@@ -1,0 +1,76 @@
+version: '3.8'
+
+services:
+  # Main MLAT processing system
+  mlat-processor:
+    build: .
+    container_name: mlat-processor
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+    networks:
+      - mlat-network
+    depends_on:
+      - mlat-api
+    command: python src/production_main.py
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # REST API service
+  mlat-api:
+    build: .
+    container_name: mlat-api
+    restart: unless-stopped
+    env_file:
+      - .env
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+    networks:
+      - mlat-network
+    command: python src/api/rest_api.py
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Web dashboard (nginx serving static files)
+  mlat-dashboard:
+    image: nginx:alpine
+    container_name: mlat-dashboard
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    volumes:
+      - ./src/visualization:/usr/share/nginx/html:ro
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    networks:
+      - mlat-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5m"
+        max-file: "2"
+
+networks:
+  mlat-network:
+    driver: bridge
+
+volumes:
+  data:
+  logs:

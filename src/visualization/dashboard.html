@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MLAT Aircraft Tracker - Real-Time Dashboard</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #1a1a2e;
+            color: #eee;
+            overflow: hidden;
+        }
+
+        .container {
+            display: grid;
+            grid-template-columns: 300px 1fr;
+            grid-template-rows: 60px 1fr;
+            height: 100vh;
+        }
+
+        .header {
+            grid-column: 1 / -1;
+            background: #16213e;
+            padding: 0 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 2px solid #0f3460;
+        }
+
+        .header h1 {
+            font-size: 24px;
+            color: #00d9ff;
+        }
+
+        .status {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+        }
+
+        .status-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .status-label {
+            font-size: 11px;
+            color: #888;
+            text-transform: uppercase;
+        }
+
+        .status-value {
+            font-size: 18px;
+            font-weight: bold;
+            color: #00d9ff;
+        }
+
+        .sidebar {
+            background: #16213e;
+            padding: 20px;
+            overflow-y: auto;
+            border-right: 2px solid #0f3460;
+        }
+
+        .map-container {
+            position: relative;
+            background: #0f3460;
+        }
+
+        #map {
+            width: 100%;
+            height: 100%;
+        }
+
+        .aircraft-card {
+            background: #0f3460;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-left: 4px solid #00d9ff;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .aircraft-card:hover {
+            background: #1a4d7a;
+            transform: translateX(5px);
+        }
+
+        .aircraft-id {
+            font-size: 16px;
+            font-weight: bold;
+            color: #00d9ff;
+            margin-bottom: 8px;
+        }
+
+        .aircraft-info {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            font-size: 12px;
+        }
+
+        .info-label {
+            color: #888;
+        }
+
+        .info-value {
+            color: #eee;
+            font-weight: 500;
+        }
+
+        .receiver-markers {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(22, 33, 62, 0.95);
+            padding: 15px;
+            border-radius: 8px;
+            z-index: 1000;
+            max-width: 250px;
+        }
+
+        .receiver-title {
+            font-size: 14px;
+            font-weight: bold;
+            color: #00d9ff;
+            margin-bottom: 10px;
+        }
+
+        .receiver-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 5px 0;
+            border-bottom: 1px solid #0f3460;
+            font-size: 12px;
+        }
+
+        .receiver-item:last-child {
+            border-bottom: none;
+        }
+
+        .online {
+            color: #00ff88;
+        }
+
+        .offline {
+            color: #ff4444;
+        }
+
+        .legend {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(22, 33, 62, 0.95);
+            padding: 15px;
+            border-radius: 8px;
+            z-index: 1000;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 8px;
+            font-size: 12px;
+        }
+
+        .legend-icon {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+        }
+
+        .aircraft-icon {
+            background: #00d9ff;
+        }
+
+        .receiver-icon {
+            background: #ff6b6b;
+        }
+
+        .simulation-control {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            z-index: 1000;
+            background: rgba(22, 33, 62, 0.95);
+            padding: 15px;
+            border-radius: 8px;
+        }
+
+        .btn {
+            background: #00d9ff;
+            color: #1a1a2e;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            margin: 5px;
+            transition: all 0.3s;
+        }
+
+        .btn:hover {
+            background: #00b8d4;
+            transform: translateY(-2px);
+        }
+
+        .btn-stop {
+            background: #ff4444;
+            color: white;
+        }
+
+        .btn-stop:hover {
+            background: #cc0000;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>✈️ MLAT Aircraft Tracker</h1>
+            <div class="status">
+                <div class="status-item">
+                    <span class="status-label">Aircraft Tracked</span>
+                    <span class="status-value" id="aircraft-count">0</span>
+                </div>
+                <div class="status-item">
+                    <span class="status-label">Active Receivers</span>
+                    <span class="status-value" id="receiver-count">0</span>
+                </div>
+                <div class="status-item">
+                    <span class="status-label">Positions/min</span>
+                    <span class="status-value" id="rate">0</span>
+                </div>
+                <div class="status-item">
+                    <span class="status-label">Avg Uncertainty</span>
+                    <span class="status-value" id="avg-uncertainty">0m</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="sidebar" id="sidebar">
+            <h3 style="color: #00d9ff; margin-bottom: 15px;">Tracked Aircraft</h3>
+            <div id="aircraft-list"></div>
+        </div>
+
+        <div class="map-container">
+            <div id="map"></div>
+            
+            <div class="simulation-control">
+                <h4 style="color: #00d9ff; margin-bottom: 10px;">Simulation Control</h4>
+                <button class="btn" onclick="startSimulation()">▶ Start</button>
+                <button class="btn btn-stop" onclick="stopSimulation()">⏹ Stop</button>
+                <button class="btn" onclick="addAircraft()">➕ Add Aircraft</button>
+            </div>
+
+            <div class="receiver-markers">
+                <div class="receiver-title">Receiver Network</div>
+                <div id="receiver-list"></div>
+            </div>
+
+            <div class="legend">
+                <div class="legend-item">
+                    <div class="legend-icon aircraft-icon"></div>
+                    <span>Aircraft</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-icon receiver-icon"></div>
+                    <span>Receiver Station</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        // Initialize map
+        const map = L.map('map').setView([40.7128, -74.0060], 7);
+        
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors',
+            maxZoom: 19
+        }).addTo(map);
+
+        // Data structures
+        const receivers = [
+            { id: 'RECV_NYC', name: 'New York', lat: 40.7128, lon: -74.0060, alt: 10 },
+            { id: 'RECV_BOS', name: 'Boston', lat: 42.3601, lon: -71.0589, alt: 20 },
+            { id: 'RECV_PHL', name: 'Philadelphia', lat: 39.9526, lon: -75.1652, alt: 15 },
+            { id: 'RECV_DC', name: 'Washington DC', lat: 38.9072, lon: -77.0369, alt: 25 },
+            { id: 'RECV_BUF', name: 'Buffalo', lat: 42.8864, lon: -78.8784, alt: 18 }
+        ];
+
+        const aircraft = {};
+        const receiverMarkers = {};
+        const aircraftMarkers = {};
+        
+        let simulationInterval = null;
+        let positionCount = 0;
+        let startTime = Date.now();
+
+        // Custom icons
+        const aircraftIcon = L.divIcon({
+            className: 'custom-aircraft-icon',
+            html: '<div style="background: #00d9ff; width: 12px; height: 12px; border-radius: 50%; border: 2px solid white;"></div>',
+            iconSize: [16, 16]
+        });
+
+        const receiverIcon = L.divIcon({
+            className: 'custom-receiver-icon',
+            html: '<div style="background: #ff6b6b; width: 14px; height: 14px; border-radius: 50%; border: 2px solid white;"></div>',
+            iconSize: [18, 18]
+        });
+
+        // Initialize receivers on map
+        function initializeReceivers() {
+            receivers.forEach(recv => {
+                const marker = L.marker([recv.lat, recv.lon], { icon: receiverIcon })
+                    .addTo(map)
+                    .bindPopup(`<b>${recv.name}</b><br>ID: ${recv.id}<br>Alt: ${recv.alt}m`);
+                receiverMarkers[recv.id] = marker;
+            });
+            
+            updateReceiverList();
+        }
+
+        function updateReceiverList() {
+            const list = document.getElementById('receiver-list');
+            list.innerHTML = receivers.map(recv => `
+                <div class="receiver-item">
+                    <span>${recv.name}</span>
+                    <span class="online">● Online</span>
+                </div>
+            `).join('');
+            
+            document.getElementById('receiver-count').textContent = receivers.length;
+        }
+
+        // Simulate aircraft movement
+        function createRandomAircraft() {
+            const id = 'AC' + Math.random().toString(36).substr(2, 6).toUpperCase();
+            const centerLat = 40.5;
+            const centerLon = -74.5;
+            
+            return {
+                id: id,
+                icao: '4840D6',
+                lat: centerLat + (Math.random() - 0.5) * 3,
+                lon: centerLon + (Math.random() - 0.5) * 3,
+                alt: 8000 + Math.random() * 4000,
+                heading: Math.random() * 360,
+                speed: 400 + Math.random() * 200,  // km/h
+                uncertainty: 50 + Math.random() * 200,
+                lastUpdate: Date.now(),
+                positions: []
+            };
+        }
+
+        function updateAircraftPosition(ac) {
+            // Simple movement simulation
+            const timeStep = 1 / 3600;  // 1 second in hours
+            const distanceKm = ac.speed * timeStep;
+            const distanceDeg = distanceKm / 111;  // Rough conversion
+            
+            ac.lat += distanceDeg * Math.cos(ac.heading * Math.PI / 180);
+            ac.lon += distanceDeg * Math.sin(ac.heading * Math.PI / 180);
+            
+            // Random heading changes
+            if (Math.random() < 0.1) {
+                ac.heading += (Math.random() - 0.5) * 20;
+            }
+            
+            // Keep in bounds
+            if (ac.lat < 37 || ac.lat > 44 || ac.lon < -79 || ac.lon > -70) {
+                ac.heading += 180;
+                ac.heading = ac.heading % 360;
+            }
+            
+            ac.lastUpdate = Date.now();
+            ac.positions.push({ lat: ac.lat, lon: ac.lon, time: Date.now() });
+            
+            // Keep last 50 positions
+            if (ac.positions.length > 50) {
+                ac.positions.shift();
+            }
+            
+            // Update uncertainty (better over time)
+            ac.uncertainty = Math.max(30, ac.uncertainty * 0.95);
+        }
+
+        function addAircraft() {
+            const ac = createRandomAircraft();
+            aircraft[ac.id] = ac;
+            
+            const marker = L.marker([ac.lat, ac.lon], { icon: aircraftIcon })
+                .addTo(map)
+                .bindPopup(getAircraftPopup(ac));
+            aircraftMarkers[ac.id] = marker;
+            
+            // Draw path
+            if (ac.positions.length > 1) {
+                const path = ac.positions.map(p => [p.lat, p.lon]);
+                L.polyline(path, { color: '#00d9ff', weight: 2, opacity: 0.5 }).addTo(map);
+            }
+            
+            updateUI();
+            positionCount++;
+        }
+
+        function getAircraftPopup(ac) {
+            return `
+                <b>Aircraft ${ac.id}</b><br>
+                ICAO: ${ac.icao}<br>
+                Position: ${ac.lat.toFixed(4)}°, ${ac.lon.toFixed(4)}°<br>
+                Altitude: ${Math.round(ac.alt)}m (${Math.round(ac.alt * 3.28084)}ft)<br>
+                Speed: ${Math.round(ac.speed)} km/h<br>
+                Heading: ${Math.round(ac.heading)}°<br>
+                Uncertainty: ±${Math.round(ac.uncertainty)}m
+            `;
+        }
+
+        function updateAircraft() {
+            Object.values(aircraft).forEach(ac => {
+                updateAircraftPosition(ac);
+                
+                // Update marker
+                const marker = aircraftMarkers[ac.id];
+                if (marker) {
+                    marker.setLatLng([ac.lat, ac.lon]);
+                    marker.setPopupContent(getAircraftPopup(ac));
+                    
+                    // Rotate icon based on heading
+                    const iconElement = marker.getElement();
+                    if (iconElement) {
+                        iconElement.style.transform = `rotate(${ac.heading}deg)`;
+                    }
+                }
+                
+                positionCount++;
+            });
+            
+            updateUI();
+        }
+
+        function updateUI() {
+            // Update aircraft count
+            document.getElementById('aircraft-count').textContent = Object.keys(aircraft).length;
+            
+            // Update rate
+            const elapsed = (Date.now() - startTime) / 1000 / 60;  // minutes
+            const rate = elapsed > 0 ? Math.round(positionCount / elapsed) : 0;
+            document.getElementById('rate').textContent = rate;
+            
+            // Update average uncertainty
+            const uncertainties = Object.values(aircraft).map(ac => ac.uncertainty);
+            const avgUncertainty = uncertainties.length > 0 
+                ? Math.round(uncertainties.reduce((a, b) => a + b, 0) / uncertainties.length)
+                : 0;
+            document.getElementById('avg-uncertainty').textContent = avgUncertainty + 'm';
+            
+            // Update aircraft list
+            const list = document.getElementById('aircraft-list');
+            list.innerHTML = Object.values(aircraft).map(ac => `
+                <div class="aircraft-card" onclick="focusAircraft('${ac.id}')">
+                    <div class="aircraft-id">${ac.id}</div>
+                    <div class="aircraft-info">
+                        <span class="info-label">Altitude:</span>
+                        <span class="info-value">${Math.round(ac.alt)}m</span>
+                        <span class="info-label">Speed:</span>
+                        <span class="info-value">${Math.round(ac.speed)} km/h</span>
+                        <span class="info-label">Heading:</span>
+                        <span class="info-value">${Math.round(ac.heading)}°</span>
+                        <span class="info-label">Uncertainty:</span>
+                        <span class="info-value">±${Math.round(ac.uncertainty)}m</span>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function focusAircraft(id) {
+            const ac = aircraft[id];
+            if (ac) {
+                map.setView([ac.lat, ac.lon], 10);
+                aircraftMarkers[id].openPopup();
+            }
+        }
+
+        function startSimulation() {
+            if (simulationInterval) return;
+            
+            // Add initial aircraft
+            for (let i = 0; i < 3; i++) {
+                addAircraft();
+            }
+            
+            // Update every second
+            simulationInterval = setInterval(updateAircraft, 1000);
+        }
+
+        function stopSimulation() {
+            if (simulationInterval) {
+                clearInterval(simulationInterval);
+                simulationInterval = null;
+            }
+        }
+
+        // Initialize
+        initializeReceivers();
+        updateUI();
+
+        console.log('MLAT Dashboard initialized! Click "Start" to begin simulation.');
+    </script>
+</body>
+</html>
