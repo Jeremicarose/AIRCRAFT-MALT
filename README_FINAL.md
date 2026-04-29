@@ -90,7 +90,8 @@ mlat-system/
 │   ├── correlation/
 │   │   └── correlator.py        # Signal correlation engine
 │   ├── network/
-│   │   └── neuron_client.py     # Neuron network integration
+│   │   ├── ckb_discovery.py     # CKB receiver discovery
+│   │   └── ckb_client.py        # CKB + 4DSky network integration
 │   ├── database/
 │   │   └── mlat_db.py           # SQLite database layer
 │   ├── api/
@@ -178,13 +179,13 @@ mlat-system/
 - Message-based grouping
 - Quality validation
 
-### 3. Network Client (`src/network/neuron_client.py`)
-**What it does**: Connects to Neuron network via Hedera/4DSky
+### 3. Network Client (`src/network/ckb_client.py`)
+**What it does**: Connects to Neuron network via CKB/4DSky
 
 **Status**: Framework complete, ready for SDK integration
 
 **Interfaces**:
-- Hedera peer discovery
+- CKB peer discovery
 - 4DSky data streaming
 - Connection management
 
@@ -268,7 +269,8 @@ socket.on('position_update', (data) => {
 
 ### Prerequisites
 - Docker and Docker Compose
-- Hedera account (testnet or mainnet)
+- CKB node access or testnet RPC
+- Receiver registry type hash
 - 4DSky API credentials
 - Server: 2GB RAM, 2 CPU minimum
 
@@ -322,7 +324,8 @@ See [DEPLOYMENT_GUIDE.md](docs/DEPLOYMENT_GUIDE.md) for detailed instructions.
 
 - **[Getting Started](docs/GETTING_STARTED.md)** - Learn the basics
 - **[Project Summary](docs/PROJECT_SUMMARY.md)** - Technical details
-- **[Integration Guide](docs/INTEGRATION_GUIDE.md)** - Connect to Hedera/4DSky
+- **[Integration Guide](docs/INTEGRATION_GUIDE.md)** - Connect to CKB/4DSky
+- **[CKB Integration Guide](docs/CKB_INTEGRATION_GUIDE.md)** - Receiver registry setup
 - **[Deployment Guide](docs/DEPLOYMENT_GUIDE.md)** - Production setup
 
 ## 🧪 Testing
@@ -370,7 +373,7 @@ The system includes:
 | Database | ✅ Complete | With migrations |
 | REST API | ✅ Complete | Full CRUD + WebSocket |
 | Dashboard | ✅ Complete | Interactive map |
-| Hedera Integration | ⚠️ Framework | Add SDK |
+| CKB Integration | ⚠️ Framework | Configure registry + RPC |
 | 4DSky Integration | ⚠️ Framework | Add SDK |
 | Docker | ✅ Complete | Multi-service |
 | Tests | ⚠️ Partial | Core components |
@@ -383,7 +386,7 @@ The system includes:
 - [x] REST API
 - [x] Web dashboard
 - [x] Docker deployment
-- [ ] Hedera SDK integration
+- [ ] CKB registry wiring with deployed contract
 - [ ] 4DSky SDK integration
 - [ ] Kalman filtering for tracks
 - [ ] Machine learning enhancements
@@ -427,7 +430,7 @@ Built for the Neuron Network MLAT Challenge
 
 Uses:
 - Neuron distributed receiver network
-- Hedera for decentralized peer discovery
+- CKB for decentralized peer discovery
 - 4DSky for Mode-S data streaming
 - Community-powered infrastructure
 
@@ -444,7 +447,7 @@ This is a **complete, production-ready MLAT system**:
 ✅ Docker deployment
 ✅ Comprehensive documentation
 
-**Next step**: Add your Hedera and 4DSky credentials, deploy, and start tracking aircraft! ✈️🎯
+**Next step**: Add your CKB and 4DSky configuration, deploy, and start tracking aircraft! ✈️🎯
 
 ---
 

@@ -1,6 +1,6 @@
 # Aircraft MLAT Localization System 🛩️
 
-A complete Multilateration (MLAT) system for localizing aircraft using distributed Mode-S data from the Neuron network.
+A complete Multilateration (MLAT) system for localizing aircraft using distributed Mode-S data from the Neuron network with CKB-based receiver discovery.
 
 ## 🎯 What This Does
 
@@ -13,7 +13,7 @@ This system **tracks aircraft without relying on GPS broadcasts** by using signa
 - ✅ **Distributed Network**: Designed for decentralized Neuron network integration
 - ✅ **Real-time Processing**: Handles live data streams from multiple receivers
 - ✅ **Quality Metrics**: Calculates position uncertainty (GDOP)
-- ⚠️ **Network Ready**: Framework prepared for Hedera + 4DSky integration
+- ⚠️ **Network Ready**: Framework prepared for CKB + 4DSky integration
 
 ## 🚀 Quick Start
 
@@ -68,7 +68,7 @@ mlat-system/
 ├── src/
 │   ├── mlat/              # Core MLAT positioning algorithm
 │   ├── correlation/       # Signal correlation and matching
-│   ├── network/          # Neuron network integration (stub)
+│   ├── network/          # CKB + 4DSky integration
 │   └── main.py           # System orchestrator
 ├── tests/                # Test suite
 ├── docs/                 # Documentation
@@ -107,8 +107,8 @@ Where the hyperbolas intersect = aircraft position!
 - Groups signals by message content
 - **Status**: ✅ Complete
 
-### 3. Network Client (`src/network/neuron_client.py`)
-- Hedera peer discovery interface
+### 3. Network Client (`src/network/ckb_client.py`)
+- CKB blockchain peer discovery interface
 - 4DSky data streaming interface
 - Connection management
 - **Status**: ⚠️ Framework ready (needs SDK integration)
@@ -141,12 +141,13 @@ This project demonstrates:
 ## 🔧 To Complete Production System
 
 1. **Get SDK Access**:
-   - Hedera testnet credentials
+   - CKB testnet credentials / node access
+   - Receiver registry type hash
    - 4DSky SDK documentation
 
 2. **Implement Stubs**:
-   - `HederaPeerDiscovery.discover_peers()`
-   - `FourDSkyDataStream.connect_to_receiver()`
+   - Replace the simulated 4DSky feed with the real SDK
+   - Register and discover receivers via the on-chain CKB registry
 
 3. **Test with Real Data**:
    - Connect to actual receivers
@@ -162,6 +163,7 @@ This project demonstrates:
 
 - **[Getting Started Guide](docs/GETTING_STARTED.md)**: Detailed setup and usage
 - **[Project Summary](docs/PROJECT_SUMMARY.md)**: Complete technical overview
+- **[CKB Integration Guide](docs/CKB_INTEGRATION_GUIDE.md)**: Receiver registry and chain setup
 - **Code Comments**: Extensive inline documentation
 
 ## 🧪 Testing
@@ -187,7 +189,7 @@ PYTHONPATH=src python tests/test_system.py
 
 This is a challenge project demonstrating MLAT concepts. To extend:
 
-1. Implement real Hedera SDK integration
+1. Implement real CKB registry integration
 2. Add 4DSky SDK connection
 3. Improve solver convergence
 4. Add visualization
@@ -201,7 +203,7 @@ This is a challenge project demonstrating MLAT concepts. To extend:
 
 Built for the Neuron Network MLAT challenge. Demonstrates decentralized aircraft tracking using:
 - Neuron distributed receiver network
-- Hedera for peer discovery
+- CKB for peer discovery
 - 4DSky for data streaming
 - MLAT for position calculation
 

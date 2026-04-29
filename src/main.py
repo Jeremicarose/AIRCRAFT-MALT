@@ -2,14 +2,14 @@
 MLAT System Orchestrator
 
 Main system that coordinates:
-1. Network connection and data streaming
+1. CKB-based peer discovery and data streaming
 2. Signal correlation
 3. Position calculation
 4. Result output
 """
 
 import asyncio
-from typing import Dict, List, Optional
+from typing import Dict, List
 from datetime import datetime
 import sys
 import os
@@ -17,9 +17,41 @@ import os
 # Add parent directory to path for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from network.neuron_client import NeuronNetworkClient, NetworkConfig, ReceiverInfo
+try:
+    from dotenv import load_dotenv
+except ImportError:
+    load_dotenv = None
+
+if load_dotenv is not None:
+    load_dotenv()
+
+from network.ckb_client import CKBNeuronNetworkClient, NetworkConfig
 from correlation.correlator import SignalCorrelator, RawSignal, CorrelatedSignalGroup
 from mlat.solver import MLATSolver, ReceiverPosition, SignalObservation, AircraftPosition
+
+
+def _env_bool(name: str, default: bool) -> bool:
+    value = os.getenv(name)
+    if value is None:
+        return default
+    return value.strip().lower() in {"1", "true", "yes", "on"}
+
+
+def load_runtime_config() -> NetworkConfig:
+    """Load CKB demo configuration from environment."""
+    return NetworkConfig(
+        ckb_network=os.getenv("CKB_NETWORK", "testnet"),
+        ckb_rpc_url=os.getenv("CKB_RPC_URL", "https://testnet.ckb.dev/rpc"),
+        ckb_indexer_url=os.getenv("CKB_INDEXER_URL", "https://testnet.ckb.dev/indexer"),
+        receiver_registry_type_hash=os.getenv("RECEIVER_REGISTRY_TYPE_HASH", ""),
+        api_key=os.getenv("FOURDSKYAPIKEY") or os.getenv("FOURDSKY_API_KEY"),
+        fourdskyendpoint=os.getenv("FOURDSKYENDPOINT") or os.getenv(
+            "FOURDSKY_ENDPOINT",
+            "wss://api.4dsky.com/stream",
+        ),
+        max_receivers=int(os.getenv("MAX_RECEIVERS", "5")),
+        simulate_if_unavailable=_env_bool("SIMULATE_IF_UNAVAILABLE", True),
+    )
 
 
 class MLATSystem:
@@ -33,7 +65,7 @@ class MLATSystem:
         self.config = config
         
         # Initialize subsystems
-        self.network_client = NeuronNetworkClient(config)
+        self.network_client = CKBNeuronNetworkClient(config)
         self.correlator = SignalCorrelator(
             time_window=0.002,  # 2ms correlation window
             min_receivers=4
@@ -232,11 +264,7 @@ class MLATSystem:
 
 async def main():
     """Main entry point"""
-    # Create configuration
-    config = NetworkConfig(
-        hedera_network="testnet",
-        max_receivers=5
-    )
+    config = load_runtime_config()
     
     # Create MLAT system
     system = MLATSystem(config)

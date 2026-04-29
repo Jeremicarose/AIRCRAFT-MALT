@@ -19,6 +19,14 @@ from typing import Dict, List
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+try:
+    from dotenv import load_dotenv
+except ImportError:
+    load_dotenv = None
+
+if load_dotenv is not None:
+    load_dotenv()
+
 from database.mlat_db import MLATDatabase
 
 # Create Flask app
@@ -31,7 +39,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Database connection
-db = MLATDatabase("mlat_data.db")
+db = MLATDatabase(os.getenv("DATABASE_PATH", "mlat_data.db"))
 db.connect()
 
 
@@ -372,17 +380,21 @@ def api_documentation():
 # ============================================================================
 
 if __name__ == '__main__':
+    host = os.getenv("API_HOST", "0.0.0.0")
+    port = int(os.getenv("API_PORT", "5000"))
+    debug = os.getenv("API_DEBUG", "false").strip().lower() in {"1", "true", "yes", "on"}
+
     print("\n" + "=" * 70)
     print("🚀 MLAT REST API Server Starting")
     print("=" * 70)
     print("\nEndpoints available:")
-    print("  http://localhost:5000/api - API Documentation")
-    print("  http://localhost:5000/api/health - Health Check")
-    print("  http://localhost:5000/api/aircraft - Active Aircraft")
-    print("  http://localhost:5000/api/positions/recent - Recent Positions")
+    print(f"  http://localhost:{port}/api - API Documentation")
+    print(f"  http://localhost:{port}/api/health - Health Check")
+    print(f"  http://localhost:{port}/api/aircraft - Active Aircraft")
+    print(f"  http://localhost:{port}/api/positions/recent - Recent Positions")
     print("\nWebSocket available at:")
-    print("  ws://localhost:5000/socket.io")
+    print(f"  ws://localhost:{port}/socket.io")
     print("\n" + "=" * 70 + "\n")
     
     # Run server
-    socketio.run(app, host='0.0.0.0', port=5000, debug=True)
+    socketio.run(app, host=host, port=port, debug=debug)

@@ -13,7 +13,7 @@ A complete **Multilateration (MLAT) system** for localizing aircraft using distr
 - **Quality**: Includes uncertainty estimation (GDOP)
 
 ### ✅ Neuron Network Integration (Framework Ready)
-- **Peer Discovery**: Hedera-based discovery interface created
+- **Peer Discovery**: CKB-based discovery interface created
 - **Data Streaming**: 4DSky SDK integration framework
 - **Network Client**: Complete abstraction layer for easy SDK swap-in
 
@@ -42,7 +42,7 @@ A complete **Multilateration (MLAT) system** for localizing aircraft using distr
 │                          │ Mode-S Streams                       │
 │                          ▼                                      │
 │              ┌───────────────────────┐                         │
-│              │  Hedera Discovery     │                         │
+│              │   CKB Discovery       │                         │
 │              │  (Peer Registry)      │                         │
 │              └───────────────────────┘                         │
 └────────────────────────────────────────────────────────────────┘
@@ -121,12 +121,14 @@ mlat-system/
 │   │
 │   ├── network/
 │   │   ├── __init__.py
-│   │   └── neuron_client.py           # ⭐ Network integration (400+ lines)
-│   │       • ReceiverInfo class
+│   │   ├── ckb_discovery.py           # ⭐ CKB receiver discovery
+│   │   │   • ReceiverInfo class
+│   │   │   • CKBConfig class
+│   │   │   • CKBPeerDiscovery
+│   │   └── ckb_client.py              # ⭐ Network integration
 │   │       • NetworkConfig class
-│   │       • HederaPeerDiscovery (interface ready)
-│   │       • FourDSkyDataStream (interface ready)
-│   │       • NeuronNetworkClient (orchestrator)
+│   │       • CKBNeuronNetworkClient
+│   │       • Simulated 4DSky feed
 │   │
 │   └── main.py                         # ⭐ System orchestrator (300+ lines)
 │       • MLATSystem class
@@ -285,7 +287,7 @@ Example:
 | MLAT Solver | ✅ Complete | Production-ready algorithm |
 | Signal Correlator | ✅ Complete | Time-window clustering works |
 | Network Interface | ⚠️ Stub | Framework ready, needs SDK integration |
-| Hedera Discovery | ⚠️ Stub | Interface defined, needs Hedera SDK |
+| CKB Discovery | ⚠️ Stub | Registry lookup needs deployed contract + RPC |
 | 4DSky Streaming | ⚠️ Stub | Interface defined, needs 4DSky SDK |
 | Visualization | ❌ TODO | Can add web dashboard |
 | Data Storage | ❌ TODO | Can add database for tracks |
@@ -301,7 +303,7 @@ Example:
 ## 🔨 What Needs Work
 
 1. **SDK Integration**: 
-   - Replace Hedera stubs with real SDK calls
+   - Connect to a deployed CKB receiver registry
    - Integrate actual 4DSky SDK when available
 
 2. **Algorithm Tuning**:
@@ -334,13 +336,14 @@ Example:
 
 ### For Production:
 1. **Get SDK Access**:
-   - Sign up for Hedera testnet
+   - Provision a CKB testnet or mainnet RPC endpoint
+   - Deploy the receiver registry contract
    - Get 4DSky SDK documentation
    - Obtain API keys
 
 2. **Integrate**:
-   - Implement `HederaPeerDiscovery.discover_peers()`
-   - Implement `FourDSkyDataStream.connect_to_receiver()`
+   - Configure `RECEIVER_REGISTRY_TYPE_HASH`
+   - Replace the simulated 4DSky stream with the real SDK
    - Test with one receiver first
 
 3. **Deploy**:
@@ -408,7 +411,7 @@ You're ready to track aircraft! ✈️🎯
 
 - **Mode-S Protocol**: "The 1090MHz Riddle" by Junzi Sun
 - **MLAT Theory**: "Position Location Using Radio Signals" papers
-- **Hedera**: Official documentation at hedera.com/docs
+- **CKB**: Official documentation at docs.nervos.org
 - **Aviation Data**: OpenSky Network for test data
 
 ---

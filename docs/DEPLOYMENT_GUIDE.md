@@ -5,7 +5,8 @@ This guide covers deploying the MLAT system to production.
 ## 📋 Prerequisites
 
 - Docker and Docker Compose installed
-- Hedera account credentials
+- CKB RPC access or testnet credentials
+- Receiver registry type hash
 - 4DSky API access
 - Server with minimum 2GB RAM, 2 CPU cores
 - Open ports: 5000 (API), 8080 (Dashboard)
@@ -31,11 +32,12 @@ nano .env
 Edit `.env`:
 
 ```bash
-# Hedera Configuration
-HEDERA_NETWORK=testnet
-HEDERA_ACCOUNT_ID=0.0.YOUR_ACCOUNT_ID
-HEDERA_PRIVATE_KEY=your_private_key_here
-RECEIVER_REGISTRY_TOPIC=0.0.TOPIC_ID
+# CKB Configuration
+CKB_NETWORK=testnet
+CKB_RPC_URL=https://testnet.ckb.dev/rpc
+CKB_INDEXER_URL=https://testnet.ckb.dev/indexer
+RECEIVER_REGISTRY_TYPE_HASH=0xYOUR_TYPE_HASH
+SIMULATE_IF_UNAVAILABLE=false
 
 # 4DSky Configuration
 FOURDSKYAPIKEY=your_api_key_here
@@ -203,11 +205,11 @@ spec:
       - name: mlat-processor
         image: your-registry/mlat-system:latest
         env:
-        - name: HEDERA_ACCOUNT_ID
+        - name: CKB_RPC_URL
           valueFrom:
             secretKeyRef:
               name: mlat-secrets
-              key: hedera-account-id
+              key: ckb-rpc-url
         volumeMounts:
         - name: data
           mountPath: /app/data
@@ -495,7 +497,7 @@ docker system prune -f
 ## ✅ Production Checklist
 
 - [ ] Environment variables configured
-- [ ] Hedera and 4DSky credentials added
+- [ ] CKB and 4DSky configuration added
 - [ ] SSL certificates installed
 - [ ] Firewall rules configured
 - [ ] Monitoring setup

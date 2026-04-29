@@ -21,8 +21,8 @@ You now have a **complete MLAT aircraft localization system** with all major com
    - Duplicate filtering
    - Mode-S message decoding utilities
 
-3. **Network Integration Framework** (`src/network/neuron_client.py`)
-   - Complete interface definitions for Hedera
+3. **Network Integration Framework** (`src/network/ckb_client.py`)
+   - Complete interface definitions for CKB receiver discovery
    - Complete interface definitions for 4DSky
    - Network client orchestration
    - Connection management
@@ -69,7 +69,7 @@ You now have a **complete MLAT aircraft localization system** with all major com
         ┌───────────────┴───────────────┐
         │                               │
    ┌────▼──────┐              ┌─────────▼────────┐
-   │  Hedera   │              │   4DSky SDK      │
+   │    CKB    │              │   4DSky SDK      │
    │ Discovery │              │ Data  Streaming   │
    └────┬──────┘              └─────────┬────────┘
         │                               │
@@ -77,7 +77,7 @@ You now have a **complete MLAT aircraft localization system** with all major com
                     │
         ┌───────────▼───────────┐
         │   Network Client      │
-        │  (neuron_client.py)   │
+        │   (ckb_client.py)     │
         └───────────┬───────────┘
                     │
         ┌───────────▼───────────┐
@@ -112,7 +112,8 @@ mlat-system/
 │   ├── correlation/
 │   │   └── correlator.py         ⭐ Signal correlation (300+ lines)
 │   ├── network/
-│   │   └── neuron_client.py      ⭐ Network integration (400+ lines)
+│   │   ├── ckb_discovery.py      ⭐ CKB receiver discovery
+│   │   └── ckb_client.py         ⭐ Network integration
 │   ├── visualization/
 │   │   └── dashboard.html        ⭐ Interactive web dashboard
 │   └── main.py                    ⭐ System orchestrator (300+ lines)
@@ -159,10 +160,10 @@ mlat-system/
 
 ### Network Integration Files
 
-**`src/network/neuron_client.py`** - Network Client
-- `HederaPeerDiscovery` - Interface for Hedera peer discovery
-- `FourDSkyDataStream` - Interface for 4DSky data streaming
-- `NeuronNetworkClient` - High-level orchestration
+**`src/network/ckb_client.py`** - Network Client
+- `CKBPeerDiscovery` - CKB peer discovery and registry lookup
+- Simulated 4DSky stream for local development
+- `CKBNeuronNetworkClient` - High-level orchestration
 - **Currently uses stubs** - ready for real SDK integration
 
 ### Orchestration Files
@@ -202,7 +203,7 @@ mlat-system/
 
 **`docs/INTEGRATION_GUIDE.md`**
 - Step-by-step SDK integration
-- Hedera setup instructions
+- CKB setup instructions
 - 4DSky configuration
 - Security best practices
 - Production deployment guide
@@ -220,7 +221,7 @@ mlat-system/
 
 ### What Needs Real Integration
 
-⚠️ **Hedera SDK** - Replace stub with actual Hedera SDK calls
+⚠️ **CKB Registry** - Point discovery at a deployed receiver registry
 ⚠️ **4DSky SDK** - Replace stub with actual 4DSky SDK calls
 ⚠️ **Credentials** - Add your API keys and accounts
 
@@ -297,7 +298,7 @@ The system is designed to be **educational**:
 
 ### Advanced Level
 1. Read `docs/INTEGRATION_GUIDE.md`
-2. Set up Hedera testnet account
+2. Set up CKB testnet access and receiver registry
 3. Implement real SDK integration
 4. Deploy to production
 
@@ -327,7 +328,7 @@ This system demonstrates:
 
 To make this production-ready:
 
-- [ ] Add Hedera SDK integration
+- [ ] Add CKB registry integration
 - [ ] Add 4DSky SDK integration  
 - [ ] Tune MLAT algorithm with real data
 - [ ] Add database for position storage
@@ -361,5 +362,5 @@ The system includes:
 ---
 
 *Built for the Neuron Network MLAT Challenge*
-*Ready for Hedera + 4DSky Integration*
+*Ready for CKB + 4DSky Integration*
 *Education-First Design*

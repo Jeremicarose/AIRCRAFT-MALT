@@ -2,7 +2,7 @@
 Production MLAT System - Main Application
 
 Integrates all components:
-- Network connectivity (Neuron/Hedera/4DSky)
+- Network connectivity (CKB/4DSky)
 - Signal correlation
 - MLAT position solving
 - Database storage
@@ -15,23 +15,59 @@ import logging
 import signal
 import sys
 import os
-from datetime import datetime
-from typing import Dict, List
+from typing import Dict
 import time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from network.neuron_client import NeuronNetworkClient, NetworkConfig
+try:
+    from dotenv import load_dotenv
+except ImportError:
+    load_dotenv = None
+
+if load_dotenv is not None:
+    load_dotenv()
+
+from network.ckb_client import CKBNeuronNetworkClient, NetworkConfig
 from correlation.correlator import SignalCorrelator, RawSignal
 from mlat.robust_solver import RobustMLATSolver, ReceiverPosition, SignalObservation
 from database.mlat_db import MLATDatabase
 
 # Setup logging
 logging.basicConfig(
-    level=logging.INFO,
+    level=getattr(logging, os.getenv("LOG_LEVEL", "INFO").upper(), logging.INFO),
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
+
+
+def _env_bool(name: str, default: bool) -> bool:
+    value = os.getenv(name)
+    if value is None:
+        return default
+    return value.strip().lower() in {"1", "true", "yes", "on"}
+
+
+def load_runtime_settings() -> tuple[NetworkConfig, str]:
+    """Load CKB and storage configuration from environment."""
+    fourdsky_endpoint = os.getenv("FOURDSKYENDPOINT") or os.getenv(
+        "FOURDSKY_ENDPOINT",
+        "wss://api.4dsky.com/stream",
+    )
+    fourdsky_api_key = os.getenv("FOURDSKYAPIKEY") or os.getenv("FOURDSKY_API_KEY")
+
+    config = NetworkConfig(
+        ckb_network=os.getenv("CKB_NETWORK", "testnet"),
+        ckb_rpc_url=os.getenv("CKB_RPC_URL", "https://testnet.ckb.dev/rpc"),
+        ckb_indexer_url=os.getenv("CKB_INDEXER_URL", "https://testnet.ckb.dev/indexer"),
+        receiver_registry_type_hash=os.getenv("RECEIVER_REGISTRY_TYPE_HASH", ""),
+        api_key=fourdsky_api_key,
+        fourdskyendpoint=fourdsky_endpoint,
+        max_receivers=int(os.getenv("MAX_RECEIVERS", "10")),
+        simulate_if_unavailable=_env_bool("SIMULATE_IF_UNAVAILABLE", True),
+    )
+    db_path = os.getenv("DATABASE_PATH", "mlat_data.db")
+    return config, db_path
 
 
 class ProductionMLATSystem:
@@ -43,7 +79,7 @@ class ProductionMLATSystem:
         self.config = config
         
         # Initialize components
-        self.network_client = NeuronNetworkClient(config)
+        self.network_client = CKBNeuronNetworkClient(config)
         self.correlator = SignalCorrelator(
             time_window=0.005,  # 5ms
             min_receivers=4
@@ -293,14 +329,10 @@ class ProductionMLATSystem:
 
 async def main():
     """Main entry point"""
-    # Load configuration
-    config = NetworkConfig(
-        hedera_network="testnet",
-        max_receivers=10
-    )
+    config, db_path = load_runtime_settings()
     
     # Create system
-    system = ProductionMLATSystem(config)
+    system = ProductionMLATSystem(config, db_path=db_path)
     
     # Setup signal handlers for graceful shutdown
     loop = asyncio.get_event_loop()

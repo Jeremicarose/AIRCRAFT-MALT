@@ -12,7 +12,7 @@ Congratulations! You've built the foundation of a Multilateration (MLAT) Aircraf
 ├─────────────────────────────────────────────────────────┤
 │                                                         │
 │  ┌──────────────┐       ┌──────────────┐              │
-│  │   Hedera     │──────▶│   4DSky SDK  │              │
+│  │     CKB      │──────▶│   4DSky SDK  │              │
 │  │ Peer Discovery│       │  Data Stream │              │
 │  └──────────────┘       └──────────────┘              │
 │         │                       │                       │
@@ -49,7 +49,8 @@ mlat-system/
 │   ├── correlation/
 │   │   └── correlator.py         # Signal correlation
 │   ├── network/
-│   │   └── neuron_client.py      # Network interface
+│   │   ├── ckb_client.py         # CKB network interface
+│   │   └── ckb_discovery.py      # On-chain receiver discovery
 │   └── main.py                    # Main orchestrator
 ├── tests/
 │   └── test_system.py            # Test suite
@@ -110,43 +111,42 @@ for group in groups:
     print(f"Found {len(group.signals)} receivers heard this")
 ```
 
-### 3. Network Client (`src/network/neuron_client.py`)
+### 3. Network Client (`src/network/ckb_client.py`)
 
 **What it does**: Connects to the Neuron network to receive Mode-S data
 
 **Key features**:
-- Hedera-based peer discovery
+- CKB-based peer discovery
 - 4DSky SDK integration (stub)
 - Real-time data streaming
 
 **TODO for production**:
-- Implement actual Hedera SDK calls
+- Configure a deployed CKB receiver registry
 - Integrate real 4DSky SDK
 - Handle authentication and rate limiting
 
 ## 🚀 Next Steps to Complete the System
 
-### Step 1: Integrate Real Hedera SDK
+### Step 1: Integrate Real CKB Registry
 
 You'll need to:
-1. Install Hedera SDK: `pip install hedera-sdk-python`
-2. Get Hedera testnet credentials
-3. Replace the stub in `HederaPeerDiscovery.discover_peers()`
+1. Install the CKB SDK: `pip install ckb-py`
+2. Deploy or point to the receiver registry contract
+3. Set `RECEIVER_REGISTRY_TYPE_HASH` and `CKB_RPC_URL`
 
 Example:
 ```python
-from hedera import Client, TopicMessageQuery
+from network.ckb_discovery import CKBPeerDiscovery, CKBConfig
 
-async def discover_peers(self):
-    client = Client.forTestnet()
-    client.setOperator(account_id, private_key)
-    
-    # Query the receiver registry topic
-    query = TopicMessageQuery()
-    query.setTopicId(topic_id)
-    
-    # Parse and return receiver info
-    # ...
+config = CKBConfig(
+    network="testnet",
+    ckb_rpc_url="https://testnet.ckb.dev/rpc",
+    receiver_registry_type_hash="0xYOUR_TYPE_HASH"
+)
+
+discovery = CKBPeerDiscovery(config)
+await discovery.initialize()
+receivers = await discovery.discover_peers()
 ```
 
 ### Step 2: Integrate 4DSky SDK
@@ -308,9 +308,9 @@ logger.debug(f"Found {len(groups)} groups from {len(signals)} signals")
 - GPS and GNSS positioning textbooks
 - Aviation surveillance system documentation
 
-### Hedera
-- [Hedera Documentation](https://hedera.com/docs)
-- [Hedera SDK Python](https://github.com/hashgraph/hedera-sdk-py)
+### CKB
+- [Nervos Documentation](https://docs.nervos.org/)
+- [CKB Integration Guide](docs/CKB_INTEGRATION_GUIDE.md)
 
 ### Mode-S Protocol
 - "The 1090MHz Riddle" (open book on Mode-S)

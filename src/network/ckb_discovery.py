@@ -15,7 +15,7 @@ from dataclasses import dataclass
 import json
 import asyncio
 import logging
-from abc import ABC, abstractmethod
+import time
 
 logger = logging.getLogger(__name__)
 
@@ -39,8 +39,10 @@ class CKBConfig:
     """Configuration for CKB blockchain connection"""
     network: str = "testnet"  # "mainnet" or "testnet"
     ckb_rpc_url: str = "https://testnet.ckb.dev/rpc"
+    ckb_indexer_url: str = "https://testnet.ckb.dev/indexer"
     receiver_registry_type_hash: str = ""  # Type script hash for receiver registry
     api_timeout: int = 30
+    simulate_if_unavailable: bool = True
 
 
 class CKBPeerDiscovery:
@@ -56,10 +58,17 @@ class CKBPeerDiscovery:
         self.config = config
         self.cached_peers: Dict[str, ReceiverInfo] = {}
         self.client = None
+        self.simulation_mode = False
         
     async def initialize(self):
         """Initialize CKB RPC client"""
         logger.info(f"Initializing CKB peer discovery on {self.config.network}")
+
+        if not self.config.receiver_registry_type_hash:
+            self._enable_simulation(
+                "No receiver registry type hash configured; using simulated CKB receivers"
+            )
+            return
         
         # Import CKB SDK
         try:
@@ -71,9 +80,19 @@ class CKBPeerDiscovery:
             logger.info(f"✅ Connected to CKB node, current block: {tip}")
             
         except ImportError:
+            if self.config.simulate_if_unavailable:
+                self._enable_simulation(
+                    "CKB SDK not installed. Falling back to simulated receiver discovery"
+                )
+                return
             logger.error("❌ CKB SDK not installed. Run: pip install ckb-py")
             raise
         except Exception as e:
+            if self.config.simulate_if_unavailable:
+                self._enable_simulation(
+                    f"Failed to connect to CKB node ({e}); using simulated receiver discovery"
+                )
+                return
             logger.error(f"❌ Failed to connect to CKB node: {e}")
             raise
     
@@ -96,6 +115,14 @@ class CKBPeerDiscovery:
         3. Verify receiver credentials
         4. Return list of active receivers
         """
+        if self.simulation_mode:
+            logger.info("🔍 Discovering peers from simulated CKB registry...")
+            receivers = self._get_simulated_receivers()
+            for receiver in receivers:
+                self.cached_peers[receiver.receiver_id] = receiver
+            logger.info(f"✅ Discovered {len(receivers)} simulated receivers")
+            return receivers
+
         logger.info("🔍 Discovering peers from CKB blockchain...")
         
         receivers = []
@@ -130,6 +157,9 @@ class CKBPeerDiscovery:
         
         Uses get_cells RPC to find all cells with the receiver registry type script.
         """
+        if self.client is None:
+            return []
+
         try:
             # Build search query
             search_key = {
@@ -158,6 +188,74 @@ class CKBPeerDiscovery:
         except Exception as e:
             logger.error(f"Failed to search receiver cells: {e}")
             return []
+
+    def _enable_simulation(self, reason: str):
+        """Enable local simulation mode when live CKB access is unavailable."""
+        self.simulation_mode = True
+        self.client = None
+        logger.warning(reason)
+
+    def _get_simulated_receivers(self) -> List[ReceiverInfo]:
+        """Return a deterministic receiver set for local development."""
+        simulated_receivers = [
+            ReceiverInfo(
+                receiver_id="RECV_NYC_001",
+                latitude=40.7128,
+                longitude=-74.0060,
+                altitude=10.0,
+                status="online",
+                last_seen=time.time(),
+                capabilities=["mode-s", "adsb", "mlat"],
+                ckb_address="ckt1qyqnyc000000000000000000000000000000000",
+                lock_hash="0xnyc000000000000000000000000000000000000000000000000000000000000",
+            ),
+            ReceiverInfo(
+                receiver_id="RECV_BOS_001",
+                latitude=42.3601,
+                longitude=-71.0589,
+                altitude=20.0,
+                status="online",
+                last_seen=time.time(),
+                capabilities=["mode-s", "adsb", "mlat"],
+                ckb_address="ckt1qyqboston0000000000000000000000000000000",
+                lock_hash="0xbos000000000000000000000000000000000000000000000000000000000000",
+            ),
+            ReceiverInfo(
+                receiver_id="RECV_PHL_001",
+                latitude=39.9526,
+                longitude=-75.1652,
+                altitude=15.0,
+                status="online",
+                last_seen=time.time(),
+                capabilities=["mode-s", "mlat"],
+                ckb_address="ckt1qyqphl000000000000000000000000000000000",
+                lock_hash="0xphl000000000000000000000000000000000000000000000000000000000000",
+            ),
+            ReceiverInfo(
+                receiver_id="RECV_DC_001",
+                latitude=38.9072,
+                longitude=-77.0369,
+                altitude=25.0,
+                status="online",
+                last_seen=time.time(),
+                capabilities=["mode-s", "adsb", "mlat"],
+                ckb_address="ckt1qyqdc0000000000000000000000000000000000",
+                lock_hash="0xdc0000000000000000000000000000000000000000000000000000000000000",
+            ),
+            ReceiverInfo(
+                receiver_id="RECV_BUF_001",
+                latitude=42.8864,
+                longitude=-78.8784,
+                altitude=18.0,
+                status="online",
+                last_seen=time.time(),
+                capabilities=["mode-s", "mlat"],
+                ckb_address="ckt1qyqbuf000000000000000000000000000000000",
+                lock_hash="0xbuf000000000000000000000000000000000000000000000000000000000000",
+            ),
+        ]
+
+        return simulated_receivers
     
     async def _parse_receiver_cell(self, cell: Dict) -> Optional[ReceiverInfo]:
         """
@@ -215,8 +313,6 @@ class CKBPeerDiscovery:
         - Recent timestamp (last 24 hours)
         - Valid coordinates
         """
-        import time
-        
         # Check status
         if receiver.status != "online":
             return False
