@@ -10,7 +10,7 @@ Features:
 - On-chain data availability
 """
 
-from typing import List, Dict, Optional
+from typing import Any, Dict, List, Optional
 from dataclasses import dataclass
 import json
 import asyncio
@@ -32,6 +32,10 @@ class ReceiverInfo:
     capabilities: List[str]
     ckb_address: str  # CKB address of receiver
     lock_hash: str    # Lock script hash for verification
+    stream_endpoint: Optional[str] = None
+    stream_protocol: Optional[str] = None
+    stream_format: Optional[str] = None
+    metadata: Optional[Dict[str, Any]] = None
 
 
 @dataclass
@@ -208,6 +212,8 @@ class CKBPeerDiscovery:
                 capabilities=["mode-s", "adsb", "mlat"],
                 ckb_address="ckt1qyqnyc000000000000000000000000000000000",
                 lock_hash="0xnyc000000000000000000000000000000000000000000000000000000000000",
+                stream_protocol="simulation",
+                stream_format="json",
             ),
             ReceiverInfo(
                 receiver_id="RECV_BOS_001",
@@ -219,6 +225,8 @@ class CKBPeerDiscovery:
                 capabilities=["mode-s", "adsb", "mlat"],
                 ckb_address="ckt1qyqboston0000000000000000000000000000000",
                 lock_hash="0xbos000000000000000000000000000000000000000000000000000000000000",
+                stream_protocol="simulation",
+                stream_format="json",
             ),
             ReceiverInfo(
                 receiver_id="RECV_PHL_001",
@@ -230,6 +238,8 @@ class CKBPeerDiscovery:
                 capabilities=["mode-s", "mlat"],
                 ckb_address="ckt1qyqphl000000000000000000000000000000000",
                 lock_hash="0xphl000000000000000000000000000000000000000000000000000000000000",
+                stream_protocol="simulation",
+                stream_format="json",
             ),
             ReceiverInfo(
                 receiver_id="RECV_DC_001",
@@ -241,6 +251,8 @@ class CKBPeerDiscovery:
                 capabilities=["mode-s", "adsb", "mlat"],
                 ckb_address="ckt1qyqdc0000000000000000000000000000000000",
                 lock_hash="0xdc0000000000000000000000000000000000000000000000000000000000000",
+                stream_protocol="simulation",
+                stream_format="json",
             ),
             ReceiverInfo(
                 receiver_id="RECV_BUF_001",
@@ -252,6 +264,8 @@ class CKBPeerDiscovery:
                 capabilities=["mode-s", "mlat"],
                 ckb_address="ckt1qyqbuf000000000000000000000000000000000",
                 lock_hash="0xbuf000000000000000000000000000000000000000000000000000000000000",
+                stream_protocol="simulation",
+                stream_format="json",
             ),
         ]
 
@@ -294,7 +308,11 @@ class CKBPeerDiscovery:
                 last_seen=data_json['timestamp'],
                 capabilities=data_json['capabilities'],
                 ckb_address=cell['output']['lock']['args'],
-                lock_hash=cell['output']['lock']['hash']
+                lock_hash=cell['output']['lock']['hash'],
+                stream_endpoint=data_json.get('stream_endpoint'),
+                stream_protocol=data_json.get('stream_protocol'),
+                stream_format=data_json.get('stream_format'),
+                metadata=data_json.get('metadata'),
             )
             
             return receiver
@@ -345,7 +363,11 @@ class CKBPeerDiscovery:
         longitude: float,
         altitude: float,
         capabilities: List[str],
-        private_key: str
+        private_key: str,
+        stream_endpoint: Optional[str] = None,
+        stream_protocol: Optional[str] = None,
+        stream_format: Optional[str] = None,
+        metadata: Optional[Dict[str, Any]] = None,
     ) -> bool:
         """
         Register a new receiver on CKB blockchain.
@@ -380,6 +402,15 @@ class CKBPeerDiscovery:
                 "capabilities": capabilities,
                 "timestamp": time.time()
             }
+
+            if stream_endpoint:
+                receiver_data["stream_endpoint"] = stream_endpoint
+            if stream_protocol:
+                receiver_data["stream_protocol"] = stream_protocol
+            if stream_format:
+                receiver_data["stream_format"] = stream_format
+            if metadata:
+                receiver_data["metadata"] = metadata
             
             # Convert to hex
             data_json = json.dumps(receiver_data)

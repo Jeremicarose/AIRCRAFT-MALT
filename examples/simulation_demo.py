@@ -17,10 +17,6 @@ import math
 import time
 from typing import List, Dict
 from datetime import datetime
-import sys
-import os
-
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from mlat.enhanced_solver import EnhancedMLATSolver, ReceiverPosition, SignalObservation, AircraftPosition
 from correlation.correlator import SignalCorrelator, RawSignal

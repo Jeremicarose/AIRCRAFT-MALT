@@ -13,12 +13,9 @@ Integrates all components:
 import asyncio
 import logging
 import signal
-import sys
 import os
 from typing import Dict
 import time
-
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 try:
     from dotenv import load_dotenv
@@ -52,7 +49,7 @@ def load_runtime_settings() -> tuple[NetworkConfig, str]:
     """Load CKB and storage configuration from environment."""
     fourdsky_endpoint = os.getenv("FOURDSKYENDPOINT") or os.getenv(
         "FOURDSKY_ENDPOINT",
-        "wss://api.4dsky.com/stream",
+        "",
     )
     fourdsky_api_key = os.getenv("FOURDSKYAPIKEY") or os.getenv("FOURDSKY_API_KEY")
 
@@ -63,6 +60,12 @@ def load_runtime_settings() -> tuple[NetworkConfig, str]:
         receiver_registry_type_hash=os.getenv("RECEIVER_REGISTRY_TYPE_HASH", ""),
         api_key=fourdsky_api_key,
         fourdskyendpoint=fourdsky_endpoint,
+        fourdsky_transport=os.getenv("FOURDSKY_TRANSPORT", "auto"),
+        fourdsky_auth_header=os.getenv("FOURDSKY_AUTH_HEADER", "X-API-Key"),
+        fourdsky_auth_scheme=os.getenv("FOURDSKY_AUTH_SCHEME") or None,
+        fourdsky_auth_token=os.getenv("FOURDSKY_AUTH_TOKEN") or None,
+        fourdsky_subscribe_message=os.getenv("FOURDSKY_SUBSCRIBE_MESSAGE") or None,
+        fourdsky_bridge_command=os.getenv("FOURDSKY_BRIDGE_COMMAND") or None,
         max_receivers=int(os.getenv("MAX_RECEIVERS", "10")),
         simulate_if_unavailable=_env_bool("SIMULATE_IF_UNAVAILABLE", True),
     )
@@ -131,6 +134,15 @@ class ProductionMLATSystem:
                 longitude=info.longitude,
                 altitude=info.altitude,
                 receiver_id=receiver_id
+            )
+            self.database.store_receiver(
+                receiver_id=receiver_id,
+                latitude=info.latitude,
+                longitude=info.longitude,
+                altitude=info.altitude,
+                status=info.status,
+                last_seen=info.last_seen,
+                capabilities=info.capabilities,
             )
     
     async def start(self):
@@ -359,11 +371,16 @@ async def main():
         await system.stop()
 
 
-if __name__ == "__main__":
+def main_cli():
+    """Console entry point for the production processor."""
     print("\n" + "╔" + "=" * 68 + "╗")
     print("║" + " " * 68 + "║")
     print("║" + "  MLAT AIRCRAFT LOCALIZATION SYSTEM - PRODUCTION".center(68) + "║")
     print("║" + " " * 68 + "║")
     print("╚" + "=" * 68 + "╝\n")
-    
+
     asyncio.run(main())
+
+
+if __name__ == "__main__":
+    main_cli()

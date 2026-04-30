@@ -47,13 +47,28 @@ CKB_PRIVATE_KEY=0xYOUR_PRIVATE_KEY_HERE
 
 # 4DSky Configuration (for Mode-S data streaming)
 FOURDSKYAPIKEY=your_api_key_here
-FOURDSKYENDPOINT=wss://api.4dsky.com/stream
+FOURDSKYENDPOINT=
+FOURDSKY_TRANSPORT=auto
+FOURDSKY_AUTH_HEADER=X-API-Key
+FOURDSKY_AUTH_SCHEME=
+FOURDSKY_AUTH_TOKEN=
+FOURDSKY_SUBSCRIBE_MESSAGE=
+FOURDSKY_BRIDGE_COMMAND=
 
 # System Configuration
 MAX_RECEIVERS=10
 LOG_LEVEL=INFO
-DATABASE_PATH=/app/data/mlat_data.db
-API_KEY=change_this_secret_key
+DATABASE_PATH=data/mlat_data.db
+
+# API Configuration
+API_HOST=0.0.0.0
+API_PORT=5000
+API_DEBUG=false
+CORS_ALLOWED_ORIGINS=http://localhost:8080,http://127.0.0.1:8080
+ENABLE_ADMIN_API=false
+ENABLE_BACKGROUND_BROADCASTER=true
+API_KEY=
+ADMIN_API_KEY=
 EOF
     echo "✅ Created .env file"
     echo ""

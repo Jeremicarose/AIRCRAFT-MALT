@@ -9,6 +9,7 @@ Stores:
 """
 
 import sqlite3
+import os
 from typing import List, Optional, Dict, Tuple
 from dataclasses import dataclass, asdict
 from datetime import datetime, timedelta
@@ -44,6 +45,19 @@ class AircraftTrack:
     positions: List[StoredPosition]
 
 
+@dataclass
+class StoredReceiver:
+    """Receiver metadata stored in the database."""
+    receiver_id: str
+    latitude: float
+    longitude: float
+    altitude: float
+    status: str
+    last_seen: float
+    capabilities: str
+    updated_at: str
+
+
 class MLATDatabase:
     """
     SQLite database for MLAT system.
@@ -57,6 +71,9 @@ class MLATDatabase:
         
     def connect(self):
         """Connect to database and create tables if needed"""
+        db_dir = os.path.dirname(self.db_path)
+        if db_dir:
+            os.makedirs(db_dir, exist_ok=True)
         self.conn = sqlite3.connect(self.db_path)
         self.conn.row_factory = sqlite3.Row
         self._create_tables()
@@ -168,6 +185,13 @@ class MLATDatabase:
         except sqlite3.IntegrityError:
             # Duplicate position - update instead
             cursor.execute("""
+                SELECT id FROM positions
+                WHERE aircraft_id = ? AND timestamp = ?
+            """, (aircraft_id, timestamp))
+            existing_row = cursor.fetchone()
+            existing_id = existing_row['id'] if existing_row else None
+
+            cursor.execute("""
                 UPDATE positions SET
                     latitude = ?, longitude = ?, altitude = ?,
                     uncertainty = ?, num_receivers = ?, receiver_ids = ?,
@@ -180,7 +204,7 @@ class MLATDatabase:
             
             self.conn.commit()
             logger.debug(f"Updated position for aircraft {aircraft_id}")
-            return cursor.lastrowid
+            return existing_id
     
     def get_aircraft_track(
         self,
@@ -340,6 +364,98 @@ class MLATDatabase:
         ))
         
         self.conn.commit()
+
+    def store_receiver(
+        self,
+        receiver_id: str,
+        latitude: float,
+        longitude: float,
+        altitude: float,
+        status: str,
+        last_seen: float,
+        capabilities: List[str],
+    ):
+        """Insert or update a receiver record."""
+        cursor = self.conn.cursor()
+        updated_at = datetime.now().isoformat()
+        capabilities_json = json.dumps(capabilities)
+
+        cursor.execute("""
+            INSERT INTO receivers (
+                receiver_id, latitude, longitude, altitude,
+                status, last_seen, capabilities, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(receiver_id) DO UPDATE SET
+                latitude = excluded.latitude,
+                longitude = excluded.longitude,
+                altitude = excluded.altitude,
+                status = excluded.status,
+                last_seen = excluded.last_seen,
+                capabilities = excluded.capabilities,
+                updated_at = excluded.updated_at
+        """, (
+            receiver_id,
+            latitude,
+            longitude,
+            altitude,
+            status,
+            last_seen,
+            capabilities_json,
+            updated_at,
+        ))
+
+        self.conn.commit()
+
+    def get_receivers(self) -> List[StoredReceiver]:
+        """Return all receivers ordered by receiver id."""
+        cursor = self.conn.cursor()
+        cursor.execute("""
+            SELECT * FROM receivers
+            ORDER BY receiver_id ASC
+        """)
+
+        rows = cursor.fetchall()
+        return [
+            StoredReceiver(
+                receiver_id=row["receiver_id"],
+                latitude=row["latitude"],
+                longitude=row["longitude"],
+                altitude=row["altitude"],
+                status=row["status"],
+                last_seen=row["last_seen"],
+                capabilities=row["capabilities"],
+                updated_at=row["updated_at"],
+            )
+            for row in rows
+        ]
+
+    def get_positions_after_id(self, last_id: int, limit: int = 100) -> List[StoredPosition]:
+        """Return positions with id greater than last_id in ascending order."""
+        cursor = self.conn.cursor()
+        cursor.execute("""
+            SELECT * FROM positions
+            WHERE id > ?
+            ORDER BY id ASC
+            LIMIT ?
+        """, (last_id, limit))
+
+        rows = cursor.fetchall()
+        return [
+            StoredPosition(
+                id=row['id'],
+                aircraft_id=row['aircraft_id'],
+                timestamp=row['timestamp'],
+                latitude=row['latitude'],
+                longitude=row['longitude'],
+                altitude=row['altitude'],
+                uncertainty=row['uncertainty'],
+                num_receivers=row['num_receivers'],
+                receiver_ids=row['receiver_ids'],
+                residual=row['residual'],
+                created_at=row['created_at']
+            )
+            for row in rows
+        ]
     
     def get_statistics_history(self, hours: int = 24) -> List[Dict]:
         """Get statistics for last N hours"""

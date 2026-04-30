@@ -13,9 +13,7 @@ services:
       - ./logs:/app/logs
     networks:
       - mlat-network
-    depends_on:
-      - mlat-api
-    command: python src/production_main.py
+    command: mlat-processor
     logging:
       driver: "json-file"
       options:
@@ -36,9 +34,9 @@ services:
       - ./logs:/app/logs
     networks:
       - mlat-network
-    command: python src/api/rest_api.py
+    command: mlat-api
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5000/api/health"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5000/api/health', timeout=5)"]
       interval: 30s
       timeout: 10s
       retries: 3

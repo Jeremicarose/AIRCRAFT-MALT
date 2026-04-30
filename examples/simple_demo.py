@@ -5,13 +5,9 @@ This demonstrates the system components working together with
 a simplified, guaranteed-to-converge approach.
 """
 
-import sys
-import os
 import math
 import random
 from datetime import datetime
-
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from mlat.solver import MLATSolver, ReceiverPosition, SignalObservation
 from correlation.correlator import SignalCorrelator, RawSignal

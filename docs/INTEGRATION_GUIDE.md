@@ -61,23 +61,59 @@ The current code already supports:
 - Querying a CKB node when the SDK and RPC are available
 - Falling back to a deterministic local receiver set when not available
 
-## 🔧 Step 3: Replace the Simulated 4DSky Feed
+## 🔧 Step 3: Connect a Real 4DSky Feed
 
-The network client currently simulates a shared 4DSky feed so the MLAT pipeline can run locally. To connect the real SDK, replace the simulated stream path in `src/network/ckb_client.py`.
+The network client now supports these feed modes in `src/network/ckb_client.py`:
 
-Your real implementation should:
+- `simulation`: local generated feed
+- `websocket-json`: connect to a websocket that emits JSON records
+- `command-jsonl`: run a local bridge process that prints newline-delimited JSON
+- `auto`: choose a real feed when configured, otherwise fall back to simulation
 
-1. Authenticate with 4DSky
-2. Subscribe to the selected receivers
-3. Forward `receiver_id`, `timestamp`, and `message` to the callback used by the processor
-4. Preserve precise timestamps so TDOA remains valid
+### Option A: Direct WebSocket JSON Feed
 
-Required environment variables:
+Use this when 4DSky or your bridge gives you a websocket endpoint:
 
 ```bash
+FOURDSKY_TRANSPORT=websocket-json
+FOURDSKYENDPOINT=wss://your-feed-endpoint
 FOURDSKYAPIKEY=your_api_key_here
-FOURDSKYENDPOINT=wss://api.4dsky.com/stream
+FOURDSKY_AUTH_HEADER=X-API-Key
+FOURDSKY_AUTH_SCHEME=
+FOURDSKY_SUBSCRIBE_MESSAGE=
 ```
+
+Accepted inbound JSON shapes include records like:
+
+```json
+{"receiver_id":"RECV_NYC_001","timestamp":1714400000.123,"message":"8D4840D6202CC371C32CE0576098"}
+```
+
+### Option B: Local ADEX / Bridge Process
+
+Use this when the 4DSky client or your own bridge can output JSON lines to stdout:
+
+```bash
+FOURDSKY_TRANSPORT=command-jsonl
+FOURDSKY_BRIDGE_COMMAND='python bridge.py'
+```
+
+Each output line should look like:
+
+```json
+{"receiver_id":"RECV_NYC_001","timestamp":"2026-04-29T12:00:00Z","message":"8D4840D6202CC371C32CE0576098"}
+```
+
+### Optional Receiver-Level Metadata
+
+If you want the receiver registry to carry stream metadata too, `src/network/ckb_discovery.py` now supports these optional fields in the stored receiver JSON:
+
+- `stream_endpoint`
+- `stream_protocol`
+- `stream_format`
+- `metadata`
+
+That lets you publish per-receiver stream connection details alongside location and capability data.
 
 ## 🚀 Step 4: Run the System
 

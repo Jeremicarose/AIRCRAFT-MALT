@@ -136,7 +136,8 @@ CKB_PRIVATE_KEY=0x...
 
 # 4DSky Configuration (still needed for data streaming)
 FOURDSKYAPIKEY=your_api_key
-FOURDSKYENDPOINT=wss://api.4dsky.com/stream
+FOURDSKYENDPOINT=wss://your-feed-endpoint
+FOURDSKY_TRANSPORT=auto
 ```
 
 ### 6. Run MLAT System with CKB
@@ -171,7 +172,10 @@ await discovery.register_receiver(
     longitude=-74.0060,
     altitude=10.0,
     capabilities=["mode-s", "adsb", "mlat"],
-    private_key="0x..."  # Your CKB private key
+    private_key="0x...",  # Your CKB private key
+    stream_endpoint="wss://your-4dsky-feed",
+    stream_protocol="websocket-json",
+    stream_format="json"
 )
 ```
 

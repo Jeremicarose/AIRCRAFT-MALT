@@ -9,30 +9,101 @@ Provides HTTP endpoints for:
 """
 
 from flask import Flask, jsonify, request
-from flask_cors import CORS
-from flask_socketio import SocketIO, emit
-import sys
 import os
 import logging
+import threading
+import time
+import json
 from datetime import datetime
 from typing import Dict, List
-
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 try:
     from dotenv import load_dotenv
 except ImportError:
     load_dotenv = None
 
+try:
+    from flask_cors import CORS
+except ImportError:
+    CORS = None
+
+try:
+    from flask_socketio import SocketIO, emit
+except ImportError:
+    SocketIO = None
+
 if load_dotenv is not None:
     load_dotenv()
 
 from database.mlat_db import MLATDatabase
 
+
+def _env_bool(name: str, default: bool) -> bool:
+    value = os.getenv(name)
+    if value is None:
+        return default
+    return value.strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _split_csv(name: str, default: str = "") -> List[str]:
+    value = os.getenv(name, default)
+    return [item.strip() for item in value.split(",") if item.strip()]
+
+
+ALLOWED_ORIGINS = _split_csv(
+    "CORS_ALLOWED_ORIGINS",
+    "http://localhost:8080,http://127.0.0.1:8080",
+)
+ENABLE_ADMIN_API = _env_bool("ENABLE_ADMIN_API", False)
+ENABLE_BACKGROUND_BROADCASTER = _env_bool("ENABLE_BACKGROUND_BROADCASTER", True)
+ADMIN_API_KEY = os.getenv("ADMIN_API_KEY") or os.getenv("API_KEY")
+API_KEY_HEADER = os.getenv("API_KEY_HEADER", "X-API-Key")
+
 # Create Flask app
 app = Flask(__name__)
-CORS(app)  # Enable CORS for web access
-socketio = SocketIO(app, cors_allowed_origins="*")
+if CORS is not None:
+    CORS(app, origins=ALLOWED_ORIGINS)
+else:
+    @app.after_request
+    def add_cors_headers(response):
+        origin = request.headers.get('Origin')
+        if origin and origin in ALLOWED_ORIGINS:
+            response.headers['Access-Control-Allow-Origin'] = origin
+            response.headers['Vary'] = 'Origin'
+        response.headers['Access-Control-Allow-Headers'] = 'Content-Type,Authorization,X-API-Key'
+        response.headers['Access-Control-Allow-Methods'] = 'GET,POST,OPTIONS'
+        return response
+
+if SocketIO is None:
+    class _FallbackSocketIO:
+        def __init__(self, flask_app):
+            self.app = flask_app
+
+        def on(self, _event):
+            def decorator(func):
+                return func
+            return decorator
+
+        def emit(self, *_args, **_kwargs):
+            return None
+
+        def sleep(self, seconds):
+            time.sleep(seconds)
+
+        def start_background_task(self, target, *args, **kwargs):
+            thread = threading.Thread(target=target, args=args, kwargs=kwargs, daemon=True)
+            thread.start()
+            return thread
+
+        def run(self, flask_app, host='0.0.0.0', port=5000, debug=False):
+            flask_app.run(host=host, port=port, debug=debug)
+
+    socketio = _FallbackSocketIO(app)
+
+    def emit(*_args, **_kwargs):
+        return None
+else:
+    socketio = SocketIO(app, cors_allowed_origins=ALLOWED_ORIGINS)
 
 # Setup logging
 logging.basicConfig(level=logging.INFO)
@@ -41,6 +112,8 @@ logger = logging.getLogger(__name__)
 # Database connection
 db = MLATDatabase(os.getenv("DATABASE_PATH", "mlat_data.db"))
 db.connect()
+_broadcast_lock = threading.Lock()
+_broadcast_started = False
 
 
 # ============================================================================
@@ -116,6 +189,30 @@ def get_recent_positions():
         'positions': positions_data,
         'count': len(positions_data),
         'time_window_seconds': seconds
+    })
+
+
+@app.route('/api/receivers', methods=['GET'])
+def get_receivers():
+    """Get receiver metadata stored by the processor."""
+    receivers = db.get_receivers()
+    receiver_data = [
+        {
+            'receiver_id': receiver.receiver_id,
+            'latitude': receiver.latitude,
+            'longitude': receiver.longitude,
+            'altitude': receiver.altitude,
+            'status': receiver.status,
+            'last_seen': receiver.last_seen,
+            'capabilities': json.loads(receiver.capabilities),
+            'updated_at': receiver.updated_at,
+        }
+        for receiver in receivers
+    ]
+
+    return jsonify({
+        'receivers': receiver_data,
+        'count': len(receiver_data),
     })
 
 
@@ -301,10 +398,78 @@ def broadcast_position_update(aircraft_id: str, position_data: Dict):
     
     Call this from the main MLAT system when a new position is calculated.
     """
-    socketio.emit('position_update', {
+    payload = {
         'aircraft_id': aircraft_id,
         'position': position_data
-    }, room=aircraft_id)
+    }
+    socketio.emit('position_update', payload)
+    socketio.emit('position_update', payload, room=aircraft_id)
+
+
+def _validate_api_key() -> bool:
+    """Check whether the request contains the configured admin API key."""
+    if not ADMIN_API_KEY:
+        return False
+    return request.headers.get(API_KEY_HEADER) == ADMIN_API_KEY
+
+
+def _parse_cleanup_days() -> int:
+    """Validate cleanup request payload and return the retention period."""
+    data = request.get_json(silent=True)
+    if not isinstance(data, dict):
+        raise ValueError("Request body must be a JSON object")
+
+    days = data.get('days', 7)
+    if not isinstance(days, int):
+        raise ValueError("'days' must be an integer")
+    if days < 1 or days > 365:
+        raise ValueError("'days' must be between 1 and 365")
+
+    return days
+
+
+def _start_background_broadcaster():
+    """Poll the database for new positions and emit websocket updates."""
+    global _broadcast_started
+
+    with _broadcast_lock:
+        if _broadcast_started:
+            return
+        _broadcast_started = True
+
+    def _poll_new_positions():
+        poll_db = MLATDatabase(os.getenv("DATABASE_PATH", "mlat_data.db"))
+        poll_db.connect()
+        last_position_id = 0
+
+        try:
+            existing = poll_db.get_recent_positions(seconds=86400, limit=1)
+            if existing and existing[0].id is not None:
+                last_position_id = existing[0].id
+
+            while True:
+                new_positions = poll_db.get_positions_after_id(last_position_id, limit=200)
+                for position in new_positions:
+                    last_position_id = max(last_position_id, position.id or 0)
+                    broadcast_position_update(
+                        aircraft_id=position.aircraft_id,
+                        position_data={
+                            'id': position.id,
+                            'timestamp': position.timestamp,
+                            'latitude': position.latitude,
+                            'longitude': position.longitude,
+                            'altitude': position.altitude,
+                            'uncertainty': position.uncertainty,
+                            'num_receivers': position.num_receivers,
+                            'created_at': position.created_at,
+                        },
+                    )
+
+                socketio.sleep(1.0)
+        finally:
+            poll_db.close()
+
+    socketio.start_background_task(_poll_new_positions)
 
 
 # ============================================================================
@@ -318,8 +483,16 @@ def cleanup_old_data():
     
     Body: {'days': 7}
     """
-    data = request.get_json()
-    days = data.get('days', 7)
+    if not ENABLE_ADMIN_API:
+        return jsonify({'error': 'Admin API is disabled'}), 404
+
+    if not _validate_api_key():
+        return jsonify({'error': 'Unauthorized'}), 403
+
+    try:
+        days = _parse_cleanup_days()
+    except ValueError as exc:
+        return jsonify({'error': str(exc)}), 400
     
     db.cleanup_old_data(days=days)
     
@@ -376,10 +549,11 @@ def api_documentation():
 
 
 # ============================================================================
-# Main
-# ============================================================================
+def run_server():
+    """Run the API server using environment-driven host/port settings."""
+    if ENABLE_BACKGROUND_BROADCASTER:
+        _start_background_broadcaster()
 
-if __name__ == '__main__':
     host = os.getenv("API_HOST", "0.0.0.0")
     port = int(os.getenv("API_PORT", "5000"))
     debug = os.getenv("API_DEBUG", "false").strip().lower() in {"1", "true", "yes", "on"}
@@ -393,8 +567,20 @@ if __name__ == '__main__':
     print(f"  http://localhost:{port}/api/aircraft - Active Aircraft")
     print(f"  http://localhost:{port}/api/positions/recent - Recent Positions")
     print("\nWebSocket available at:")
-    print(f"  ws://localhost:{port}/socket.io")
+    if SocketIO is None:
+        print("  Socket.IO unavailable in this environment; dashboard will use polling fallback")
+    else:
+        print(f"  ws://localhost:{port}/socket.io")
     print("\n" + "=" * 70 + "\n")
     
     # Run server
     socketio.run(app, host=host, port=port, debug=debug)
+
+
+def main():
+    """Console entry point for the REST API."""
+    run_server()
+
+
+if __name__ == '__main__':
+    run_server()

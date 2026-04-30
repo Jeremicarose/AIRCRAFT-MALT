@@ -1,0 +1,46 @@
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mlat-system"
+version = "0.1.0"
+description = "CKB-backed MLAT aircraft localization system"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+  "numpy>=1.21.0",
+  "flask>=2.3.0",
+  "flask-cors>=4.0.0",
+  "flask-socketio>=5.3.0",
+  "python-socketio>=5.9.0",
+  "websockets>=12.0,<14.0",
+  "ckb-py>=0.1.0",
+  "python-dotenv>=1.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=7.0.0",
+  "pytest-asyncio>=0.18.0",
+  "black>=22.0.0",
+  "flake8>=4.0.0",
+  "mypy>=0.950",
+]
+
+[project.scripts]
+mlat-api = "api.rest_api:main"
+mlat-processor = "production_main:main_cli"
+mlat-demo = "main:main_cli"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+py-modules = ["main", "production_main"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["api*", "correlation*", "database*", "mlat*", "network*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"

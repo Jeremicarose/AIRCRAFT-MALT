@@ -11,11 +11,7 @@ Main system that coordinates:
 import asyncio
 from typing import Dict, List
 from datetime import datetime
-import sys
 import os
-
-# Add parent directory to path for imports
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 try:
     from dotenv import load_dotenv
@@ -47,8 +43,14 @@ def load_runtime_config() -> NetworkConfig:
         api_key=os.getenv("FOURDSKYAPIKEY") or os.getenv("FOURDSKY_API_KEY"),
         fourdskyendpoint=os.getenv("FOURDSKYENDPOINT") or os.getenv(
             "FOURDSKY_ENDPOINT",
-            "wss://api.4dsky.com/stream",
+            "",
         ),
+        fourdsky_transport=os.getenv("FOURDSKY_TRANSPORT", "auto"),
+        fourdsky_auth_header=os.getenv("FOURDSKY_AUTH_HEADER", "X-API-Key"),
+        fourdsky_auth_scheme=os.getenv("FOURDSKY_AUTH_SCHEME") or None,
+        fourdsky_auth_token=os.getenv("FOURDSKY_AUTH_TOKEN") or None,
+        fourdsky_subscribe_message=os.getenv("FOURDSKY_SUBSCRIBE_MESSAGE") or None,
+        fourdsky_bridge_command=os.getenv("FOURDSKY_BRIDGE_COMMAND") or None,
         max_receivers=int(os.getenv("MAX_RECEIVERS", "5")),
         simulate_if_unavailable=_env_bool("SIMULATE_IF_UNAVAILABLE", True),
     )
@@ -287,6 +289,10 @@ async def main():
         await system.stop()
 
 
-if __name__ == "__main__":
-    # Run the system
+def main_cli():
+    """Console entry point for the demo system."""
     asyncio.run(main())
+
+
+if __name__ == "__main__":
+    main_cli()

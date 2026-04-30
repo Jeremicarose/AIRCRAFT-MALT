@@ -225,6 +225,28 @@
         .btn-stop:hover {
             background: #cc0000;
         }
+
+        .control-title {
+            color: #00d9ff;
+            margin-bottom: 10px;
+        }
+
+        .control-input {
+            width: 100%;
+            margin-bottom: 10px;
+            padding: 8px 10px;
+            border-radius: 5px;
+            border: 1px solid #0f3460;
+            background: #0f3460;
+            color: #eee;
+        }
+
+        .control-status {
+            font-size: 12px;
+            color: #9fb7c9;
+            margin-top: 6px;
+            line-height: 1.4;
+        }
     </style>
 </head>
 <body>
@@ -260,10 +282,12 @@
             <div id="map"></div>
             
             <div class="simulation-control">
-                <h4 style="color: #00d9ff; margin-bottom: 10px;">Simulation Control</h4>
-                <button class="btn" onclick="startSimulation()">▶ Start</button>
-                <button class="btn btn-stop" onclick="stopSimulation()">⏹ Stop</button>
-                <button class="btn" onclick="addAircraft()">➕ Add Aircraft</button>
+                <h4 class="control-title">Live Connection</h4>
+                <input id="api-url" class="control-input" type="text" />
+                <button class="btn" onclick="connectLive()">▶ Connect</button>
+                <button class="btn btn-stop" onclick="disconnectLive()">⏹ Disconnect</button>
+                <button class="btn" onclick="refreshSnapshot()">↻ Refresh</button>
+                <div class="control-status" id="connection-status">Disconnected</div>
             </div>
 
             <div class="receiver-markers">
@@ -285,33 +309,25 @@
     </div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
     <script>
-        // Initialize map
         const map = L.map('map').setView([40.7128, -74.0060], 7);
-        
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '© OpenStreetMap contributors',
             maxZoom: 19
         }).addTo(map);
 
-        // Data structures
-        const receivers = [
-            { id: 'RECV_NYC', name: 'New York', lat: 40.7128, lon: -74.0060, alt: 10 },
-            { id: 'RECV_BOS', name: 'Boston', lat: 42.3601, lon: -71.0589, alt: 20 },
-            { id: 'RECV_PHL', name: 'Philadelphia', lat: 39.9526, lon: -75.1652, alt: 15 },
-            { id: 'RECV_DC', name: 'Washington DC', lat: 38.9072, lon: -77.0369, alt: 25 },
-            { id: 'RECV_BUF', name: 'Buffalo', lat: 42.8864, lon: -78.8784, alt: 18 }
-        ];
-
         const aircraft = {};
+        const receivers = {};
         const receiverMarkers = {};
         const aircraftMarkers = {};
-        
-        let simulationInterval = null;
+        const aircraftPaths = {};
+        let socket = null;
         let positionCount = 0;
         let startTime = Date.now();
+        let lastBoundsFitAt = 0;
+        let refreshTimer = null;
 
-        // Custom icons
         const aircraftIcon = L.divIcon({
             className: 'custom-aircraft-icon',
             html: '<div style="background: #00d9ff; width: 12px; height: 12px; border-radius: 50%; border: 2px solid white;"></div>',
@@ -324,166 +340,205 @@
             iconSize: [18, 18]
         });
 
-        // Initialize receivers on map
-        function initializeReceivers() {
-            receivers.forEach(recv => {
-                const marker = L.marker([recv.lat, recv.lon], { icon: receiverIcon })
-                    .addTo(map)
-                    .bindPopup(`<b>${recv.name}</b><br>ID: ${recv.id}<br>Alt: ${recv.alt}m`);
-                receiverMarkers[recv.id] = marker;
-            });
-            
-            updateReceiverList();
+        function defaultApiUrl() {
+            const hostname = window.location.hostname || 'localhost';
+            const protocol = window.location.protocol === 'https:' ? 'https' : 'http';
+            return `${protocol}://${hostname}:5000`;
         }
 
-        function updateReceiverList() {
-            const list = document.getElementById('receiver-list');
-            list.innerHTML = receivers.map(recv => `
-                <div class="receiver-item">
-                    <span>${recv.name}</span>
-                    <span class="online">● Online</span>
-                </div>
-            `).join('');
-            
-            document.getElementById('receiver-count').textContent = receivers.length;
+        function getApiBase() {
+            return document.getElementById('api-url').value.trim().replace(/\/$/, '');
         }
 
-        // Simulate aircraft movement
-        function createRandomAircraft() {
-            const id = 'AC' + Math.random().toString(36).substr(2, 6).toUpperCase();
-            const centerLat = 40.5;
-            const centerLon = -74.5;
-            
-            return {
-                id: id,
-                icao: '4840D6',
-                lat: centerLat + (Math.random() - 0.5) * 3,
-                lon: centerLon + (Math.random() - 0.5) * 3,
-                alt: 8000 + Math.random() * 4000,
-                heading: Math.random() * 360,
-                speed: 400 + Math.random() * 200,  // km/h
-                uncertainty: 50 + Math.random() * 200,
-                lastUpdate: Date.now(),
-                positions: []
-            };
+        function setStatus(message) {
+            document.getElementById('connection-status').textContent = message;
         }
 
-        function updateAircraftPosition(ac) {
-            // Simple movement simulation
-            const timeStep = 1 / 3600;  // 1 second in hours
-            const distanceKm = ac.speed * timeStep;
-            const distanceDeg = distanceKm / 111;  // Rough conversion
-            
-            ac.lat += distanceDeg * Math.cos(ac.heading * Math.PI / 180);
-            ac.lon += distanceDeg * Math.sin(ac.heading * Math.PI / 180);
-            
-            // Random heading changes
-            if (Math.random() < 0.1) {
-                ac.heading += (Math.random() - 0.5) * 20;
+        async function fetchJson(path) {
+            const response = await fetch(`${getApiBase()}${path}`);
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status} for ${path}`);
             }
-            
-            // Keep in bounds
-            if (ac.lat < 37 || ac.lat > 44 || ac.lon < -79 || ac.lon > -70) {
-                ac.heading += 180;
-                ac.heading = ac.heading % 360;
-            }
-            
-            ac.lastUpdate = Date.now();
-            ac.positions.push({ lat: ac.lat, lon: ac.lon, time: Date.now() });
-            
-            // Keep last 50 positions
-            if (ac.positions.length > 50) {
-                ac.positions.shift();
-            }
-            
-            // Update uncertainty (better over time)
-            ac.uncertainty = Math.max(30, ac.uncertainty * 0.95);
+            return response.json();
         }
 
-        function addAircraft() {
-            const ac = createRandomAircraft();
-            aircraft[ac.id] = ac;
-            
-            const marker = L.marker([ac.lat, ac.lon], { icon: aircraftIcon })
-                .addTo(map)
-                .bindPopup(getAircraftPopup(ac));
-            aircraftMarkers[ac.id] = marker;
-            
-            // Draw path
-            if (ac.positions.length > 1) {
-                const path = ac.positions.map(p => [p.lat, p.lon]);
-                L.polyline(path, { color: '#00d9ff', weight: 2, opacity: 0.5 }).addTo(map);
+        function parseCapabilities(raw) {
+            if (Array.isArray(raw)) {
+                return raw;
             }
-            
-            updateUI();
-            positionCount++;
+            if (typeof raw === 'string') {
+                try {
+                    const parsed = JSON.parse(raw);
+                    return Array.isArray(parsed) ? parsed : [raw];
+                } catch (error) {
+                    return [raw];
+                }
+            }
+            return [];
         }
 
         function getAircraftPopup(ac) {
             return `
                 <b>Aircraft ${ac.id}</b><br>
-                ICAO: ${ac.icao}<br>
                 Position: ${ac.lat.toFixed(4)}°, ${ac.lon.toFixed(4)}°<br>
                 Altitude: ${Math.round(ac.alt)}m (${Math.round(ac.alt * 3.28084)}ft)<br>
-                Speed: ${Math.round(ac.speed)} km/h<br>
-                Heading: ${Math.round(ac.heading)}°<br>
-                Uncertainty: ±${Math.round(ac.uncertainty)}m
+                Receivers: ${ac.numReceivers || 0}<br>
+                Uncertainty: ±${Math.round(ac.uncertainty)}m<br>
+                Last update: ${new Date(ac.timestamp * 1000).toLocaleTimeString()}
             `;
         }
 
-        function updateAircraft() {
-            Object.values(aircraft).forEach(ac => {
-                updateAircraftPosition(ac);
-                
-                // Update marker
-                const marker = aircraftMarkers[ac.id];
-                if (marker) {
-                    marker.setLatLng([ac.lat, ac.lon]);
-                    marker.setPopupContent(getAircraftPopup(ac));
-                    
-                    // Rotate icon based on heading
-                    const iconElement = marker.getElement();
-                    if (iconElement) {
-                        iconElement.style.transform = `rotate(${ac.heading}deg)`;
-                    }
-                }
-                
-                positionCount++;
-            });
-            
-            updateUI();
+        function upsertReceiver(receiver) {
+            receivers[receiver.receiver_id] = {
+                id: receiver.receiver_id,
+                name: receiver.receiver_id,
+                lat: receiver.latitude,
+                lon: receiver.longitude,
+                alt: receiver.altitude,
+                status: receiver.status,
+                capabilities: parseCapabilities(receiver.capabilities),
+                lastSeen: receiver.last_seen
+            };
+
+            const marker = receiverMarkers[receiver.receiver_id];
+            const popup = `
+                <b>${receiver.receiver_id}</b><br>
+                Position: ${receiver.latitude.toFixed(4)}°, ${receiver.longitude.toFixed(4)}°<br>
+                Altitude: ${Math.round(receiver.altitude)}m<br>
+                Status: ${receiver.status}
+            `;
+
+            if (marker) {
+                marker.setLatLng([receiver.latitude, receiver.longitude]);
+                marker.setPopupContent(popup);
+            } else {
+                receiverMarkers[receiver.receiver_id] = L.marker(
+                    [receiver.latitude, receiver.longitude],
+                    { icon: receiverIcon }
+                ).addTo(map).bindPopup(popup);
+            }
+        }
+
+        function upsertAircraftFromApi(record) {
+            const aircraftId = record.aircraft_id;
+            const lat = record.position ? record.position.latitude : record.latitude;
+            const lon = record.position ? record.position.longitude : record.longitude;
+            const alt = record.position ? record.position.altitude : record.altitude;
+
+            if (typeof lat !== 'number' || typeof lon !== 'number') {
+                return;
+            }
+
+            if (!aircraft[aircraftId]) {
+                aircraft[aircraftId] = {
+                    id: aircraftId,
+                    lat,
+                    lon,
+                    alt: alt || 0,
+                    uncertainty: record.uncertainty || 0,
+                    numReceivers: record.num_receivers || 0,
+                    timestamp: record.timestamp || Date.now() / 1000,
+                    positions: []
+                };
+            }
+
+            const ac = aircraft[aircraftId];
+            ac.lat = lat;
+            ac.lon = lon;
+            ac.alt = alt || 0;
+            ac.uncertainty = record.uncertainty || 0;
+            ac.numReceivers = record.num_receivers || 0;
+            ac.timestamp = record.timestamp || Date.now() / 1000;
+            ac.positions.push({ lat, lon, time: ac.timestamp });
+
+            if (ac.positions.length > 50) {
+                ac.positions = ac.positions.slice(-50);
+            }
+
+            if (!aircraftMarkers[aircraftId]) {
+                aircraftMarkers[aircraftId] = L.marker([lat, lon], { icon: aircraftIcon })
+                    .addTo(map)
+                    .bindPopup(getAircraftPopup(ac));
+            } else {
+                aircraftMarkers[aircraftId].setLatLng([lat, lon]);
+                aircraftMarkers[aircraftId].setPopupContent(getAircraftPopup(ac));
+            }
+
+            if (!aircraftPaths[aircraftId]) {
+                aircraftPaths[aircraftId] = L.polyline([], {
+                    color: '#00d9ff',
+                    weight: 2,
+                    opacity: 0.5
+                }).addTo(map);
+            }
+            aircraftPaths[aircraftId].setLatLngs(ac.positions.map((point) => [point.lat, point.lon]));
+
+            positionCount += 1;
+        }
+
+        function clearAircraftState() {
+            Object.values(aircraftMarkers).forEach((marker) => map.removeLayer(marker));
+            Object.values(aircraftPaths).forEach((path) => map.removeLayer(path));
+            Object.keys(aircraft).forEach((key) => delete aircraft[key]);
+            Object.keys(aircraftMarkers).forEach((key) => delete aircraftMarkers[key]);
+            Object.keys(aircraftPaths).forEach((key) => delete aircraftPaths[key]);
+            positionCount = 0;
+            startTime = Date.now();
+        }
+
+        function maybeFitMap() {
+            const now = Date.now();
+            if (now - lastBoundsFitAt < 10000) {
+                return;
+            }
+
+            const points = Object.values(aircraft).map((ac) => [ac.lat, ac.lon]);
+            if (points.length === 0) {
+                return;
+            }
+
+            lastBoundsFitAt = now;
+            map.fitBounds(points, { padding: [40, 40], maxZoom: 9 });
+        }
+
+        function updateReceiverList() {
+            const receiverList = Object.values(receivers);
+            const list = document.getElementById('receiver-list');
+            list.innerHTML = receiverList.map((recv) => `
+                <div class="receiver-item">
+                    <span>${recv.name}</span>
+                    <span class="${recv.status === 'online' ? 'online' : 'offline'}">● ${recv.status}</span>
+                </div>
+            `).join('');
+            document.getElementById('receiver-count').textContent = receiverList.length;
         }
 
         function updateUI() {
-            // Update aircraft count
-            document.getElementById('aircraft-count').textContent = Object.keys(aircraft).length;
-            
-            // Update rate
-            const elapsed = (Date.now() - startTime) / 1000 / 60;  // minutes
+            const aircraftList = Object.values(aircraft).sort((a, b) => b.timestamp - a.timestamp);
+            document.getElementById('aircraft-count').textContent = aircraftList.length;
+
+            const elapsed = (Date.now() - startTime) / 1000 / 60;
             const rate = elapsed > 0 ? Math.round(positionCount / elapsed) : 0;
             document.getElementById('rate').textContent = rate;
-            
-            // Update average uncertainty
-            const uncertainties = Object.values(aircraft).map(ac => ac.uncertainty);
-            const avgUncertainty = uncertainties.length > 0 
-                ? Math.round(uncertainties.reduce((a, b) => a + b, 0) / uncertainties.length)
+
+            const avgUncertainty = aircraftList.length > 0
+                ? Math.round(aircraftList.reduce((sum, ac) => sum + ac.uncertainty, 0) / aircraftList.length)
                 : 0;
-            document.getElementById('avg-uncertainty').textContent = avgUncertainty + 'm';
-            
-            // Update aircraft list
+            document.getElementById('avg-uncertainty').textContent = `${avgUncertainty}m`;
+
             const list = document.getElementById('aircraft-list');
-            list.innerHTML = Object.values(aircraft).map(ac => `
+            list.innerHTML = aircraftList.map((ac) => `
                 <div class="aircraft-card" onclick="focusAircraft('${ac.id}')">
                     <div class="aircraft-id">${ac.id}</div>
                     <div class="aircraft-info">
                         <span class="info-label">Altitude:</span>
                         <span class="info-value">${Math.round(ac.alt)}m</span>
-                        <span class="info-label">Speed:</span>
-                        <span class="info-value">${Math.round(ac.speed)} km/h</span>
-                        <span class="info-label">Heading:</span>
-                        <span class="info-value">${Math.round(ac.heading)}°</span>
+                        <span class="info-label">Receivers:</span>
+                        <span class="info-value">${ac.numReceivers}</span>
                         <span class="info-label">Uncertainty:</span>
                         <span class="info-value">±${Math.round(ac.uncertainty)}m</span>
+                        <span class="info-label">Updated:</span>
+                        <span class="info-value">${new Date(ac.timestamp * 1000).toLocaleTimeString()}</span>
                     </div>
                 </div>
             `).join('');
@@ -497,30 +552,117 @@
             }
         }
 
-        function startSimulation() {
-            if (simulationInterval) return;
-            
-            // Add initial aircraft
-            for (let i = 0; i < 3; i++) {
-                addAircraft();
-            }
-            
-            // Update every second
-            simulationInterval = setInterval(updateAircraft, 1000);
-        }
+        async function loadReceivers() {
+            try {
+                const data = await fetchJson('/api/receivers');
+                Object.values(receiverMarkers).forEach((marker) => map.removeLayer(marker));
+                Object.keys(receiverMarkers).forEach((key) => delete receiverMarkers[key]);
+                Object.keys(receivers).forEach((key) => delete receivers[key]);
 
-        function stopSimulation() {
-            if (simulationInterval) {
-                clearInterval(simulationInterval);
-                simulationInterval = null;
+                data.receivers.forEach(upsertReceiver);
+                updateReceiverList();
+            } catch (error) {
+                console.error('Failed to load receivers', error);
+                setStatus(`Receiver load failed: ${error.message}`);
             }
         }
 
-        // Initialize
-        initializeReceivers();
+        async function loadPositions() {
+            clearAircraftState();
+            const data = await fetchJson('/api/positions/recent?seconds=600&limit=500');
+            const orderedPositions = [...data.positions].sort((a, b) => a.timestamp - b.timestamp);
+            orderedPositions.forEach(upsertAircraftFromApi);
+            updateUI();
+            maybeFitMap();
+        }
+
+        async function loadStatistics() {
+            try {
+                const data = await fetchJson('/api/statistics?hours=1');
+                const current = data.current || {};
+                if (typeof current.active_aircraft === 'number') {
+                    document.getElementById('aircraft-count').textContent = current.active_aircraft;
+                }
+            } catch (error) {
+                console.error('Failed to load statistics', error);
+            }
+        }
+
+        async function refreshSnapshot() {
+            setStatus('Refreshing snapshot...');
+            try {
+                await Promise.all([
+                    loadReceivers(),
+                    loadPositions(),
+                    loadStatistics()
+                ]);
+                setStatus(`Snapshot refreshed from ${getApiBase()}`);
+            } catch (error) {
+                setStatus(`Refresh failed: ${error.message}`);
+            }
+        }
+
+        function disconnectLive() {
+            if (socket) {
+                socket.disconnect();
+                socket = null;
+            }
+            if (refreshTimer) {
+                clearInterval(refreshTimer);
+                refreshTimer = null;
+            }
+            setStatus('Disconnected');
+        }
+
+        async function connectLive() {
+            disconnectLive();
+            setStatus('Connecting...');
+
+            try {
+                await refreshSnapshot();
+            } catch (error) {
+                console.error(error);
+            }
+
+            socket = io(getApiBase(), {
+                transports: ['websocket', 'polling']
+            });
+
+            socket.on('connect', () => {
+                setStatus(`Connected to ${getApiBase()}`);
+            });
+
+            socket.on('disconnect', () => {
+                setStatus('Disconnected');
+            });
+
+            socket.on('connect_error', (error) => {
+                setStatus(`Socket error: ${error.message}`);
+            });
+
+            socket.on('position_update', (payload) => {
+                if (!payload || !payload.aircraft_id || !payload.position) {
+                    return;
+                }
+
+                upsertAircraftFromApi({
+                    aircraft_id: payload.aircraft_id,
+                    ...payload.position
+                });
+                updateUI();
+            });
+
+            refreshTimer = setInterval(() => {
+                refreshSnapshot().catch((error) => {
+                    console.error('Background refresh failed', error);
+                });
+            }, 15000);
+        }
+
+        document.getElementById('api-url').value = defaultApiUrl();
         updateUI();
-
-        console.log('MLAT Dashboard initialized! Click "Start" to begin simulation.');
+        updateReceiverList();
+        connectLive();
     </script>
 </body>
 </html>
