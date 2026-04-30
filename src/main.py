@@ -21,42 +21,14 @@ except ImportError:
 if load_dotenv is not None:
     load_dotenv()
 
-from network.ckb_client import CKBNeuronNetworkClient, NetworkConfig
-from correlation.correlator import SignalCorrelator, RawSignal, CorrelatedSignalGroup
+from network.ckb_client import NetworkConfig
+from correlation.correlator import RawSignal, CorrelatedSignalGroup
 from mlat.solver import MLATSolver, ReceiverPosition, SignalObservation, AircraftPosition
+from mlat_runtime import BaseMLATRuntime
+from runtime_config import load_runtime_settings
 
 
-def _env_bool(name: str, default: bool) -> bool:
-    value = os.getenv(name)
-    if value is None:
-        return default
-    return value.strip().lower() in {"1", "true", "yes", "on"}
-
-
-def load_runtime_config() -> NetworkConfig:
-    """Load CKB demo configuration from environment."""
-    return NetworkConfig(
-        ckb_network=os.getenv("CKB_NETWORK", "testnet"),
-        ckb_rpc_url=os.getenv("CKB_RPC_URL", "https://testnet.ckb.dev/rpc"),
-        ckb_indexer_url=os.getenv("CKB_INDEXER_URL", "https://testnet.ckb.dev/indexer"),
-        receiver_registry_type_hash=os.getenv("RECEIVER_REGISTRY_TYPE_HASH", ""),
-        api_key=os.getenv("FOURDSKYAPIKEY") or os.getenv("FOURDSKY_API_KEY"),
-        fourdskyendpoint=os.getenv("FOURDSKYENDPOINT") or os.getenv(
-            "FOURDSKY_ENDPOINT",
-            "",
-        ),
-        fourdsky_transport=os.getenv("FOURDSKY_TRANSPORT", "auto"),
-        fourdsky_auth_header=os.getenv("FOURDSKY_AUTH_HEADER", "X-API-Key"),
-        fourdsky_auth_scheme=os.getenv("FOURDSKY_AUTH_SCHEME") or None,
-        fourdsky_auth_token=os.getenv("FOURDSKY_AUTH_TOKEN") or None,
-        fourdsky_subscribe_message=os.getenv("FOURDSKY_SUBSCRIBE_MESSAGE") or None,
-        fourdsky_bridge_command=os.getenv("FOURDSKY_BRIDGE_COMMAND") or None,
-        max_receivers=int(os.getenv("MAX_RECEIVERS", "5")),
-        simulate_if_unavailable=_env_bool("SIMULATE_IF_UNAVAILABLE", True),
-    )
-
-
-class MLATSystem:
+class MLATSystem(BaseMLATRuntime[ReceiverPosition, SignalObservation]):
     """
     Complete MLAT system orchestrator.
     
@@ -64,24 +36,17 @@ class MLATSystem:
     """
     
     def __init__(self, config: NetworkConfig):
-        self.config = config
-        
-        # Initialize subsystems
-        self.network_client = CKBNeuronNetworkClient(config)
-        self.correlator = SignalCorrelator(
+        super().__init__(
+            config,
             time_window=0.002,  # 2ms correlation window
-            min_receivers=4
+            min_receivers=4,
         )
         self.mlat_solver = MLATSolver(min_receivers=4)
-        
+
         # Tracking state
         self.tracked_aircraft: Dict[str, List[AircraftPosition]] = {}
-        self.receiver_positions: Dict[str, ReceiverPosition] = {}
         self.total_positions_calculated = 0
         self.total_signals_received = 0
-        
-        # Running flag
-        self.is_running = False
     
     async def initialize(self) -> None:
         """Initialize the MLAT system"""
@@ -90,25 +55,34 @@ class MLATSystem:
         print("=" * 60)
         print()
         
-        # Initialize network connection
-        await self.network_client.initialize()
-        
-        # Store receiver positions for MLAT
-        self._cache_receiver_positions()
+        await self.initialize_network()
         
         print()
         print("✅ System initialized successfully!")
         print()
     
-    def _cache_receiver_positions(self) -> None:
-        """Cache receiver positions for quick lookup during MLAT"""
-        for receiver_id, info in self.network_client.active_receivers.items():
-            self.receiver_positions[receiver_id] = ReceiverPosition(
-                latitude=info.latitude,
-                longitude=info.longitude,
-                altitude=info.altitude,
-                receiver_id=receiver_id
-            )
+    def build_receiver_position(self, receiver_id: str, info) -> ReceiverPosition:
+        return ReceiverPosition(
+            latitude=info.latitude,
+            longitude=info.longitude,
+            altitude=info.altitude,
+            receiver_id=receiver_id,
+        )
+
+    def on_signal_received(self, signal: RawSignal):
+        self.total_signals_received += 1
+
+    def build_observation(
+        self,
+        signal: RawSignal,
+        receiver_position: ReceiverPosition,
+    ) -> SignalObservation:
+        return SignalObservation(
+            receiver_id=signal.receiver_id,
+            timestamp=signal.timestamp,
+            signal_data=signal.message,
+            receiver_position=receiver_position,
+        )
     
     async def start(self) -> None:
         """Start the MLAT system"""
@@ -119,37 +93,13 @@ class MLATSystem:
         print()
         
         # Start receiving data
-        await self.network_client.start_streaming(self._handle_incoming_signal)
+        await self.network_client.start_streaming(self.handle_incoming_signal)
         
         # Start correlation and solving loop
         asyncio.create_task(self._processing_loop())
         
         print("✅ System running - Press Ctrl+C to stop")
         print("-" * 60)
-    
-    async def _handle_incoming_signal(
-        self,
-        receiver_id: str,
-        timestamp: float,
-        message: str
-    ) -> None:
-        """
-        Handle each incoming Mode-S signal.
-        
-        This is called by the network client for every message received.
-        """
-        self.total_signals_received += 1
-        
-        # Create raw signal object
-        signal = RawSignal(
-            receiver_id=receiver_id,
-            timestamp=timestamp,
-            message=message,
-            signal_strength=0.0
-        )
-        
-        # Add to correlator
-        self.correlator.add_signal(signal)
     
     async def _processing_loop(self) -> None:
         """
@@ -175,22 +125,7 @@ class MLATSystem:
         """
         Process a correlated signal group to calculate aircraft position.
         """
-        # Convert to SignalObservations
-        observations = []
-        
-        for signal in group.signals:
-            # Get receiver position
-            recv_pos = self.receiver_positions.get(signal.receiver_id)
-            if not recv_pos:
-                continue
-            
-            obs = SignalObservation(
-                receiver_id=signal.receiver_id,
-                timestamp=signal.timestamp,
-                signal_data=signal.message,
-                receiver_position=recv_pos
-            )
-            observations.append(obs)
+        observations = self.build_observations_from_group(group)
         
         # Solve position
         position = self.mlat_solver.solve_position(observations)
@@ -266,10 +201,10 @@ class MLATSystem:
 
 async def main():
     """Main entry point"""
-    config = load_runtime_config()
+    settings = load_runtime_settings(max_receivers_default=5)
     
     # Create MLAT system
-    system = MLATSystem(config)
+    system = MLATSystem(settings.network_config)
     
     try:
         # Initialize

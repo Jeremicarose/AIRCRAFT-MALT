@@ -26,9 +26,11 @@ if load_dotenv is not None:
     load_dotenv()
 
 from network.ckb_client import CKBNeuronNetworkClient, NetworkConfig
-from correlation.correlator import SignalCorrelator, RawSignal
+from correlation.correlator import RawSignal
 from mlat.robust_solver import RobustMLATSolver, ReceiverPosition, SignalObservation
 from database.mlat_db import MLATDatabase
+from mlat_runtime import BaseMLATRuntime
+from runtime_config import load_runtime_settings
 
 # Setup logging
 logging.basicConfig(
@@ -37,63 +39,20 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-
-def _env_bool(name: str, default: bool) -> bool:
-    value = os.getenv(name)
-    if value is None:
-        return default
-    return value.strip().lower() in {"1", "true", "yes", "on"}
-
-
-def load_runtime_settings() -> tuple[NetworkConfig, str]:
-    """Load CKB and storage configuration from environment."""
-    fourdsky_endpoint = os.getenv("FOURDSKYENDPOINT") or os.getenv(
-        "FOURDSKY_ENDPOINT",
-        "",
-    )
-    fourdsky_api_key = os.getenv("FOURDSKYAPIKEY") or os.getenv("FOURDSKY_API_KEY")
-
-    config = NetworkConfig(
-        ckb_network=os.getenv("CKB_NETWORK", "testnet"),
-        ckb_rpc_url=os.getenv("CKB_RPC_URL", "https://testnet.ckb.dev/rpc"),
-        ckb_indexer_url=os.getenv("CKB_INDEXER_URL", "https://testnet.ckb.dev/indexer"),
-        receiver_registry_type_hash=os.getenv("RECEIVER_REGISTRY_TYPE_HASH", ""),
-        api_key=fourdsky_api_key,
-        fourdskyendpoint=fourdsky_endpoint,
-        fourdsky_transport=os.getenv("FOURDSKY_TRANSPORT", "auto"),
-        fourdsky_auth_header=os.getenv("FOURDSKY_AUTH_HEADER", "X-API-Key"),
-        fourdsky_auth_scheme=os.getenv("FOURDSKY_AUTH_SCHEME") or None,
-        fourdsky_auth_token=os.getenv("FOURDSKY_AUTH_TOKEN") or None,
-        fourdsky_subscribe_message=os.getenv("FOURDSKY_SUBSCRIBE_MESSAGE") or None,
-        fourdsky_bridge_command=os.getenv("FOURDSKY_BRIDGE_COMMAND") or None,
-        max_receivers=int(os.getenv("MAX_RECEIVERS", "10")),
-        simulate_if_unavailable=_env_bool("SIMULATE_IF_UNAVAILABLE", True),
-    )
-    db_path = os.getenv("DATABASE_PATH", "mlat_data.db")
-    return config, db_path
-
-
-class ProductionMLATSystem:
+class ProductionMLATSystem(BaseMLATRuntime[ReceiverPosition, SignalObservation]):
     """
     Production-ready MLAT system with all features integrated.
     """
     
     def __init__(self, config: NetworkConfig, db_path: str = "mlat_data.db"):
-        self.config = config
-        
-        # Initialize components
-        self.network_client = CKBNeuronNetworkClient(config)
-        self.correlator = SignalCorrelator(
+        super().__init__(
+            config,
             time_window=0.005,  # 5ms
-            min_receivers=4
+            min_receivers=4,
         )
         self.solver = RobustMLATSolver(min_receivers=4)
         self.database = MLATDatabase(db_path)
-        
-        # State tracking
-        self.receiver_positions: Dict[str, ReceiverPosition] = {}
-        self.is_running = False
-        
+
         # Statistics
         self.stats = {
             'start_time': time.time(),
@@ -113,37 +72,49 @@ class ProductionMLATSystem:
         # Connect to database
         self.database.connect()
         logger.info("✅ Database connected")
-        
+
         # Initialize network
-        await self.network_client.initialize()
+        await self.initialize_network()
         logger.info("✅ Network initialized")
-        
-        # Cache receiver positions
-        self._cache_receiver_positions()
         logger.info(f"✅ Cached {len(self.receiver_positions)} receiver positions")
         
         logger.info("=" * 70)
         logger.info("✅ SYSTEM READY")
         logger.info("=" * 70)
     
-    def _cache_receiver_positions(self):
-        """Cache receiver positions for MLAT"""
-        for receiver_id, info in self.network_client.active_receivers.items():
-            self.receiver_positions[receiver_id] = ReceiverPosition(
-                latitude=info.latitude,
-                longitude=info.longitude,
-                altitude=info.altitude,
-                receiver_id=receiver_id
-            )
-            self.database.store_receiver(
-                receiver_id=receiver_id,
-                latitude=info.latitude,
-                longitude=info.longitude,
-                altitude=info.altitude,
-                status=info.status,
-                last_seen=info.last_seen,
-                capabilities=info.capabilities,
-            )
+    def build_receiver_position(self, receiver_id: str, info) -> ReceiverPosition:
+        return ReceiverPosition(
+            latitude=info.latitude,
+            longitude=info.longitude,
+            altitude=info.altitude,
+            receiver_id=receiver_id,
+        )
+
+    def on_receiver_cached(self, receiver_id: str, info):
+        self.database.store_receiver(
+            receiver_id=receiver_id,
+            latitude=info.latitude,
+            longitude=info.longitude,
+            altitude=info.altitude,
+            status=info.status,
+            last_seen=info.last_seen,
+            capabilities=info.capabilities,
+        )
+
+    def on_signal_received(self, signal: RawSignal):
+        self.stats['total_signals'] += 1
+
+    def build_observation(
+        self,
+        signal: RawSignal,
+        receiver_position: ReceiverPosition,
+    ) -> SignalObservation:
+        return SignalObservation(
+            receiver_id=signal.receiver_id,
+            timestamp=signal.timestamp,
+            signal_data=signal.message,
+            receiver_position=receiver_position,
+        )
     
     async def start(self):
         """Start the MLAT system"""
@@ -152,7 +123,7 @@ class ProductionMLATSystem:
         logger.info("📡 Starting data stream processing...")
         
         # Start network data streaming
-        await self.network_client.start_streaming(self._handle_incoming_signal)
+        await self.network_client.start_streaming(self.handle_incoming_signal)
         
         # Start processing loops
         processing_task = asyncio.create_task(self._processing_loop())
@@ -162,26 +133,6 @@ class ProductionMLATSystem:
         
         # Wait for tasks
         await asyncio.gather(processing_task, stats_task)
-    
-    async def _handle_incoming_signal(
-        self,
-        receiver_id: str,
-        timestamp: float,
-        message: str
-    ):
-        """Handle each incoming Mode-S signal"""
-        self.stats['total_signals'] += 1
-        
-        # Create signal object
-        signal = RawSignal(
-            receiver_id=receiver_id,
-            timestamp=timestamp,
-            message=message,
-            signal_strength=0.0
-        )
-        
-        # Add to correlator
-        self.correlator.add_signal(signal)
     
     async def _processing_loop(self):
         """Main processing loop - correlate and solve"""
@@ -205,21 +156,7 @@ class ProductionMLATSystem:
     
     async def _process_signal_group(self, group):
         """Process a correlated signal group"""
-        # Convert to observations
-        observations = []
-        
-        for signal in group.signals:
-            recv_pos = self.receiver_positions.get(signal.receiver_id)
-            if not recv_pos:
-                continue
-            
-            obs = SignalObservation(
-                receiver_id=signal.receiver_id,
-                timestamp=signal.timestamp,
-                signal_data=signal.message,
-                receiver_position=recv_pos
-            )
-            observations.append(obs)
+        observations = self.build_observations_from_group(group)
         
         if len(observations) < 4:
             return
@@ -341,10 +278,10 @@ class ProductionMLATSystem:
 
 async def main():
     """Main entry point"""
-    config, db_path = load_runtime_settings()
+    settings = load_runtime_settings(max_receivers_default=10)
     
     # Create system
-    system = ProductionMLATSystem(config, db_path=db_path)
+    system = ProductionMLATSystem(settings.network_config, db_path=settings.db_path)
     
     # Setup signal handlers for graceful shutdown
     loop = asyncio.get_event_loop()

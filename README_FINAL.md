@@ -69,10 +69,10 @@ curl http://localhost:5000/api/health
 pip install -r requirements.txt
 
 # Start API server
-PYTHONPATH=src python src/api/rest_api.py
+mlat-api
 
 # In another terminal, start processor
-PYTHONPATH=src python src/production_main.py
+mlat-processor
 
 # Open dashboard
 open src/visualization/dashboard.html
@@ -106,7 +106,10 @@ mlat-system/
 │   └── simulation_demo.py       # Full system simulation
 │
 ├── tests/                        # Test suite
-│   └── test_system.py           # Comprehensive tests
+│   ├── test_solver.py           # Solver regression tests
+│   ├── test_correlator.py       # Signal correlation tests
+│   ├── test_database.py         # Database behavior tests
+│   └── test_api.py              # API endpoint tests
 │
 ├── docs/                         # Documentation
 │   ├── GETTING_STARTED.md       # Beginner's guide
@@ -332,7 +335,7 @@ See [DEPLOYMENT_GUIDE.md](docs/DEPLOYMENT_GUIDE.md) for detailed instructions.
 
 ```bash
 # Run tests
-PYTHONPATH=src pytest tests/
+python -m pytest
 
 # Run demos
 PYTHONPATH=src python examples/simple_demo.py

@@ -35,7 +35,7 @@ mlat-demo = "main:main_cli"
 
 [tool.setuptools]
 package-dir = {"" = "src"}
-py-modules = ["main", "production_main"]
+py-modules = ["main", "production_main", "runtime_config", "mlat_runtime"]
 
 [tool.setuptools.packages.find]
 where = ["src"]

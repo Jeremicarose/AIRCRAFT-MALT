@@ -53,7 +53,10 @@ mlat-system/
 │   │   └── ckb_discovery.py      # On-chain receiver discovery
 │   └── main.py                    # Main orchestrator
 ├── tests/
-│   └── test_system.py            # Test suite
+│   ├── test_solver.py            # Solver regression tests
+│   ├── test_correlator.py        # Correlator tests
+│   ├── test_database.py          # Database tests
+│   └── test_api.py               # API tests
 └── docs/
     └── GETTING_STARTED.md        # This file
 ```
@@ -228,7 +231,7 @@ class PositionDatabase:
 ```bash
 # Run the test suite
 cd mlat-system
-PYTHONPATH=src python tests/test_system.py
+python -m pytest
 ```
 
 ### Testing with Simulated Data

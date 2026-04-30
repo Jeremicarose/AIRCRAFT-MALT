@@ -122,8 +122,8 @@ Local run:
 ```bash
 pip install -r requirements.txt
 cp .env.example .env
-PYTHONPATH=src python src/api/rest_api.py
-PYTHONPATH=src python src/production_main.py
+mlat-api
+mlat-processor
 ```
 
 Docker run:

@@ -123,7 +123,10 @@ mlat-system/
 │   └── simulation_demo.py        ⭐ Full system simulation
 │
 ├── tests/                        📂 Test suite
-│   └── test_system.py            ⭐ Comprehensive tests
+│   ├── test_solver.py            ⭐ Solver regression tests
+│   ├── test_correlator.py        ⭐ Correlator tests
+│   ├── test_database.py          ⭐ Database behavior tests
+│   └── test_api.py               ⭐ API endpoint tests
 │
 └── docs/                         📂 Documentation
     ├── GETTING_STARTED.md        ⭐ Beginner's guide

@@ -144,7 +144,7 @@ FOURDSKY_TRANSPORT=auto
 
 ```bash
 # Start the system
-PYTHONPATH=src python src/production_main.py
+mlat-processor
 ```
 
 ## 📝 Receiver Registration

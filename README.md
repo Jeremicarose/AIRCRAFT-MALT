@@ -32,7 +32,7 @@ pip install -r requirements.txt
 
 ```bash
 # Run the test suite
-PYTHONPATH=src python tests/test_system.py
+python -m pytest
 ```
 
 ### Basic Usage
@@ -170,12 +170,13 @@ This project demonstrates:
 
 ```bash
 # Run all tests
-PYTHONPATH=src python tests/test_system.py
+python -m pytest
 
 # Expected output:
-# ✅ MLAT Solver tests
-# ✅ Signal Correlation tests  
-# ✅ Full Pipeline tests
+# ✅ Solver tests
+# ✅ Correlator tests
+# ✅ Database tests
+# ✅ API tests
 ```
 
 ## 📈 Expected Performance

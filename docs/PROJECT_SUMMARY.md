@@ -138,11 +138,10 @@ mlat-system/
 │       • Statistics and monitoring
 │
 ├── tests/
-│   └── test_system.py                  # Comprehensive test suite
-│       • test_mlat_solver()
-│       • test_signal_correlation()
-│       • test_full_pipeline()
-│       • Simulated aircraft signals
+│   ├── test_solver.py                  # Solver regression tests
+│   ├── test_correlator.py              # Correlator tests
+│   ├── test_database.py                # Database tests
+│   └── test_api.py                     # API endpoint tests
 │
 └── docs/
     ├── GETTING_STARTED.md              # This guide
@@ -322,7 +321,7 @@ Example:
 1. **Study the code**:
    - Read `src/mlat/solver.py` - understand TDOA
    - Read `src/correlation/correlator.py` - see signal matching
-   - Run tests: `PYTHONPATH=src python tests/test_system.py`
+   - Run tests: `python -m pytest`
 
 2. **Experiment**:
    - Modify correlation time window
