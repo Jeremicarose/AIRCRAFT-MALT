@@ -426,6 +426,7 @@ def api_documentation():
         },
         "websocket": {
             "url": "/socket.io",
+            ""
             "events": {
                 "connect": "Connect to live updates",
                 "subscribe_aircraft": "Subscribe to aircraft updates",
