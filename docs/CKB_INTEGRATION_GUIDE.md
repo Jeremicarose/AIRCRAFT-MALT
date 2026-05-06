@@ -4,7 +4,7 @@ Complete guide for using Nervos Network (CKB) blockchain with the MLAT system.
 
 ## 🎯 Why CKB for MLAT?
 
-CKB (Common Knowledge Base) is perfect for decentralized peer discovery because:
+CKB (Common Knowledge Base) is used here as a decentralized receiver registry because:
 
 ✅ **Truly Decentralized** - No central authority
 ✅ **Flexible Cell Model** - Store any data structure
@@ -45,13 +45,15 @@ CKB (Common Knowledge Base) is perfect for decentralized peer discovery because:
 ### Data Flow
 
 1. **Receiver Registration**
-   - Receiver creates CKB cell with metadata
-   - Cell contains: location, capabilities, status
-   - Uses type script for identification
+   - Receiver creates or updates a CKB cell with canonical JSON metadata
+   - The type script validates the receiver record schema
+   - The lock script controls ownership/update authority
 
 2. **Peer Discovery**
    - MLAT system queries CKB for receiver cells
+   - Parses canonical JSON receiver records
    - Filters for active, MLAT-capable receivers
+   - If multiple cells exist for one receiver id, keeps the latest valid record
    - Caches receiver information
 
 3. **Data Streaming**
@@ -251,7 +253,7 @@ if __name__ == "__main__":
     args: "0x"
   },
   
-  // Cell data (receiver metadata as JSON)
+  // Cell data (canonical receiver metadata as JSON)
   data: {
     receiver_id: "RECV_NYC_001",
     latitude: 40.7128,
@@ -260,10 +262,19 @@ if __name__ == "__main__":
     status: "online",
     capabilities: ["mode-s", "adsb", "mlat"],
     timestamp: 1704067200,
-    signature: "0x..."  // Signature for verification
+    stream_endpoint: "wss://feed.example/ws",
+    stream_protocol: "websocket-json",
+    stream_format: "json",
+    metadata: {
+      region: "nyc"
+    }
   }
 }
 ```
+
+Ownership is not stored inside the JSON payload. Ownership is controlled by the **lock script**.
+
+Validation logic belongs in the **type script**.
 
 ### Querying Receivers
 
@@ -312,7 +323,7 @@ pub fn main() -> Result<(), Error> {
     // Load receiver data
     let data = load_cell_data(0, Source::GroupInput)?;
     
-    // Parse JSON
+    // Parse canonical receiver JSON
     let receiver: ReceiverData = serde_json::from_slice(&data)?;
     
     // Validate receiver data
@@ -321,12 +332,15 @@ pub fn main() -> Result<(), Error> {
     assert!(receiver.altitude >= 0.0 && receiver.altitude <= 10000.0);
     assert!(!receiver.capabilities.is_empty());
     
-    // Verify signature
-    verify_signature(&receiver)?;
-    
     Ok(())
 }
 ```
+
+In the final CKB design:
+
+- **state** = cell data
+- **logic** = type script validation
+- **ownership** = lock script authorization
 
 ### Building and Deploying
 

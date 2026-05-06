@@ -292,19 +292,19 @@ class SimulationFeedTransport(BaseFeedTransport):
         self.simulated_aircraft = [
             {
                 "icao": "A1B2C3",
-                "lat": 40.55,
-                "lon": -74.25,
-                "alt": 9200.0,
+                "lat": 40.20,
+                "lon": -74.70,
+                "alt": 8500.0,
                 "heading": 55.0,
-                "speed_kmh": 470.0,
+                "speed_kmh": 120.0,
             },
             {
                 "icao": "D4E5F6",
-                "lat": 41.10,
-                "lon": -73.40,
-                "alt": 8400.0,
-                "heading": 225.0,
-                "speed_kmh": 510.0,
+                "lat": 40.95,
+                "lon": -73.10,
+                "alt": 7800.0,
+                "heading": 205.0,
+                "speed_kmh": 120.0,
             },
         ]
 
@@ -352,9 +352,9 @@ class SimulationFeedTransport(BaseFeedTransport):
         aircraft["lat"] += dlat
         aircraft["lon"] += dlon
 
-        if random.random() < 0.1:
+        if random.random() < 0.02:
             aircraft["heading"] = (
-                aircraft["heading"] + random.uniform(-10.0, 10.0)
+                aircraft["heading"] + random.uniform(-3.0, 3.0)
             ) % 360.0
 
     def _calculate_reception_time(
@@ -370,7 +370,7 @@ class SimulationFeedTransport(BaseFeedTransport):
         distance = math.sqrt(
             sum((aircraft_ecef[i] - receiver_ecef[i]) ** 2 for i in range(3))
         )
-        jitter = random.gauss(0.0, 5e-9)
+        jitter = random.gauss(0.0, 1e-9)
         return transmit_time + (distance / speed_of_light) + jitter
 
     @staticmethod

@@ -1,17 +1,14 @@
 """
 CKB Blockchain Integration for MLAT System
 
-Uses Nervos Network (CKB) for decentralized peer discovery instead of Hedera.
-
-Features:
-- Receiver registration on-chain
-- Decentralized peer discovery
-- Trustless receiver verification
-- On-chain data availability
+This module standardizes a canonical JSON receiver-registry schema:
+- state lives in cell data
+- validation logic lives in this client + the on-chain type script
+- ownership is controlled by the cell's lock script
 """
 
 from typing import Any, Dict, List, Optional
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 import json
 import asyncio
 import logging
@@ -36,6 +33,87 @@ class ReceiverInfo:
     stream_protocol: Optional[str] = None
     stream_format: Optional[str] = None
     metadata: Optional[Dict[str, Any]] = None
+
+
+@dataclass
+class ReceiverRegistryRecord:
+    """Canonical JSON schema stored in CKB receiver-registry cell data."""
+
+    receiver_id: str
+    latitude: float
+    longitude: float
+    altitude: float
+    status: str
+    capabilities: List[str]
+    timestamp: float
+    stream_endpoint: Optional[str] = None
+    stream_protocol: Optional[str] = None
+    stream_format: Optional[str] = None
+    metadata: Optional[Dict[str, Any]] = None
+
+    def validate(self) -> None:
+        """Validate schema contents before storing or using the record."""
+        if not self.receiver_id or not isinstance(self.receiver_id, str):
+            raise ValueError("receiver_id must be a non-empty string")
+
+        if not (-90.0 <= float(self.latitude) <= 90.0):
+            raise ValueError("latitude out of bounds")
+        if not (-180.0 <= float(self.longitude) <= 180.0):
+            raise ValueError("longitude out of bounds")
+        if not (-500.0 <= float(self.altitude) <= 20000.0):
+            raise ValueError("altitude out of bounds")
+
+        if self.status not in {"online", "offline", "degraded"}:
+            raise ValueError("status must be online, offline, or degraded")
+
+        if not isinstance(self.capabilities, list) or not self.capabilities:
+            raise ValueError("capabilities must be a non-empty list")
+        if "mode-s" not in self.capabilities:
+            raise ValueError("capabilities must include mode-s")
+
+        if float(self.timestamp) <= 0:
+            raise ValueError("timestamp must be positive")
+
+        if self.stream_protocol is not None and self.stream_protocol not in {
+            "simulation",
+            "websocket-json",
+            "command-jsonl",
+        }:
+            raise ValueError("unsupported stream_protocol")
+
+        if self.stream_format is not None and self.stream_format not in {
+            "json",
+            "jsonl",
+        }:
+            raise ValueError("unsupported stream_format")
+
+        if self.metadata is not None and not isinstance(self.metadata, dict):
+            raise ValueError("metadata must be an object")
+
+    def to_cell_data_hex(self) -> str:
+        """Encode the canonical JSON schema as CKB cell data."""
+        self.validate()
+        payload = json.dumps(asdict(self), separators=(",", ":"), sort_keys=True)
+        return "0x" + payload.encode("utf-8").hex()
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "ReceiverRegistryRecord":
+        """Construct and validate a record from decoded JSON."""
+        record = cls(
+            receiver_id=data["receiver_id"],
+            latitude=float(data["latitude"]),
+            longitude=float(data["longitude"]),
+            altitude=float(data["altitude"]),
+            status=data["status"],
+            capabilities=list(data["capabilities"]),
+            timestamp=float(data["timestamp"]),
+            stream_endpoint=data.get("stream_endpoint"),
+            stream_protocol=data.get("stream_protocol"),
+            stream_format=data.get("stream_format"),
+            metadata=data.get("metadata"),
+        )
+        record.validate()
+        return record
 
 
 @dataclass
@@ -129,7 +207,7 @@ class CKBPeerDiscovery:
 
         logger.info("🔍 Discovering peers from CKB blockchain...")
         
-        receivers = []
+        receivers_by_id: Dict[str, ReceiverInfo] = {}
         
         try:
             # Search for receiver registry cells
@@ -142,16 +220,23 @@ class CKBPeerDiscovery:
                 try:
                     receiver = await self._parse_receiver_cell(cell)
                     if receiver and self._is_receiver_valid(receiver):
-                        receivers.append(receiver)
-                        self.cached_peers[receiver.receiver_id] = receiver
+                        existing = receivers_by_id.get(receiver.receiver_id)
+                        if existing is None or receiver.last_seen >= existing.last_seen:
+                            receivers_by_id[receiver.receiver_id] = receiver
+                            self.cached_peers[receiver.receiver_id] = receiver
                 except Exception as e:
                     logger.warning(f"Failed to parse receiver cell: {e}")
                     continue
             
+            receivers = sorted(
+                receivers_by_id.values(),
+                key=lambda receiver: receiver.receiver_id,
+            )
             logger.info(f"✅ Discovered {len(receivers)} valid receivers")
             
         except Exception as e:
             logger.error(f"Error discovering peers: {e}")
+            receivers = []
         
         return receivers
     
@@ -294,25 +379,25 @@ class CKBPeerDiscovery:
             if output_data == "0x":
                 return None
             
-            # Decode hex data to JSON
+            # Decode hex data to canonical JSON
             data_bytes = bytes.fromhex(output_data[2:])  # Remove 0x prefix
             data_json = json.loads(data_bytes.decode('utf-8'))
-            
-            # Extract receiver info
+            record = ReceiverRegistryRecord.from_dict(data_json)
+
             receiver = ReceiverInfo(
-                receiver_id=data_json['receiver_id'],
-                latitude=data_json['latitude'],
-                longitude=data_json['longitude'],
-                altitude=data_json['altitude'],
-                status=data_json['status'],
-                last_seen=data_json['timestamp'],
-                capabilities=data_json['capabilities'],
+                receiver_id=record.receiver_id,
+                latitude=record.latitude,
+                longitude=record.longitude,
+                altitude=record.altitude,
+                status=record.status,
+                last_seen=record.timestamp,
+                capabilities=record.capabilities,
                 ckb_address=cell['output']['lock']['args'],
                 lock_hash=cell['output']['lock']['hash'],
-                stream_endpoint=data_json.get('stream_endpoint'),
-                stream_protocol=data_json.get('stream_protocol'),
-                stream_format=data_json.get('stream_format'),
-                metadata=data_json.get('metadata'),
+                stream_endpoint=record.stream_endpoint,
+                stream_protocol=record.stream_protocol,
+                stream_format=record.stream_format,
+                metadata=record.metadata,
             )
             
             return receiver
@@ -392,29 +477,20 @@ class CKBPeerDiscovery:
             from ckb import wallet
             import time
             
-            # Prepare receiver data
-            receiver_data = {
-                "receiver_id": receiver_id,
-                "latitude": latitude,
-                "longitude": longitude,
-                "altitude": altitude,
-                "status": "online",
-                "capabilities": capabilities,
-                "timestamp": time.time()
-            }
-
-            if stream_endpoint:
-                receiver_data["stream_endpoint"] = stream_endpoint
-            if stream_protocol:
-                receiver_data["stream_protocol"] = stream_protocol
-            if stream_format:
-                receiver_data["stream_format"] = stream_format
-            if metadata:
-                receiver_data["metadata"] = metadata
-            
-            # Convert to hex
-            data_json = json.dumps(receiver_data)
-            data_hex = "0x" + data_json.encode('utf-8').hex()
+            record = ReceiverRegistryRecord(
+                receiver_id=receiver_id,
+                latitude=latitude,
+                longitude=longitude,
+                altitude=altitude,
+                status="online",
+                capabilities=capabilities,
+                timestamp=time.time(),
+                stream_endpoint=stream_endpoint,
+                stream_protocol=stream_protocol,
+                stream_format=stream_format,
+                metadata=metadata,
+            )
+            data_hex = record.to_cell_data_hex()
             
             # Build transaction
             # (This is simplified - real implementation needs proper cell building)

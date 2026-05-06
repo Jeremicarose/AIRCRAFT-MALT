@@ -19,7 +19,8 @@ except ImportError:
     load_dotenv = None
 
 if load_dotenv is not None:
-    load_dotenv()
+    env_file = os.getenv("MLAT_ENV_FILE", os.path.join(os.getcwd(), ".env"))
+    load_dotenv(dotenv_path=env_file)
 
 from network.ckb_client import NetworkConfig
 from correlation.correlator import RawSignal, CorrelatedSignalGroup
