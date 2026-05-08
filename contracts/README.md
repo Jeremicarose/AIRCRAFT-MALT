@@ -150,6 +150,16 @@ Practical contract expectations:
 4. Reject unsupported `stream_protocol` / `stream_format`
 5. Let the lock script control ownership and updates
 
+This repo now includes a minimal Rust validation skeleton at:
+
+- [contracts/receiver-registry/Cargo.toml](/Users/jeremicarose/Downloads/mlat-system%202/contracts/receiver-registry/Cargo.toml:1)
+- [contracts/receiver-registry/src/lib.rs](/Users/jeremicarose/Downloads/mlat-system%202/contracts/receiver-registry/src/lib.rs:1)
+- [contracts/receiver-registry/src/main.rs](/Users/jeremicarose/Downloads/mlat-system%202/contracts/receiver-registry/src/main.rs:1)
+
+That skeleton validates the same canonical schema used by:
+
+- [src/network/ckb_discovery.py](/Users/jeremicarose/Downloads/mlat-system%202/src/network/ckb_discovery.py:23)
+
 ## Recommendation
 
 Do **not** maintain both:
