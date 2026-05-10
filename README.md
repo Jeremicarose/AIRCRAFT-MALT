@@ -2,9 +2,75 @@
 
 A complete Multilateration (MLAT) system for localizing aircraft using distributed Mode-S data from the Neuron network with CKB-based receiver discovery.
 
+## 🚨 Problem This Solves
+
+Many aircraft-tracking and aviation-data systems rely heavily on:
+
+- aircraft self-reported positions
+- centrally managed receiver directories
+- tightly coupled data pipelines
+
+That creates several operational problems:
+
+1. **Not every useful signal includes a trusted aircraft position**
+   - Mode-S and related traffic can be observed even when a clean position is not directly available
+   - a multilateration layer lets you estimate position from receiver timing instead of waiting for the aircraft to tell you where it is
+
+2. **Receiver infrastructure is often managed informally or centrally**
+   - teams end up with spreadsheets, ad hoc service discovery, or private registries
+   - that makes it harder to scale contributor-operated receiver fleets cleanly
+
+3. **Operators need a bridge between raw receiver feeds and usable positioning infrastructure**
+   - collecting signals is not the same as turning them into usable localization output
+   - you still need correlation, solving, storage, and an API/dashboard layer
+
+This project addresses those gaps by combining:
+
+- receiver discovery via a CKB-backed registry model
+- feed ingestion via live or simulated transports
+- MLAT correlation and solving
+- storage and visualization for downstream consumers
+
 ## 🎯 What This Does
 
 This system **tracks aircraft without relying on GPS broadcasts** by using signal timing from multiple ground receivers. It's like GPS in reverse - instead of satellites telling your phone where you are, ground stations figure out where aircraft are by measuring when their signals arrive.
+
+## 👥 Who This Is For
+
+This project makes the most sense for people who already operate, integrate, or study distributed aviation-data infrastructure, especially:
+
+- **receiver-network operators**
+  - teams managing multiple Mode-S / ADS-B / MLAT-capable receivers
+  - groups that want a more structured discovery and metadata model
+
+- **aviation-data infrastructure builders**
+  - developers who need an API/database/dashboard layer on top of raw receiver traffic
+  - teams prototyping localization pipelines before wiring real provider integrations
+
+- **researchers and protocol experimenters**
+  - people exploring decentralized discovery, multilateration, or collaborative receiver networks
+  - engineers comparing different transport, registry, and solver designs
+
+- **platform teams evaluating CKB-backed registry workflows**
+  - if you want to use CKB as a decentralized registry rather than as a full telemetry database, this repo is a concrete reference implementation
+
+## 🤝 Why Integrate This In Your Stack
+
+If you are the target audience above, this project is useful because it gives you an opinionated separation of concerns:
+
+- **CKB for receiver registry state**
+  - store receiver metadata and ownership externally from the runtime
+
+- **4DSky or adapter transport for live feed ingress**
+  - plug in a websocket or bridge process without rewriting the whole system
+
+- **MLAT runtime for correlation and localization**
+  - turn raw observations into trackable position outputs
+
+- **SQLite + API + dashboard for operations**
+  - inspect the system, validate it, and expose results to downstream consumers
+
+In practical terms, this repo helps a team avoid building each of those layers from scratch while still keeping the design open enough to swap discovery or transport components later.
 
 ## ✨ Key Features
 
@@ -14,6 +80,17 @@ This system **tracks aircraft without relying on GPS broadcasts** by using signa
 - ✅ **Real-time Processing**: Handles live data streams from multiple receivers
 - ✅ **Quality Metrics**: Calculates position uncertainty (GDOP)
 - ⚠️ **Network Ready**: Framework prepared for CKB + 4DSky integration
+
+## 📌 Current Maturity
+
+This repository is best understood as:
+
+- **production-structured**
+- **test-backed**
+- **simulation-capable today**
+- **integration-ready for real CKB + 4DSky inputs**
+
+It is **not** yet fully proven against live deployed registry data and live 4DSky credentials in this repo alone.
 
 ## 🚀 Quick Start
 

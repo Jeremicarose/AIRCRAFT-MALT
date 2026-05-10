@@ -6,6 +6,7 @@ __pycache__/
 htmlcov/
 
 .env
+ckb-cli/
 data/
 logs/
 *.db
@@ -15,3 +16,5 @@ logs/
 build/
 dist/
 *.egg-info/
+target/
+contracts/**/target/

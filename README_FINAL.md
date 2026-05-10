@@ -11,6 +11,51 @@ A **production-ready**, decentralized aircraft tracking system using Multilatera
 
 A complete system that **tracks aircraft without GPS broadcasts** by using signal timing from multiple ground receivers. Built for the Neuron network challenge, this system uses **CKB (Nervos Network) blockchain** for truly decentralized peer discovery.
 
+## 🚨 Why This Exists
+
+This project is designed for a specific infrastructure problem:
+
+- raw receiver networks produce timing data, not immediately usable aircraft positions
+- receiver fleets need a consistent discovery and metadata layer
+- teams integrating receiver infrastructure often need to bridge decentralized registry state, live feed ingestion, localization, storage, and visualization
+
+Instead of treating those as disconnected systems, this repo combines them into one stack:
+
+1. a CKB-backed receiver registry model
+2. a transport layer for simulated or live feed ingress
+3. MLAT correlation and solving
+4. persistence, API, and dashboard output
+
+## 👥 Target Audience
+
+This repository is aimed at:
+
+- aviation-data platform engineers
+- distributed receiver-network operators
+- CKB/Nervos integrators exploring registry-style blockchain use cases
+- researchers or teams prototyping decentralized MLAT infrastructure
+
+It is especially useful when your team already has or expects:
+
+- multiple receivers
+- externally managed feed sources
+- a need for service discovery and metadata ownership
+- downstream systems that want normalized aircraft-position APIs
+
+## 🤝 Why This Makes Sense To Integrate
+
+For that audience, the value is not just “another MLAT solver.”
+
+The useful part is the infrastructure composition:
+
+- **receiver registry state lives outside the app runtime**
+- **ownership is separated from validation in the CKB model**
+- **transport adapters can be swapped independently of the solver**
+- **API and dashboard layers are already present**
+- **simulation mode lets you validate architecture before external integrations are ready**
+
+That makes it a practical starting point for teams that want to integrate MLAT capability into an existing receiver or aviation-data stack without inventing every layer themselves.
+
 ## ✨ Key Features
 
 ### Core Capabilities
@@ -38,6 +83,17 @@ A complete system that **tracks aircraft without GPS broadcasts** by using signa
 - **Latency**: <100ms from signal to position
 - **Scalability**: Horizontal scaling with load balancing
 - **Reliability**: Graceful degradation, auto-recovery
+
+## 📌 Current Maturity
+
+The project is currently strongest as:
+
+- a **well-structured MLAT platform scaffold**
+- a **working local simulation deployment**
+- a **CKB registry integration model**
+- a **test-backed API/database/runtime stack**
+
+It should not be read as “fully validated against live CKB registry data and live 4DSky provider credentials out of the box.”
 
 ## 🚀 Quick Start
 

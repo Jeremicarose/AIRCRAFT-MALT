@@ -4,12 +4,18 @@ from pathlib import Path
 def test_contract_skeleton_exists():
     root = Path("contracts/receiver-registry")
     assert (root / "Cargo.toml").exists()
-    assert (root / "src" / "lib.rs").exists()
+    assert (root / ".cargo" / "config.toml").exists()
+    assert (root / "rust-toolchain.toml").exists()
+    assert (root / "Makefile").exists()
+    assert (root / "README.md").exists()
+    assert (root / "src" / "error.rs").exists()
+    assert (root / "src" / "record.rs").exists()
+    assert (root / "src" / "entry.rs").exists()
     assert (root / "src" / "main.rs").exists()
 
 
 def test_contract_mentions_canonical_schema_fields():
-    lib_rs = Path("contracts/receiver-registry/src/lib.rs").read_text()
+    record_rs = Path("contracts/receiver-registry/src/record.rs").read_text()
     for field in [
         "receiver_id",
         "latitude",
@@ -22,4 +28,4 @@ def test_contract_mentions_canonical_schema_fields():
         "stream_protocol",
         "stream_format",
     ]:
-        assert field in lib_rs
+        assert field in record_rs

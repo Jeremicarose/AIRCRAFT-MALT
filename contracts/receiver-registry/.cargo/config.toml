@@ -2,3 +2,7 @@
 rustflags = [
   "-C", "link-arg=-s",
 ]
+
+[env]
+CC_riscv64imac_unknown_none_elf = "riscv64-elf-gcc"
+AR_riscv64imac_unknown_none_elf = "riscv64-elf-ar"
