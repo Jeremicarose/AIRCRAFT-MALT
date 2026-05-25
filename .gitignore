@@ -8,6 +8,7 @@ htmlcov/
 .env
 ckb-cli/
 data/
+deploy/
 logs/
 *.db
 *.db-shm

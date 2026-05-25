@@ -122,6 +122,19 @@ capsule deploy --address <your-address>
 # e.g., 0x1234567890abcdef...
 ```
 
+If you are using this repo’s local contract project, you can generate a compatible `ckb-cli` deployment config with:
+
+```bash
+python3 scripts/generate_receiver_registry_deploy_config.py \
+  --lock-arg 0xYOUR_LOCK_ARG
+```
+
+That will create:
+
+```bash
+deploy/receiver-registry.toml
+```
+
 ### 5. Configure MLAT System
 
 Edit `.env`:
@@ -140,6 +153,14 @@ CKB_PRIVATE_KEY=0x...
 FOURDSKYAPIKEY=your_api_key
 FOURDSKYENDPOINT=wss://your-feed-endpoint
 FOURDSKY_TRANSPORT=auto
+```
+
+After deployment, you can write the real type hash into `.env` with:
+
+```bash
+python3 scripts/update_env_type_hash.py \
+  --type-hash 0x1234567890abcdef... \
+  --disable-simulation
 ```
 
 ### 6. Run MLAT System with CKB
@@ -180,6 +201,54 @@ await discovery.register_receiver(
     stream_format="json"
 )
 ```
+
+This repo now also includes a helper to generate the canonical receiver record and the exact cell-data payload:
+
+```bash
+python3 scripts/generate_receiver_registry_record.py \
+  --receiver-id RECV_NYC_001 \
+  --latitude 40.7128 \
+  --longitude -74.0060 \
+  --altitude 10 \
+  --capability mode-s \
+  --capability adsb \
+  --capability mlat \
+  --stream-protocol websocket-json \
+  --stream-format json
+```
+
+That writes:
+
+```bash
+deploy/receiver-registry-record.json
+deploy/receiver-registry-record.hex
+```
+
+You can also print the manual registration checklist with:
+
+```bash
+python3 scripts/print_receiver_registration_instructions.py
+```
+
+To generate a typed receiver-cell transaction template for manual completion/signing:
+
+```bash
+python3 scripts/generate_receiver_registration_tx_template.py \
+  --lock-arg 0xYOUR_LOCK_ARG \
+  --type-hash 0xYOUR_DEPLOYED_TYPE_HASH
+```
+
+That writes:
+
+```bash
+deploy/receiver-registration-tx-template.json
+```
+
+This is a transaction template, not a fully funded/signed transaction. It gives you the exact output cell shape needed for the receiver-registry cell:
+
+- owner lock script
+- receiver-registry type script
+- canonical JSON payload in `outputs_data`
 
 ### Automated Registration Script
 
