@@ -98,6 +98,10 @@ api_bp = Blueprint("api", __name__)
 
 def load_app_config() -> Dict[str, object]:
     """Load API configuration from environment."""
+    simulation_mode = os.getenv("FOURDSKY_TRANSPORT", "auto") == "simulation" or _env_bool(
+        "SIMULATE_IF_UNAVAILABLE",
+        True,
+    )
     return {
         "DATABASE_PATH": os.getenv("DATABASE_PATH", "mlat_data.db"),
         "CORS_ALLOWED_ORIGINS": _split_csv("CORS_ALLOWED_ORIGINS", DEFAULT_ALLOWED_ORIGINS),
@@ -108,6 +112,7 @@ def load_app_config() -> Dict[str, object]:
         "API_HOST": os.getenv("API_HOST", "0.0.0.0"),
         "API_PORT": int(os.getenv("API_PORT", "5000")),
         "API_DEBUG": _env_bool("API_DEBUG", False),
+        "SIMULATION_MODE": simulation_mode,
     }
 
 
@@ -242,6 +247,18 @@ def health_check():
         "timestamp": datetime.now().isoformat(),
         "service": "MLAT API",
     })
+
+
+@api_bp.route("/api/system/mode", methods=["GET"])
+def get_system_mode():
+    """Expose whether the current stack is running in simulation mode."""
+    return jsonify(
+        {
+            "mode": "simulation" if current_app.config["SIMULATION_MODE"] else "live",
+            "simulation_mode": bool(current_app.config["SIMULATION_MODE"]),
+            "receiver_registry_type_hash": os.getenv("RECEIVER_REGISTRY_TYPE_HASH", ""),
+        }
+    )
 
 
 @api_bp.route("/api/aircraft", methods=["GET"])

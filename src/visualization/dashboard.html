@@ -41,6 +41,35 @@
             color: #00d9ff;
         }
 
+        .header-copy {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .mode-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 10px;
+            border-radius: 999px;
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+        }
+
+        .mode-simulation {
+            background: rgba(255, 183, 76, 0.14);
+            color: #ffcf7d;
+        }
+
+        .mode-live {
+            background: rgba(0, 255, 136, 0.12);
+            color: #7dffc3;
+        }
+
         .status {
             display: flex;
             gap: 20px;
@@ -247,12 +276,22 @@
             margin-top: 6px;
             line-height: 1.4;
         }
+
+        .control-note {
+            margin-top: 8px;
+            font-size: 11px;
+            color: #7d93a4;
+            line-height: 1.4;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h1>✈️ MLAT Aircraft Tracker</h1>
+            <div class="header-copy">
+                <h1>✈️ MLAT Aircraft Tracker</h1>
+                <span id="mode-pill" class="mode-pill mode-simulation">Loading mode</span>
+            </div>
             <div class="status">
                 <div class="status-item">
                     <span class="status-label">Aircraft Tracked</span>
@@ -288,6 +327,9 @@
                 <button class="btn btn-stop" onclick="disconnectLive()">⏹ Disconnect</button>
                 <button class="btn" onclick="refreshSnapshot()">↻ Refresh</button>
                 <div class="control-status" id="connection-status">Disconnected</div>
+                <div class="control-note" id="mode-description">
+                    This dashboard can run against a hosted simulation demo or a live CKB + receiver-feed stack.
+                </div>
             </div>
 
             <div class="receiver-markers">
@@ -352,6 +394,23 @@
 
         function setStatus(message) {
             document.getElementById('connection-status').textContent = message;
+        }
+
+        function updateModeBanner(modeData) {
+            const pill = document.getElementById('mode-pill');
+            const description = document.getElementById('mode-description');
+            if (!modeData) {
+                pill.textContent = 'Unknown mode';
+                pill.className = 'mode-pill mode-simulation';
+                return;
+            }
+
+            const isSimulation = Boolean(modeData.simulation_mode);
+            pill.textContent = isSimulation ? 'Simulation Mode' : 'Live Mode';
+            pill.className = `mode-pill ${isSimulation ? 'mode-simulation' : 'mode-live'}`;
+            description.textContent = isSimulation
+                ? 'This demo is using simulated receiver discovery and aircraft movement to show the platform behavior.'
+                : 'This deployment is connected to live registry/feed infrastructure.';
         }
 
         async function fetchJson(path) {
@@ -588,13 +647,24 @@
             }
         }
 
+        async function loadSystemMode() {
+            try {
+                const data = await fetchJson('/api/system/mode');
+                updateModeBanner(data);
+            } catch (error) {
+                console.error('Failed to load system mode', error);
+                updateModeBanner(null);
+            }
+        }
+
         async function refreshSnapshot() {
             setStatus('Refreshing snapshot...');
             try {
                 await Promise.all([
                     loadReceivers(),
                     loadPositions(),
-                    loadStatistics()
+                    loadStatistics(),
+                    loadSystemMode()
                 ]);
                 setStatus(`Snapshot refreshed from ${getApiBase()}`);
             } catch (error) {

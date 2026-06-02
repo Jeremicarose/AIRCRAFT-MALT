@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MLAT Demo</title>
+    <style>
+        :root {
+            --bg: #09111c;
+            --panel: #122033;
+            --panel-alt: #172a42;
+            --text: #eef5ff;
+            --muted: #8fa8bd;
+            --accent: #4fd8ff;
+            --accent-2: #ffcb6b;
+            --border: rgba(255, 255, 255, 0.12);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+            background:
+                radial-gradient(circle at top left, rgba(79, 216, 255, 0.12), transparent 34%),
+                linear-gradient(160deg, var(--bg), #060b12 70%);
+            color: var(--text);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 32px;
+        }
+
+        .shell {
+            width: min(1080px, 100%);
+            display: grid;
+            grid-template-columns: 1.3fr 1fr;
+            gap: 24px;
+        }
+
+        .card {
+            background: rgba(18, 32, 51, 0.92);
+            border: 1px solid var(--border);
+            border-radius: 24px;
+            padding: 28px;
+            box-shadow: 0 18px 60px rgba(0, 0, 0, 0.28);
+            backdrop-filter: blur(8px);
+        }
+
+        .eyebrow {
+            font-size: 12px;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            color: var(--accent-2);
+            margin-bottom: 16px;
+            font-weight: 700;
+        }
+
+        h1 {
+            font-size: clamp(2rem, 4vw, 3.4rem);
+            line-height: 1.05;
+            margin-bottom: 18px;
+        }
+
+        p {
+            color: var(--muted);
+            line-height: 1.6;
+            margin-bottom: 18px;
+        }
+
+        .actions {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-top: 22px;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            text-decoration: none;
+            padding: 12px 18px;
+            border-radius: 12px;
+            font-weight: 700;
+            border: 1px solid var(--border);
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            color: #08111b;
+            border-color: transparent;
+        }
+
+        .btn-secondary {
+            background: transparent;
+            color: var(--text);
+        }
+
+        .list {
+            display: grid;
+            gap: 14px;
+            margin-top: 18px;
+        }
+
+        .list-item {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 14px;
+        }
+
+        .list-item strong {
+            display: block;
+            margin-bottom: 6px;
+            color: var(--text);
+        }
+
+        .api-box {
+            background: #0a1522;
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 18px;
+            margin-top: 20px;
+        }
+
+        code {
+            color: var(--accent);
+            word-break: break-word;
+        }
+
+        @media (max-width: 860px) {
+            .shell {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="shell">
+        <section class="card">
+            <div class="eyebrow">Hosted Demo</div>
+            <h1>Distributed MLAT control plane, visualized.</h1>
+            <p>
+                This demo shows how a distributed receiver network can flow through receiver discovery,
+                signal ingestion, multilateration runtime, storage, and API/dashboard output.
+            </p>
+            <p>
+                In the current hosted demo mode, aircraft motion and receiver discovery can run in simulation so viewers
+                can understand the system shape without waiting on live external integrations.
+            </p>
+            <div class="actions">
+                <a class="btn btn-primary" href="/dashboard.html">Open Dashboard</a>
+                <a class="btn btn-secondary" href="/api">View API Docs</a>
+            </div>
+            <div class="api-box">
+                <strong>Useful endpoints</strong>
+                <p><code>/api/health</code></p>
+                <p><code>/api/receivers</code></p>
+                <p><code>/api/positions/recent?seconds=600&amp;limit=20</code></p>
+                <p><code>/api/system/mode</code></p>
+            </div>
+        </section>
+
+        <section class="card">
+            <div class="eyebrow">What You’re Looking At</div>
+            <div class="list">
+                <div class="list-item">
+                    <strong>Receiver Registry</strong>
+                    <span>Receiver identity and metadata are modeled as CKB-backed registry state.</span>
+                </div>
+                <div class="list-item">
+                    <strong>Feed Transport</strong>
+                    <span>The runtime supports simulation, websocket JSON, and command-bridge transport modes.</span>
+                </div>
+                <div class="list-item">
+                    <strong>MLAT Runtime</strong>
+                    <span>Correlation, position generation, storage, API, and dashboard all run as one integrated stack.</span>
+                </div>
+                <div class="list-item">
+                    <strong>Current Demo Mode</strong>
+                    <span>Use the dashboard banner to see whether this environment is running in simulation or live mode.</span>
+                </div>
+            </div>
+        </section>
+    </div>
+</body>
+</html>
