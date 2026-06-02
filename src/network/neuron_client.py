@@ -4,12 +4,12 @@ from __future__ import annotations
 
 import warnings
 
-from network.ckb_client import CKBNeuronNetworkClient, NetworkConfig
+from network.ckb_client import CKBReceiverNetworkClient, NetworkConfig
 from network.ckb_discovery import ReceiverInfo
 
 
-class NeuronNetworkClient(CKBNeuronNetworkClient):
-    """Backward-compatible alias to the CKB-based network client."""
+class NeuronNetworkClient(CKBReceiverNetworkClient):
+    """Backward-compatible alias to the CKB-based receiver-network client."""
 
     def __init__(self, config: NetworkConfig):
         warnings.warn(

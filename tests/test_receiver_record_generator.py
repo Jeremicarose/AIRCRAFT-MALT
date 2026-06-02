@@ -41,4 +41,5 @@ def test_generate_receiver_registry_record(tmp_path):
 
     assert record["receiver_id"] == "RECV_NYC_001"
     assert "mode-s" in record["capabilities"]
+    assert "metadata" not in record
     assert payload_hex.startswith("0x")

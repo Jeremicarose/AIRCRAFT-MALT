@@ -56,7 +56,7 @@ You now have a **complete MLAT aircraft localization system** with all major com
 
 ```
 ┌────────────────────────────────────────────────────────────┐
-│                    NEURON NETWORK                           │
+│               DISTRIBUTED RECEIVER NETWORK                  │
 │                                                             │
 │  ┌──────┐  ┌──────┐  ┌──────┐  ┌──────┐  ┌──────┐        │
 │  │Recv 1│  │Recv 2│  │Recv 3│  │Recv 4│  │Recv 5│        │
@@ -166,7 +166,7 @@ mlat-system/
 **`src/network/ckb_client.py`** - Network Client
 - `CKBPeerDiscovery` - CKB peer discovery and registry lookup
 - Simulated 4DSky stream for local development
-- `CKBNeuronNetworkClient` - High-level orchestration
+- `CKBReceiverNetworkClient` - High-level orchestration
 - **Currently uses stubs** - ready for real SDK integration
 
 ### Orchestration Files
@@ -364,6 +364,6 @@ The system includes:
 
 ---
 
-*Built for the Neuron Network MLAT Challenge*
+*Built as a decentralized MLAT infrastructure prototype*
 *Ready for CKB + 4DSky Integration*
 *Education-First Design*

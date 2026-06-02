@@ -29,6 +29,25 @@ def test_receiver_registry_record_roundtrip_and_validation():
     assert restored.metadata == {"region": "nyc"}
 
 
+def test_receiver_registry_record_omits_optional_null_fields_from_payload():
+    record = ReceiverRegistryRecord(
+        receiver_id="RECV_NYC_001",
+        latitude=40.7128,
+        longitude=-74.0060,
+        altitude=10.0,
+        status="online",
+        capabilities=["mode-s", "mlat"],
+        timestamp=1_700_000_000.0,
+        stream_protocol="websocket-json",
+        stream_format="json",
+    )
+
+    payload = record.to_payload_dict()
+
+    assert "metadata" not in payload
+    assert "stream_endpoint" not in payload
+
+
 def test_receiver_registry_record_rejects_missing_mode_s():
     record = ReceiverRegistryRecord(
         receiver_id="RECV_BAD_001",

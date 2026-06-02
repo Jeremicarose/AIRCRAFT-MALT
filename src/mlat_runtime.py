@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Dict, Generic, Optional, TypeVar
 
 from correlation.correlator import RawSignal, SignalCorrelator
-from network.ckb_client import CKBNeuronNetworkClient, NetworkConfig
+from network.ckb_client import CKBReceiverNetworkClient, NetworkConfig
 from network.ckb_discovery import ReceiverInfo
 
 
@@ -24,7 +24,7 @@ class BaseMLATRuntime(Generic[ReceiverPositionT, ObservationT]):
         min_receivers: int,
     ):
         self.config = config
-        self.network_client = CKBNeuronNetworkClient(config)
+        self.network_client = CKBReceiverNetworkClient(config)
         self.correlator = SignalCorrelator(
             time_window=time_window,
             min_receivers=min_receivers,

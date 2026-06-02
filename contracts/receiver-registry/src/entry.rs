@@ -9,7 +9,7 @@ use crate::record::ReceiverRegistryRecord;
 
 
 pub fn main() -> Result<(), Error> {
-    let data = load_cell_data(0, Source::GroupInput).map_err(|_| Error::Encoding)?;
+    let data = load_cell_data(0, Source::GroupOutput).map_err(|_| Error::Encoding)?;
     let (record, _consumed) =
         from_slice::<ReceiverRegistryRecord>(&data).map_err(|_| Error::Encoding)?;
     record.validate()

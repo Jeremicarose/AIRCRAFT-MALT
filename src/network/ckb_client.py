@@ -46,7 +46,7 @@ class NetworkConfig:
     simulate_if_unavailable: bool = True
 
 
-class CKBNeuronNetworkClient:
+class CKBReceiverNetworkClient:
     """
     Network client using CKB blockchain for peer discovery.
 
@@ -74,7 +74,7 @@ class CKBNeuronNetworkClient:
     async def initialize(self):
         """Initialize the network client"""
         logger.info("=" * 70)
-        logger.info("🚀 CKB NEURON NETWORK CLIENT INITIALIZING")
+        logger.info("🚀 CKB RECEIVER NETWORK CLIENT INITIALIZING")
         logger.info("=" * 70)
 
         await self.peer_discovery.initialize()
@@ -219,7 +219,7 @@ async def main():
         max_receivers=5,
     )
 
-    client = CKBNeuronNetworkClient(config)
+    client = CKBReceiverNetworkClient(config)
 
     try:
         await client.initialize()

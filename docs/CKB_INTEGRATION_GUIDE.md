@@ -250,6 +250,25 @@ This is a transaction template, not a fully funded/signed transaction. It gives 
 - receiver-registry type script
 - canonical JSON payload in `outputs_data`
 
+To print the exact `ckb-cli tx` command sequence for a funded deployer address:
+
+```bash
+python3 scripts/print_receiver_registration_commands.py \
+  --address ckt1YOUR_DEPLOYER_ADDRESS
+```
+
+This helper:
+
+1. fetches live cells
+2. selects a funding cell
+3. prints the exact `ckb-cli tx` commands to:
+   - initialize the tx
+   - add the input
+   - add the output
+   - inspect the tx
+   - sign it
+   - send it
+
 ### Automated Registration Script
 
 ```python

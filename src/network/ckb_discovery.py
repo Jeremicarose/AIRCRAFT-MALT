@@ -51,6 +51,27 @@ class ReceiverRegistryRecord:
     stream_format: Optional[str] = None
     metadata: Optional[Dict[str, Any]] = None
 
+    def to_payload_dict(self) -> Dict[str, Any]:
+        """Serialize the canonical schema, omitting optional null fields."""
+        payload: Dict[str, Any] = {
+            "receiver_id": self.receiver_id,
+            "latitude": self.latitude,
+            "longitude": self.longitude,
+            "altitude": self.altitude,
+            "status": self.status,
+            "capabilities": self.capabilities,
+            "timestamp": self.timestamp,
+        }
+        if self.stream_endpoint is not None:
+            payload["stream_endpoint"] = self.stream_endpoint
+        if self.stream_protocol is not None:
+            payload["stream_protocol"] = self.stream_protocol
+        if self.stream_format is not None:
+            payload["stream_format"] = self.stream_format
+        if self.metadata is not None:
+            payload["metadata"] = self.metadata
+        return payload
+
     def validate(self) -> None:
         """Validate schema contents before storing or using the record."""
         if not self.receiver_id or not isinstance(self.receiver_id, str):
@@ -93,7 +114,7 @@ class ReceiverRegistryRecord:
     def to_cell_data_hex(self) -> str:
         """Encode the canonical JSON schema as CKB cell data."""
         self.validate()
-        payload = json.dumps(asdict(self), separators=(",", ":"), sort_keys=True)
+        payload = json.dumps(self.to_payload_dict(), separators=(",", ":"), sort_keys=True)
         return "0x" + payload.encode("utf-8").hex()
 
     @classmethod

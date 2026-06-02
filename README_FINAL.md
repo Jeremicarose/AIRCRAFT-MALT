@@ -1,6 +1,6 @@
 # MLAT Aircraft Localization System - Complete Production System ✈️
 
-A **production-ready**, decentralized aircraft tracking system using Multilateration (MLAT) on the Neuron network with **CKB blockchain** for peer discovery.
+A **production-ready**, decentralized aircraft tracking system using Multilateration (MLAT) with **CKB blockchain** for receiver discovery on Nervos Network.
 
 [![Status](https://img.shields.io/badge/status-production--ready-green)]()
 [![Python](https://img.shields.io/badge/python-3.11+-blue)]()
@@ -9,7 +9,7 @@ A **production-ready**, decentralized aircraft tracking system using Multilatera
 
 ## 🎯 What This Is
 
-A complete system that **tracks aircraft without GPS broadcasts** by using signal timing from multiple ground receivers. Built for the Neuron network challenge, this system uses **CKB (Nervos Network) blockchain** for truly decentralized peer discovery.
+A complete system that **tracks aircraft without GPS broadcasts** by using signal timing from multiple ground receivers. This system uses **CKB (Nervos Network) blockchain** for decentralized peer discovery.
 
 ## 🚨 Why This Exists
 
@@ -239,7 +239,7 @@ mlat-system/
 - Quality validation
 
 ### 3. Network Client (`src/network/ckb_client.py`)
-**What it does**: Connects to Neuron network via CKB/4DSky
+**What it does**: Connects to a distributed receiver network via CKB/4DSky
 
 **Status**: Framework complete, ready for SDK integration
 
@@ -485,10 +485,10 @@ docker-compose restart mlat-api
 
 ## 🙏 Acknowledgments
 
-Built for the Neuron Network MLAT Challenge
+Built as a decentralized MLAT infrastructure prototype
 
 Uses:
-- Neuron distributed receiver network
+- Distributed receiver networks
 - CKB for decentralized peer discovery
 - 4DSky for Mode-S data streaming
 - Community-powered infrastructure

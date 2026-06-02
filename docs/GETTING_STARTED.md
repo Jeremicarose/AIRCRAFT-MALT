@@ -116,7 +116,7 @@ for group in groups:
 
 ### 3. Network Client (`src/network/ckb_client.py`)
 
-**What it does**: Connects to the Neuron network to receive Mode-S data
+**What it does**: Connects to a distributed receiver network to receive Mode-S data
 
 **Key features**:
 - CKB-based peer discovery

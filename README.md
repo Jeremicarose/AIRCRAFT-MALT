@@ -1,6 +1,6 @@
 # Aircraft MLAT Localization System 🛩️
 
-A complete Multilateration (MLAT) system for localizing aircraft using distributed Mode-S data from the Neuron network with CKB-based receiver discovery.
+A complete Multilateration (MLAT) system for localizing aircraft using distributed Mode-S data with CKB-based receiver discovery on Nervos Network.
 
 ## 🚨 Problem This Solves
 
@@ -76,7 +76,7 @@ In practical terms, this repo helps a team avoid building each of those layers f
 
 - ✅ **MLAT Algorithm**: Time Difference of Arrival (TDOA) positioning
 - ✅ **Signal Correlation**: Automatically matches signals from the same aircraft
-- ✅ **Distributed Network**: Designed for decentralized Neuron network integration
+- ✅ **Distributed Network**: Designed for decentralized receiver-network integration
 - ✅ **Real-time Processing**: Handles live data streams from multiple receivers
 - ✅ **Quality Metrics**: Calculates position uncertainty (GDOP)
 - ⚠️ **Network Ready**: Framework prepared for CKB + 4DSky integration
@@ -279,8 +279,8 @@ This is a challenge project demonstrating MLAT concepts. To extend:
 
 ## 🙏 Acknowledgments
 
-Built for the Neuron Network MLAT challenge. Demonstrates decentralized aircraft tracking using:
-- Neuron distributed receiver network
+Built as a decentralized aircraft-tracking infrastructure prototype using:
+- distributed receiver networks
 - CKB for peer discovery
 - 4DSky for data streaming
 - MLAT for position calculation

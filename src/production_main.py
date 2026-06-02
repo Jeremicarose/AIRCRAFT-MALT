@@ -28,7 +28,7 @@ if load_dotenv is not None:
     env_file = os.getenv("MLAT_ENV_FILE", os.path.join(os.getcwd(), ".env"))
     load_dotenv(dotenv_path=env_file)
 
-from network.ckb_client import CKBNeuronNetworkClient, NetworkConfig
+from network.ckb_client import CKBReceiverNetworkClient, NetworkConfig
 from correlation.correlator import RawSignal
 from mlat.robust_solver import RobustMLATSolver, ReceiverPosition, SignalObservation
 from database.mlat_db import MLATDatabase

@@ -60,7 +60,7 @@ def main() -> None:
     json_path.parent.mkdir(parents=True, exist_ok=True)
     hex_path.parent.mkdir(parents=True, exist_ok=True)
 
-    payload = json.dumps(record.__dict__, indent=2, sort_keys=True)
+    payload = json.dumps(record.to_payload_dict(), indent=2, sort_keys=True)
     json_path.write_text(payload + "\n")
     hex_path.write_text(record.to_cell_data_hex() + "\n")
 

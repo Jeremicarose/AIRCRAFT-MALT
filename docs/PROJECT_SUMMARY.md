@@ -2,7 +2,7 @@
 
 ## 🎯 What We Built
 
-A complete **Multilateration (MLAT) system** for localizing aircraft using distributed Mode-S data from the Neuron network. This system demonstrates how to track aircraft **without relying on their broadcast GPS positions**, using only signal timing from multiple receivers.
+A complete **Multilateration (MLAT) system** for localizing aircraft using distributed Mode-S data from a receiver network. This system demonstrates how to track aircraft **without relying on their broadcast GPS positions**, using only signal timing from multiple receivers.
 
 ## 📋 Challenge Requirements - ✅ Addressed
 
@@ -12,7 +12,7 @@ A complete **Multilateration (MLAT) system** for localizing aircraft using distr
 - **Handles**: 3D position solving (latitude, longitude, altitude)
 - **Quality**: Includes uncertainty estimation (GDOP)
 
-### ✅ Neuron Network Integration (Framework Ready)
+### ✅ Receiver Network Integration (Framework Ready)
 - **Peer Discovery**: CKB-based discovery interface created
 - **Data Streaming**: 4DSky SDK integration framework
 - **Network Client**: Complete abstraction layer for easy SDK swap-in
@@ -31,7 +31,7 @@ A complete **Multilateration (MLAT) system** for localizing aircraft using distr
 
 ```
 ┌────────────────────────────────────────────────────────────────┐
-│                      Neuron Network                             │
+│                 Distributed Receiver Network                    │
 │  ┌──────────┐   ┌──────────┐   ┌──────────┐   ┌──────────┐   │
 │  │Receiver 1│   │Receiver 2│   │Receiver 3│   │Receiver 4│   │
 │  │ (NYC)    │   │ (Boston) │   │ (Philly) │   │ (DC)     │   │
@@ -127,7 +127,7 @@ mlat-system/
 │   │   │   • CKBPeerDiscovery
 │   │   └── ckb_client.py              # ⭐ Network integration
 │   │       • NetworkConfig class
-│   │       • CKBNeuronNetworkClient
+│   │       • CKBReceiverNetworkClient
 │   │       • Simulated 4DSky feed
 │   │
 │   └── main.py                         # ⭐ System orchestrator (300+ lines)
