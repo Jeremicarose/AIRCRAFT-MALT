@@ -6,10 +6,11 @@ This module uses an app-factory pattern and request-scoped database access.
 
 from __future__ import annotations
 
-from flask import Blueprint, Flask, current_app, g, jsonify, request
+from flask import Blueprint, Flask, current_app, g, jsonify, request, send_from_directory
 import json
 import logging
 import os
+from pathlib import Path
 import threading
 import time
 from datetime import datetime
@@ -102,6 +103,13 @@ def load_app_config() -> Dict[str, object]:
         "SIMULATE_IF_UNAVAILABLE",
         True,
     )
+    cwd_visualization_dir = Path(os.getcwd()) / "src" / "visualization"
+    package_visualization_dir = Path(__file__).resolve().parents[1] / "visualization"
+    visualization_dir = (
+        cwd_visualization_dir
+        if cwd_visualization_dir.exists()
+        else package_visualization_dir
+    )
     return {
         "DATABASE_PATH": os.getenv("DATABASE_PATH", "mlat_data.db"),
         "CORS_ALLOWED_ORIGINS": _split_csv("CORS_ALLOWED_ORIGINS", DEFAULT_ALLOWED_ORIGINS),
@@ -113,6 +121,7 @@ def load_app_config() -> Dict[str, object]:
         "API_PORT": int(os.getenv("API_PORT", "5000")),
         "API_DEBUG": _env_bool("API_DEBUG", False),
         "SIMULATION_MODE": simulation_mode,
+        "VISUALIZATION_DIR": str(visualization_dir),
     }
 
 
@@ -249,6 +258,27 @@ def health_check():
     })
 
 
+@api_bp.route("/", methods=["GET"])
+def landing_page():
+    visualization_dir = current_app.config["VISUALIZATION_DIR"]
+    return send_from_directory(visualization_dir, "index.html")
+
+
+@api_bp.route("/dashboard.html", methods=["GET"])
+def dashboard_page():
+    visualization_dir = current_app.config["VISUALIZATION_DIR"]
+    return send_from_directory(visualization_dir, "dashboard.html")
+
+
+@api_bp.route("/<path:asset_path>", methods=["GET"])
+def visualization_assets(asset_path: str):
+    visualization_dir = current_app.config["VISUALIZATION_DIR"]
+    asset = Path(asset_path)
+    if asset.name in {"index.html", "dashboard.html"}:
+        return send_from_directory(visualization_dir, asset.name)
+    return send_from_directory(visualization_dir, asset_path)
+
+
 @api_bp.route("/api/system/mode", methods=["GET"])
 def get_system_mode():
     """Expose whether the current stack is running in simulation mode."""
@@ -257,6 +287,7 @@ def get_system_mode():
             "mode": "simulation" if current_app.config["SIMULATION_MODE"] else "live",
             "simulation_mode": bool(current_app.config["SIMULATION_MODE"]),
             "receiver_registry_type_hash": os.getenv("RECEIVER_REGISTRY_TYPE_HASH", ""),
+            "websocket_available": SocketIO is not None,
         }
     )
 

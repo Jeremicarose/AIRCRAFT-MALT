@@ -3,17 +3,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MLAT Demo</title>
+    <title>MLAT Airspace Console</title>
     <style>
         :root {
-            --bg: #09111c;
-            --panel: #122033;
-            --panel-alt: #172a42;
+            --bg: #071019;
+            --panel: rgba(12, 23, 37, 0.86);
+            --panel-alt: rgba(16, 29, 46, 0.82);
             --text: #eef5ff;
-            --muted: #8fa8bd;
+            --muted: #92a9bb;
             --accent: #4fd8ff;
             --accent-2: #ffcb6b;
-            --border: rgba(255, 255, 255, 0.12);
+            --border: rgba(255, 255, 255, 0.1);
+            --border-strong: rgba(79, 216, 255, 0.22);
+            --success: #6cf7a7;
+            --danger: #ff6b76;
         }
 
         * {
@@ -23,10 +26,11 @@
         }
 
         body {
-            font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+            font-family: "Inter", "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
             background:
-                radial-gradient(circle at top left, rgba(79, 216, 255, 0.12), transparent 34%),
-                linear-gradient(160deg, var(--bg), #060b12 70%);
+                radial-gradient(circle at top left, rgba(79, 216, 255, 0.12), transparent 24%),
+                radial-gradient(circle at top right, rgba(255, 203, 107, 0.08), transparent 20%),
+                linear-gradient(180deg, #08111d 0%, var(--bg) 100%);
             color: var(--text);
             min-height: 100vh;
             display: flex;
@@ -36,47 +40,110 @@
         }
 
         .shell {
-            width: min(1080px, 100%);
+            width: min(1240px, 100%);
             display: grid;
-            grid-template-columns: 1.3fr 1fr;
+            grid-template-columns: 1.35fr 0.95fr;
             gap: 24px;
         }
 
         .card {
-            background: rgba(18, 32, 51, 0.92);
+            background: var(--panel);
             border: 1px solid var(--border);
-            border-radius: 24px;
-            padding: 28px;
-            box-shadow: 0 18px 60px rgba(0, 0, 0, 0.28);
-            backdrop-filter: blur(8px);
+            border-radius: 28px;
+            padding: 30px;
+            box-shadow: 0 24px 80px rgba(0, 0, 0, 0.34);
+            backdrop-filter: blur(16px);
         }
 
         .eyebrow {
-            font-size: 12px;
-            letter-spacing: 0.12em;
+            font-size: 11px;
+            letter-spacing: 0.14em;
             text-transform: uppercase;
             color: var(--accent-2);
-            margin-bottom: 16px;
+            margin-bottom: 18px;
             font-weight: 700;
         }
 
         h1 {
-            font-size: clamp(2rem, 4vw, 3.4rem);
-            line-height: 1.05;
+            font-size: clamp(2.3rem, 4vw, 4.2rem);
+            line-height: 0.98;
+            letter-spacing: -0.05em;
             margin-bottom: 18px;
+            max-width: 10ch;
         }
 
         p {
             color: var(--muted);
             line-height: 1.6;
             margin-bottom: 18px;
+            max-width: 64ch;
+        }
+
+        .hero {
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hero::after {
+            content: "";
+            position: absolute;
+            inset: auto -80px -120px auto;
+            width: 280px;
+            height: 280px;
+            border-radius: 999px;
+            background: radial-gradient(circle, rgba(79, 216, 255, 0.18) 0%, rgba(79, 216, 255, 0) 74%);
+            pointer-events: none;
+        }
+
+        .hero-grid {
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 20px;
+            align-items: start;
+        }
+
+        .status-stack {
+            display: grid;
+            gap: 12px;
+            width: min(240px, 100%);
+        }
+
+        .status-chip {
+            padding: 14px;
+            border-radius: 18px;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+        }
+
+        .status-chip strong {
+            display: block;
+            font-size: 0.76rem;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: var(--muted);
+            margin-bottom: 8px;
+        }
+
+        .status-chip span {
+            display: block;
+            font-size: 1.05rem;
+            font-weight: 700;
+            letter-spacing: -0.03em;
+        }
+
+        .status-chip span.live {
+            color: var(--success);
+        }
+
+        .status-chip span.sim {
+            color: var(--accent-2);
         }
 
         .actions {
             display: flex;
             gap: 12px;
             flex-wrap: wrap;
-            margin-top: 22px;
+            margin-top: 28px;
         }
 
         .btn {
@@ -84,20 +151,25 @@
             align-items: center;
             justify-content: center;
             text-decoration: none;
-            padding: 12px 18px;
-            border-radius: 12px;
+            padding: 13px 18px;
+            border-radius: 14px;
             font-weight: 700;
             border: 1px solid var(--border);
+            transition: transform 180ms ease, border-color 180ms ease, background 180ms ease;
+        }
+
+        .btn:hover {
+            transform: translateY(-1px);
         }
 
         .btn-primary {
-            background: var(--accent);
-            color: #08111b;
+            background: linear-gradient(180deg, #53deff, #20c9ff);
+            color: #05111a;
             border-color: transparent;
         }
 
         .btn-secondary {
-            background: transparent;
+            background: rgba(255, 255, 255, 0.04);
             color: var(--text);
         }
 
@@ -108,24 +180,24 @@
         }
 
         .list-item {
-            background: rgba(255, 255, 255, 0.03);
-            border: 1px solid var(--border);
-            border-radius: 14px;
-            padding: 14px;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 18px;
+            padding: 16px;
         }
 
         .list-item strong {
             display: block;
-            margin-bottom: 6px;
+            margin-bottom: 8px;
             color: var(--text);
         }
 
         .api-box {
-            background: #0a1522;
-            border: 1px solid var(--border);
-            border-radius: 16px;
+            background: rgba(6, 15, 24, 0.72);
+            border: 1px solid rgba(79, 216, 255, 0.12);
+            border-radius: 18px;
             padding: 18px;
-            margin-top: 20px;
+            margin-top: 24px;
         }
 
         code {
@@ -133,8 +205,44 @@
             word-break: break-word;
         }
 
+        .route-list {
+            display: grid;
+            gap: 10px;
+            margin-top: 14px;
+        }
+
+        .route-item {
+            padding: 11px 12px;
+            border-radius: 14px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
         @media (max-width: 860px) {
             .shell {
+                grid-template-columns: 1fr;
+            }
+
+            .hero-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .status-stack {
+                width: 100%;
+                grid-template-columns: repeat(3, minmax(0, 1fr));
+            }
+        }
+
+        @media (max-width: 560px) {
+            body {
+                padding: 18px;
+            }
+
+            .card {
+                padding: 22px;
+            }
+
+            .status-stack {
                 grid-template-columns: 1fr;
             }
         }
@@ -142,48 +250,66 @@
 </head>
 <body>
     <div class="shell">
-        <section class="card">
+        <section class="card hero">
             <div class="eyebrow">Hosted Demo</div>
-            <h1>Distributed MLAT control plane, visualized.</h1>
-            <p>
-                This demo shows how a distributed receiver network can flow through receiver discovery,
-                signal ingestion, multilateration runtime, storage, and API/dashboard output.
-            </p>
-            <p>
-                In the current hosted demo mode, aircraft motion and receiver discovery can run in simulation so viewers
-                can understand the system shape without waiting on live external integrations.
-            </p>
+            <div class="hero-grid">
+                <div>
+                    <h1>Airspace visibility for a CKB-backed MLAT stack.</h1>
+                    <p>
+                        This console shows how receiver registry state, aircraft motion, storage, and API output fit together when you are validating a distributed multilateration system.
+                    </p>
+                    <p>
+                        In hybrid demo mode, the stack can combine real on-chain receiver discovery with simulated peer coverage so operators can inspect the system before a full live receiver fleet exists.
+                    </p>
+                </div>
+                <div class="status-stack">
+                    <div class="status-chip">
+                        <strong>Registry</strong>
+                        <span class="live">CKB-backed discovery</span>
+                    </div>
+                    <div class="status-chip">
+                        <strong>Demo Mode</strong>
+                        <span class="sim">Hybrid simulation</span>
+                    </div>
+                    <div class="status-chip">
+                        <strong>Surface</strong>
+                        <span>Airspace console</span>
+                    </div>
+                </div>
+            </div>
             <div class="actions">
-                <a class="btn btn-primary" href="/dashboard.html">Open Dashboard</a>
-                <a class="btn btn-secondary" href="/api">View API Docs</a>
+                <a class="btn btn-primary" href="/dashboard.html">Open Airspace Console</a>
+                <a class="btn btn-secondary" href="/api">Inspect API Surface</a>
             </div>
             <div class="api-box">
-                <strong>Useful endpoints</strong>
-                <p><code>/api/health</code></p>
-                <p><code>/api/receivers</code></p>
-                <p><code>/api/positions/recent?seconds=600&amp;limit=20</code></p>
-                <p><code>/api/system/mode</code></p>
+                <strong>Operational routes</strong>
+                <div class="route-list">
+                    <div class="route-item"><code>/api/health</code></div>
+                    <div class="route-item"><code>/api/receivers</code></div>
+                    <div class="route-item"><code>/api/positions/recent?seconds=600&amp;limit=20</code></div>
+                    <div class="route-item"><code>/api/system/mode</code></div>
+                </div>
             </div>
         </section>
 
         <section class="card">
-            <div class="eyebrow">What You’re Looking At</div>
+            <div class="eyebrow">Console Topology</div>
             <div class="list">
                 <div class="list-item">
                     <strong>Receiver Registry</strong>
-                    <span>Receiver identity and metadata are modeled as CKB-backed registry state.</span>
+                    <span>Receiver identity and metadata are modeled as CKB-backed registry state rather than a hidden internal service directory.</span>
                 </div>
                 <div class="list-item">
                     <strong>Feed Transport</strong>
-                    <span>The runtime supports simulation, websocket JSON, and command-bridge transport modes.</span>
+                    <span>The runtime supports simulation, websocket JSON, and command-bridge transport modes so the same console can span demo and live environments.</span>
                 </div>
                 <div class="list-item">
                     <strong>MLAT Runtime</strong>
-                    <span>Correlation, position generation, storage, API, and dashboard all run as one integrated stack.</span>
+                    <span>Correlation, position generation, storage, API, and dashboard all run as one integrated stack with the same operational framing.</span>
                 </div>
                 <div class="list-item">
-                    <strong>Current Demo Mode</strong>
-                    <span>Use the dashboard banner to see whether this environment is running in simulation or live mode.</span>
+                    <strong>Mode Awareness</strong>
+                    <span>The dashboard banner tells you whether the stack is hybrid simulation or a real live pipeline so the operator never has to guess what they are seeing.</span>
                 </div>
             </div>
         </section>
