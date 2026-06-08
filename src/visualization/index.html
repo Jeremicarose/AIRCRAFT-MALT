@@ -4,315 +4,176 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MLAT Airspace Console</title>
-    <style>
-        :root {
-            --bg: #071019;
-            --panel: rgba(12, 23, 37, 0.86);
-            --panel-alt: rgba(16, 29, 46, 0.82);
-            --text: #eef5ff;
-            --muted: #92a9bb;
-            --accent: #4fd8ff;
-            --accent-2: #ffcb6b;
-            --border: rgba(255, 255, 255, 0.1);
-            --border-strong: rgba(79, 216, 255, 0.22);
-            --success: #6cf7a7;
-            --danger: #ff6b76;
-        }
-
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
-
-        body {
-            font-family: "Inter", "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-            background:
-                radial-gradient(circle at top left, rgba(79, 216, 255, 0.12), transparent 24%),
-                radial-gradient(circle at top right, rgba(255, 203, 107, 0.08), transparent 20%),
-                linear-gradient(180deg, #08111d 0%, var(--bg) 100%);
-            color: var(--text);
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 32px;
-        }
-
-        .shell {
-            width: min(1240px, 100%);
-            display: grid;
-            grid-template-columns: 1.35fr 0.95fr;
-            gap: 24px;
-        }
-
-        .card {
-            background: var(--panel);
-            border: 1px solid var(--border);
-            border-radius: 28px;
-            padding: 30px;
-            box-shadow: 0 24px 80px rgba(0, 0, 0, 0.34);
-            backdrop-filter: blur(16px);
-        }
-
-        .eyebrow {
-            font-size: 11px;
-            letter-spacing: 0.14em;
-            text-transform: uppercase;
-            color: var(--accent-2);
-            margin-bottom: 18px;
-            font-weight: 700;
-        }
-
-        h1 {
-            font-size: clamp(2.3rem, 4vw, 4.2rem);
-            line-height: 0.98;
-            letter-spacing: -0.05em;
-            margin-bottom: 18px;
-            max-width: 10ch;
-        }
-
-        p {
-            color: var(--muted);
-            line-height: 1.6;
-            margin-bottom: 18px;
-            max-width: 64ch;
-        }
-
-        .hero {
-            position: relative;
-            overflow: hidden;
-        }
-
-        .hero::after {
-            content: "";
-            position: absolute;
-            inset: auto -80px -120px auto;
-            width: 280px;
-            height: 280px;
-            border-radius: 999px;
-            background: radial-gradient(circle, rgba(79, 216, 255, 0.18) 0%, rgba(79, 216, 255, 0) 74%);
-            pointer-events: none;
-        }
-
-        .hero-grid {
-            display: grid;
-            grid-template-columns: 1fr auto;
-            gap: 20px;
-            align-items: start;
-        }
-
-        .status-stack {
-            display: grid;
-            gap: 12px;
-            width: min(240px, 100%);
-        }
-
-        .status-chip {
-            padding: 14px;
-            border-radius: 18px;
-            background: rgba(255, 255, 255, 0.04);
-            border: 1px solid rgba(255, 255, 255, 0.06);
-        }
-
-        .status-chip strong {
-            display: block;
-            font-size: 0.76rem;
-            letter-spacing: 0.08em;
-            text-transform: uppercase;
-            color: var(--muted);
-            margin-bottom: 8px;
-        }
-
-        .status-chip span {
-            display: block;
-            font-size: 1.05rem;
-            font-weight: 700;
-            letter-spacing: -0.03em;
-        }
-
-        .status-chip span.live {
-            color: var(--success);
-        }
-
-        .status-chip span.sim {
-            color: var(--accent-2);
-        }
-
-        .actions {
-            display: flex;
-            gap: 12px;
-            flex-wrap: wrap;
-            margin-top: 28px;
-        }
-
-        .btn {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            text-decoration: none;
-            padding: 13px 18px;
-            border-radius: 14px;
-            font-weight: 700;
-            border: 1px solid var(--border);
-            transition: transform 180ms ease, border-color 180ms ease, background 180ms ease;
-        }
-
-        .btn:hover {
-            transform: translateY(-1px);
-        }
-
-        .btn-primary {
-            background: linear-gradient(180deg, #53deff, #20c9ff);
-            color: #05111a;
-            border-color: transparent;
-        }
-
-        .btn-secondary {
-            background: rgba(255, 255, 255, 0.04);
-            color: var(--text);
-        }
-
-        .list {
-            display: grid;
-            gap: 14px;
-            margin-top: 18px;
-        }
-
-        .list-item {
-            background: rgba(255, 255, 255, 0.04);
-            border: 1px solid rgba(255, 255, 255, 0.06);
-            border-radius: 18px;
-            padding: 16px;
-        }
-
-        .list-item strong {
-            display: block;
-            margin-bottom: 8px;
-            color: var(--text);
-        }
-
-        .api-box {
-            background: rgba(6, 15, 24, 0.72);
-            border: 1px solid rgba(79, 216, 255, 0.12);
-            border-radius: 18px;
-            padding: 18px;
-            margin-top: 24px;
-        }
-
-        code {
-            color: var(--accent);
-            word-break: break-word;
-        }
-
-        .route-list {
-            display: grid;
-            gap: 10px;
-            margin-top: 14px;
-        }
-
-        .route-item {
-            padding: 11px 12px;
-            border-radius: 14px;
-            background: rgba(255, 255, 255, 0.03);
-            border: 1px solid rgba(255, 255, 255, 0.05);
-        }
-
-        @media (max-width: 860px) {
-            .shell {
-                grid-template-columns: 1fr;
-            }
-
-            .hero-grid {
-                grid-template-columns: 1fr;
-            }
-
-            .status-stack {
-                width: 100%;
-                grid-template-columns: repeat(3, minmax(0, 1fr));
-            }
-        }
-
-        @media (max-width: 560px) {
-            body {
-                padding: 18px;
-            }
-
-            .card {
-                padding: 22px;
-            }
-
-            .status-stack {
-                grid-template-columns: 1fr;
-            }
-        }
-    </style>
+    <meta name="description" content="Hosted MLAT product demo for exploring replay aircraft traffic, receiver context, and coverage quality from a simple map-first experience.">
+    <link rel="stylesheet" href="/styles.css">
 </head>
-<body>
-    <div class="shell">
-        <section class="card hero">
-            <div class="eyebrow">Hosted Demo</div>
-            <div class="hero-grid">
-                <div>
-                    <h1>Airspace visibility for a CKB-backed MLAT stack.</h1>
-                    <p>
-                        This console shows how receiver registry state, aircraft motion, storage, and API output fit together when you are validating a distributed multilateration system.
-                    </p>
-                    <p>
-                        In hybrid demo mode, the stack can combine real on-chain receiver discovery with simulated peer coverage so operators can inspect the system before a full live receiver fleet exists.
-                    </p>
-                </div>
-                <div class="status-stack">
-                    <div class="status-chip">
-                        <strong>Registry</strong>
-                        <span class="live">CKB-backed discovery</span>
-                    </div>
-                    <div class="status-chip">
-                        <strong>Demo Mode</strong>
-                        <span class="sim">Hybrid simulation</span>
-                    </div>
-                    <div class="status-chip">
-                        <strong>Surface</strong>
-                        <span>Airspace console</span>
+<body class="homepage-body">
+    <div class="page-shell homepage-shell">
+        <header class="site-header">
+            <div class="container">
+                <div class="brand-lockup">
+                    <div class="brand-mark">⌁</div>
+                    <div class="brand-copy">
+                        <strong>MLAT Airspace Console</strong>
+                        <span>Hosted walkthrough for multilateration, replay traffic, and receiver context</span>
                     </div>
                 </div>
-            </div>
-            <div class="actions">
-                <a class="btn btn-primary" href="/dashboard.html">Open Airspace Console</a>
-                <a class="btn btn-secondary" href="/api">Inspect API Surface</a>
-            </div>
-            <div class="api-box">
-                <strong>Operational routes</strong>
-                <div class="route-list">
-                    <div class="route-item"><code>/api/health</code></div>
-                    <div class="route-item"><code>/api/receivers</code></div>
-                    <div class="route-item"><code>/api/positions/recent?seconds=600&amp;limit=20</code></div>
-                    <div class="route-item"><code>/api/system/mode</code></div>
+                <nav class="site-nav" aria-label="Primary navigation">
+                    <a href="#overview">How it works</a>
+                    <a href="#proof">What you learn</a>
+                    <a href="#cta">Open demo</a>
+                </nav>
+                <div class="header-actions">
+                    <span class="pill">Hosted replay</span>
+                    <a class="button button-secondary" href="/dashboard.html">Open demo</a>
                 </div>
             </div>
-        </section>
+        </header>
 
-        <section class="card">
-            <div class="eyebrow">Console Topology</div>
-            <div class="list">
-                <div class="list-item">
-                    <strong>Receiver Registry</strong>
-                    <span>Receiver identity and metadata are modeled as CKB-backed registry state rather than a hidden internal service directory.</span>
+        <main>
+            <section class="hero-section homepage-hero">
+                <div class="container hero-grid homepage-hero-grid">
+                    <div class="hero-copy">
+                        <span class="eyebrow">Hosted product walkthrough</span>
+                        <h1 class="display headline">Start with the map. Let one aircraft explain the system.</h1>
+                        <p class="lede">
+                            This walkthrough is designed for quick understanding, not operating a control console. In most deployments you will start with hosted replay traffic unless the product explicitly says live. Open the dashboard, click an aircraft first, then use receivers to understand the support network behind that estimate.
+                        </p>
+                        <div class="hero-actions">
+                            <a class="button button-primary" href="/dashboard.html">Open the walkthrough</a>
+                            <a class="button button-secondary" href="/api/system/mode">Check current mode</a>
+                        </div>
+                        <div class="hero-note">
+                            <span>Hosted and read-only</span>
+                            <span>Replay unless marked live</span>
+                            <span>Map first, aircraft first</span>
+                        </div>
+                    </div>
+
+                    <div class="hero-visual product-frame" aria-hidden="true">
+                        <div class="product-window">
+                            <div class="product-window-bar">
+                                <span></span><span></span><span></span>
+                            </div>
+                            <div class="product-window-body">
+                                <div class="product-sidebar">
+                                    <div class="product-chip">Walkthrough</div>
+                                    <div class="product-sidebar-copy">
+                                        <strong>First click: aircraft</strong>
+                                        <p>Open a position estimate first, then compare it with the receiver network that helps explain coverage and uncertainty.</p>
+                                    </div>
+                                    <div class="product-mini-list">
+                                        <div><span></span>Recent path and altitude</div>
+                                        <div><span></span>Receiver participation</div>
+                                        <div><span></span>Coverage and uncertainty</div>
+                                    </div>
+                                </div>
+                                <div class="product-map-card">
+                                    <div class="product-map-grid"></div>
+                                    <div class="product-coverage one"></div>
+                                    <div class="product-coverage two"></div>
+                                    <div class="product-coverage three"></div>
+                                    <div class="product-track"></div>
+                                    <div class="product-dot a"></div>
+                                    <div class="product-dot b"></div>
+                                    <div class="product-dot c"></div>
+                                    <div class="product-receiver r1"></div>
+                                    <div class="product-receiver r2"></div>
+                                    <div class="product-receiver r3"></div>
+                                    <div class="product-caption">Hosted replay sample</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                <div class="list-item">
-                    <strong>Feed Transport</strong>
-                    <span>The runtime supports simulation, websocket JSON, and command-bridge transport modes so the same console can span demo and live environments.</span>
+            </section>
+
+            <section id="overview" class="section homepage-section">
+                <div class="container">
+                    <div class="section-head compact-head homepage-split-head">
+                        <div>
+                            <span class="kicker">How to read the walkthrough</span>
+                            <h2 class="display">The story should be obvious before you touch anything else.</h2>
+                        </div>
+                        <p class="copy">
+                            The first screen should answer four things quickly: what MLAT means on this map, whether you are seeing replay or live traffic, why aircraft selection is the first action, and what receiver selection teaches afterward about support and coverage.
+                        </p>
+                    </div>
+                    <div class="tour-grid refined-tour-grid">
+                        <article class="tour-card">
+                            <div class="tour-step">01</div>
+                            <h3>Open the map</h3>
+                            <p>The dashboard opens as a hosted walkthrough with clear mode labels so visitors know whether they are looking at replay traffic or a live feed.</p>
+                        </article>
+                        <article class="tour-card">
+                            <div class="tour-step">02</div>
+                            <h3>Click an aircraft</h3>
+                            <p>Aircraft focus surfaces the recent path, altitude, uncertainty, and receiver count so the estimate feels explainable instead of abstract.</p>
+                        </article>
+                        <article class="tour-card">
+                            <div class="tour-step">03</div>
+                            <h3>Click a receiver</h3>
+                            <p>Receiver focus shifts the story to coverage and contribution so visitors can understand how the network supports what they just saw on the map.</p>
+                        </article>
+                    </div>
                 </div>
-                <div class="list-item">
-                    <strong>MLAT Runtime</strong>
-                    <span>Correlation, position generation, storage, API, and dashboard all run as one integrated stack with the same operational framing.</span>
+            </section>
+
+            <section id="proof" class="section homepage-section">
+                <div class="container">
+                    <div class="proof-card-clean proof-card-refined">
+                        <div class="proof-copy">
+                            <span class="kicker">What the walkthrough teaches</span>
+                            <h2 class="display">The product becomes easier to understand when the map does the explaining.</h2>
+                            <p class="copy">
+                                Rather than leading with infrastructure, the walkthrough starts with one aircraft estimate on the map. From there, receivers explain support and placement, while mode labels keep replay versus live context explicit.
+                            </p>
+                        </div>
+                        <div class="proof-stack">
+                            <article class="proof-item">
+                                <strong>Aircraft selection</strong>
+                                <span>Shows the latest position, a short history, and how many receivers supported that estimate.</span>
+                            </article>
+                            <article class="proof-item">
+                                <strong>Receiver selection</strong>
+                                <span>Shows where station-side coverage comes from and how that network relates back to the map story.</span>
+                            </article>
+                            <article class="proof-item">
+                                <strong>Mode labeling</strong>
+                                <span>Keeps hosted replay and live context obvious before anyone tries to interpret the traffic.</span>
+                            </article>
+                        </div>
+                    </div>
                 </div>
-                <div class="list-item">
-                    <strong>Mode Awareness</strong>
-                    <span>The dashboard banner tells you whether the stack is hybrid simulation or a real live pipeline so the operator never has to guess what they are seeing.</span>
+            </section>
+
+            <section id="cta" class="section homepage-section homepage-cta-section">
+                <div class="container">
+                    <div class="cta-card cta-card-clean cta-card-refined">
+                        <div>
+                            <span class="kicker">Open the walkthrough</span>
+                            <h2 class="display">Begin with the dashboard map.</h2>
+                            <p class="copy">Use the hosted experience to understand MLAT through a calm map-first flow, or inspect the mode endpoint first if you want to confirm whether the deployment is replay or live.</p>
+                        </div>
+                        <div class="hero-actions">
+                            <a class="button button-primary" href="/dashboard.html">Open demo dashboard</a>
+                            <a class="button button-ghost" href="/api">View API</a>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <footer class="footer">
+            <div class="container footer-grid">
+                <div>MLAT Airspace Console — a hosted walkthrough for understanding aircraft tracking, receiver context, coverage quality, and uncertainty.</div>
+                <div class="footer-links">
+                    <a href="/dashboard.html">Dashboard</a>
+                    <a href="/api">API</a>
+                    <a href="/api/system/mode">Mode</a>
                 </div>
             </div>
-        </section>
+        </footer>
     </div>
 </body>
 </html>

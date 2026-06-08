@@ -395,6 +395,85 @@ server {
 }
 ```
 
+## Render Hosted Demo
+
+Use Render when you want a single public URL that always opens into a populated, read-only replay environment.
+
+### Recommended service shape
+
+Create one Render web service that:
+- serves the Flask API and static frontend
+- runs the background processor in the same service environment
+- mounts a persistent disk for the SQLite database path
+
+If you keep API and processor as separate long-running commands in your Render setup, point both at the same persistent disk path for `DATABASE_PATH`.
+
+### Required environment variables
+
+```bash
+FOURDSKY_TRANSPORT=simulation
+SIMULATE_IF_UNAVAILABLE=true
+ENABLE_ADMIN_API=false
+ENABLE_BACKGROUND_BROADCASTER=true
+DEMO_MODE=true
+DEMO_SCENARIO=default
+DEMO_READ_ONLY=true
+DEMO_LABEL=Hosted demo · Northeast replay
+DEMO_AUTO_CONNECT=true
+DATABASE_PATH=/var/data/mlat_data.db
+API_HOST=0.0.0.0
+API_PORT=5000
+```
+
+### Persistent disk
+
+Mount a persistent disk and keep the SQLite database on that disk:
+
+```bash
+DATABASE_PATH=/var/data/mlat_data.db
+```
+
+This lets replay traffic survive service restarts while the processor continues pruning older synthetic data through the existing simulation cleanup path.
+
+### Start command guidance
+
+Render needs both the API surface and the background replay writer running together for the public demo.
+
+Recommended pattern:
+- start the processor as a long-running background process
+- start the API in the foreground process Render manages
+
+This repository now includes `render-entrypoint.sh` for that topology.
+
+Recommended Render start command:
+
+```bash
+./render-entrypoint.sh
+```
+
+The script:
+- creates the parent directory for `DATABASE_PATH`
+- starts `src/production_main.py` in the background
+- starts `src/api/rest_api.py` in the foreground
+- shuts the processor down when the web process exits
+
+If you prefer an inline command instead of the script, keep the same topology: processor first, API second, shared `DATABASE_PATH`, and `DEMO_MODE=true`.
+
+### Smoke checks after deploy
+
+Verify these routes from the Render URL:
+- `/`
+- `/dashboard.html`
+- `/api/system/mode`
+- `/api/positions/recent`
+- `/api/receivers`
+
+Expected demo indicators:
+- homepage copy explicitly says hosted demo or replay
+- `/api/system/mode` reports `demo_mode: true`
+- dashboard opens with replay labeling and populated traffic
+- admin cleanup route remains unavailable because `ENABLE_ADMIN_API=false`
+
 ## 🐛 Troubleshooting
 
 ### Check Service Status

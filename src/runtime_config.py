@@ -6,6 +6,7 @@ from dataclasses import dataclass
 import os
 
 from network.ckb_client import NetworkConfig
+from demo_scenarios import get_demo_scenario, get_scenario_metadata
 
 
 def env_bool(name: str, default: bool) -> bool:
@@ -16,11 +17,26 @@ def env_bool(name: str, default: bool) -> bool:
 
 
 @dataclass(frozen=True)
+class DemoSettings:
+    """Environment-derived hosted demo settings."""
+
+    enabled: bool
+    scenario: str
+    read_only: bool
+    label: str
+    auto_connect: bool
+    scenario_metadata: dict
+
+
+@dataclass(frozen=True)
 class RuntimeSettings:
     """Environment-derived runtime settings."""
 
     network_config: NetworkConfig
     db_path: str
+    simulation_retention_hours: int
+    statistics_retention_days: int
+    demo: DemoSettings
 
 
 def load_runtime_settings(
@@ -47,6 +63,32 @@ def load_runtime_settings(
         fourdsky_bridge_command=os.getenv("FOURDSKY_BRIDGE_COMMAND") or None,
         max_receivers=int(os.getenv("MAX_RECEIVERS", str(max_receivers_default))),
         simulate_if_unavailable=env_bool("SIMULATE_IF_UNAVAILABLE", True),
+        ssl_verify=env_bool("CKB_SSL_VERIFY", True),
+        max_record_age_seconds=int(os.getenv("CKB_MAX_RECORD_AGE_SECONDS", "86400")),
+        hybrid_simulation_min_receivers=int(
+            os.getenv("CKB_HYBRID_SIMULATION_MIN_RECEIVERS", "4")
+        ),
+        demo_scenario=os.getenv("DEMO_SCENARIO", "default"),
     )
     db_path = os.getenv("DATABASE_PATH", db_path_default)
-    return RuntimeSettings(network_config=config, db_path=db_path)
+    demo_enabled = env_bool("DEMO_MODE", False)
+    demo_scenario = os.getenv("DEMO_SCENARIO", "default")
+    scenario = get_demo_scenario(demo_scenario)
+    demo_label = os.getenv("DEMO_LABEL", scenario.label)
+    return RuntimeSettings(
+        network_config=config,
+        db_path=db_path,
+        simulation_retention_hours=int(os.getenv("SIMULATION_RETENTION_HOURS", "24")),
+        statistics_retention_days=int(os.getenv("STATISTICS_RETENTION_DAYS", "7")),
+        demo=DemoSettings(
+            enabled=demo_enabled,
+            scenario=scenario.slug,
+            read_only=env_bool("DEMO_READ_ONLY", demo_enabled),
+            label=demo_label,
+            auto_connect=env_bool("DEMO_AUTO_CONNECT", demo_enabled),
+            scenario_metadata={
+                **get_scenario_metadata(scenario.slug),
+                "label": demo_label,
+            },
+        ),
+    )

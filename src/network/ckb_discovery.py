@@ -12,7 +12,11 @@ from dataclasses import asdict, dataclass
 import json
 import asyncio
 import logging
+import ssl
 import time
+import urllib.request
+
+from demo_scenarios import build_demo_receivers
 
 logger = logging.getLogger(__name__)
 
@@ -146,6 +150,9 @@ class CKBConfig:
     receiver_registry_type_hash: str = ""  # Type script hash for receiver registry
     api_timeout: int = 30
     simulate_if_unavailable: bool = True
+    ssl_verify: bool = True
+    max_record_age_seconds: int = 86400
+    demo_scenario: str = "default"
 
 
 class CKBPeerDiscovery:
@@ -160,7 +167,7 @@ class CKBPeerDiscovery:
     def __init__(self, config: CKBConfig):
         self.config = config
         self.cached_peers: Dict[str, ReceiverInfo] = {}
-        self.client = None
+        self.rpc_url = config.ckb_rpc_url
         self.simulation_mode = False
         
     async def initialize(self):
@@ -172,24 +179,10 @@ class CKBPeerDiscovery:
                 "No receiver registry type hash configured; using simulated CKB receivers"
             )
             return
-        
-        # Import CKB SDK
+
         try:
-            from ckb import rpc
-            self.client = rpc.RPC(self.config.ckb_rpc_url)
-            
-            # Test connection
             tip = await self._get_tip_block_number()
             logger.info(f"✅ Connected to CKB node, current block: {tip}")
-            
-        except ImportError:
-            if self.config.simulate_if_unavailable:
-                self._enable_simulation(
-                    "CKB SDK not installed. Falling back to simulated receiver discovery"
-                )
-                return
-            logger.error("❌ CKB SDK not installed. Run: pip install ckb-py")
-            raise
         except Exception as e:
             if self.config.simulate_if_unavailable:
                 self._enable_simulation(
@@ -201,12 +194,8 @@ class CKBPeerDiscovery:
     
     async def _get_tip_block_number(self) -> int:
         """Get current block number"""
-        try:
-            tip = await asyncio.to_thread(self.client.get_tip_block_number)
-            return int(tip, 16)
-        except Exception as e:
-            logger.error(f"Failed to get tip block: {e}")
-            return 0
+        tip = await self._rpc_call("get_tip_block_number", [])
+        return int(tip, 16)
     
     async def discover_peers(self) -> List[ReceiverInfo]:
         """
@@ -267,9 +256,6 @@ class CKBPeerDiscovery:
         
         Uses get_cells RPC to find all cells with the receiver registry type script.
         """
-        if self.client is None:
-            return []
-
         try:
             # Build search query
             search_key = {
@@ -285,11 +271,14 @@ class CKBPeerDiscovery:
             }
             
             # Query cells
-            cells_response = await asyncio.to_thread(
-                self.client.get_cells,
-                search_key,
-                "asc",
-                "0x64"  # Limit to 100 cells
+            cells_response = await self._rpc_call(
+                "get_cells",
+                [
+                    search_key,
+                    "asc",
+                    "0x64",
+                ],
+                url=self.config.ckb_indexer_url,
             )
             
             cells = cells_response.get("objects", [])
@@ -302,78 +291,79 @@ class CKBPeerDiscovery:
     def _enable_simulation(self, reason: str):
         """Enable local simulation mode when live CKB access is unavailable."""
         self.simulation_mode = True
-        self.client = None
         logger.warning(reason)
 
+    async def _rpc_call(
+        self,
+        method: str,
+        params: List[Any],
+        url: Optional[str] = None,
+    ) -> Any:
+        """Make a JSON-RPC call directly to the configured CKB node."""
+        payload = {
+            "id": 1,
+            "jsonrpc": "2.0",
+            "method": method,
+            "params": params,
+        }
+        target_url = url or self.rpc_url
+
+        def _do_request() -> Any:
+            ssl_context = None
+            if target_url.startswith("https://"):
+                if self.config.ssl_verify:
+                    try:
+                        import certifi
+
+                        ssl_context = ssl.create_default_context(cafile=certifi.where())
+                    except ImportError:
+                        ssl_context = ssl.create_default_context()
+                else:
+                    ssl_context = ssl._create_unverified_context()
+
+            request = urllib.request.Request(
+                target_url,
+                data=json.dumps(payload).encode("utf-8"),
+                headers={
+                    "Content-Type": "application/json",
+                    "Accept": "application/json",
+                    "User-Agent": "mlat-system/0.1 (+https://github.com/Jeremicarose/AIRCRAFT-MALT)",
+                },
+                method="POST",
+            )
+            with urllib.request.urlopen(
+                request,
+                timeout=self.config.api_timeout,
+                context=ssl_context,
+            ) as response:
+                body = json.loads(response.read().decode("utf-8"))
+            if "error" in body:
+                raise RuntimeError(body["error"])
+            return body["result"]
+
+        return await asyncio.to_thread(_do_request)
+
     def _get_simulated_receivers(self) -> List[ReceiverInfo]:
-        """Return a deterministic receiver set for local development."""
-        simulated_receivers = [
-            ReceiverInfo(
-                receiver_id="RECV_NYC_001",
-                latitude=40.7128,
-                longitude=-74.0060,
-                altitude=10.0,
-                status="online",
-                last_seen=time.time(),
-                capabilities=["mode-s", "adsb", "mlat"],
-                ckb_address="ckt1qyqnyc000000000000000000000000000000000",
-                lock_hash="0xnyc000000000000000000000000000000000000000000000000000000000000",
-                stream_protocol="simulation",
-                stream_format="json",
-            ),
-            ReceiverInfo(
-                receiver_id="RECV_BOS_001",
-                latitude=42.3601,
-                longitude=-71.0589,
-                altitude=20.0,
-                status="online",
-                last_seen=time.time(),
-                capabilities=["mode-s", "adsb", "mlat"],
-                ckb_address="ckt1qyqboston0000000000000000000000000000000",
-                lock_hash="0xbos000000000000000000000000000000000000000000000000000000000000",
-                stream_protocol="simulation",
-                stream_format="json",
-            ),
-            ReceiverInfo(
-                receiver_id="RECV_PHL_001",
-                latitude=39.9526,
-                longitude=-75.1652,
-                altitude=15.0,
-                status="online",
-                last_seen=time.time(),
-                capabilities=["mode-s", "mlat"],
-                ckb_address="ckt1qyqphl000000000000000000000000000000000",
-                lock_hash="0xphl000000000000000000000000000000000000000000000000000000000000",
-                stream_protocol="simulation",
-                stream_format="json",
-            ),
-            ReceiverInfo(
-                receiver_id="RECV_DC_001",
-                latitude=38.9072,
-                longitude=-77.0369,
-                altitude=25.0,
-                status="online",
-                last_seen=time.time(),
-                capabilities=["mode-s", "adsb", "mlat"],
-                ckb_address="ckt1qyqdc0000000000000000000000000000000000",
-                lock_hash="0xdc0000000000000000000000000000000000000000000000000000000000000",
-                stream_protocol="simulation",
-                stream_format="json",
-            ),
-            ReceiverInfo(
-                receiver_id="RECV_BUF_001",
-                latitude=42.8864,
-                longitude=-78.8784,
-                altitude=18.0,
-                status="online",
-                last_seen=time.time(),
-                capabilities=["mode-s", "mlat"],
-                ckb_address="ckt1qyqbuf000000000000000000000000000000000",
-                lock_hash="0xbuf000000000000000000000000000000000000000000000000000000000000",
-                stream_protocol="simulation",
-                stream_format="json",
-            ),
-        ]
+        """Return a deterministic receiver set for local development and hosted demos."""
+        receiver_rows = build_demo_receivers(time.time(), self.config.demo_scenario)
+        simulated_receivers: List[ReceiverInfo] = []
+        for index, receiver in enumerate(receiver_rows):
+            simulated_receivers.append(
+                ReceiverInfo(
+                    receiver_id=receiver["receiver_id"],
+                    latitude=receiver["latitude"],
+                    longitude=receiver["longitude"],
+                    altitude=receiver["altitude"],
+                    status=receiver["status"],
+                    last_seen=receiver["last_seen"],
+                    capabilities=receiver["capabilities"],
+                    ckb_address=f"ckt1qydemo{index:02d}000000000000000000000000000000",
+                    lock_hash=f"0xdemo{index:02d}".ljust(66, "0"),
+                    stream_protocol="simulation",
+                    stream_format="json",
+                    metadata=receiver["metadata"],
+                )
+            )
 
         return simulated_receivers
     
@@ -404,6 +394,7 @@ class CKBPeerDiscovery:
             data_bytes = bytes.fromhex(output_data[2:])  # Remove 0x prefix
             data_json = json.loads(data_bytes.decode('utf-8'))
             record = ReceiverRegistryRecord.from_dict(data_json)
+            lock = cell.get("output", {}).get("lock", {})
 
             receiver = ReceiverInfo(
                 receiver_id=record.receiver_id,
@@ -413,8 +404,8 @@ class CKBPeerDiscovery:
                 status=record.status,
                 last_seen=record.timestamp,
                 capabilities=record.capabilities,
-                ckb_address=cell['output']['lock']['args'],
-                lock_hash=cell['output']['lock']['hash'],
+                ckb_address=lock.get('args', ''),
+                lock_hash=lock.get('hash') or cell.get('lock_hash', ''),
                 stream_endpoint=record.stream_endpoint,
                 stream_protocol=record.stream_protocol,
                 stream_format=record.stream_format,
@@ -439,21 +430,47 @@ class CKBPeerDiscovery:
         """
         # Check status
         if receiver.status != "online":
+            logger.info(
+                "Skipping receiver %s: status=%s is not online",
+                receiver.receiver_id,
+                receiver.status,
+            )
             return False
         
         # Check capabilities
         if "mode-s" not in receiver.capabilities:
+            logger.info(
+                "Skipping receiver %s: capabilities %s do not include mode-s",
+                receiver.receiver_id,
+                receiver.capabilities,
+            )
             return False
         
-        # Check timestamp (last 24 hours)
-        if time.time() - receiver.last_seen > 86400:
-            logger.debug(f"Receiver {receiver.receiver_id} timestamp too old")
+        # Check timestamp freshness
+        age_seconds = time.time() - receiver.last_seen
+        if age_seconds > self.config.max_record_age_seconds:
+            logger.info(
+                "Skipping receiver %s: timestamp is stale by %.0f seconds (max %d)",
+                receiver.receiver_id,
+                age_seconds,
+                self.config.max_record_age_seconds,
+            )
             return False
         
         # Check coordinates
         if not (-90 <= receiver.latitude <= 90):
+            logger.info(
+                "Skipping receiver %s: invalid latitude=%s",
+                receiver.receiver_id,
+                receiver.latitude,
+            )
             return False
         if not (-180 <= receiver.longitude <= 180):
+            logger.info(
+                "Skipping receiver %s: invalid longitude=%s",
+                receiver.receiver_id,
+                receiver.longitude,
+            )
             return False
         
         return True

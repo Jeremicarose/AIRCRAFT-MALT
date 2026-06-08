@@ -16,6 +16,8 @@ import time
 from datetime import datetime
 from typing import Dict, List, Optional
 
+from demo_scenarios import get_demo_scenario, get_scenario_metadata
+
 try:
     from dotenv import load_dotenv
 except ImportError:
@@ -99,6 +101,10 @@ api_bp = Blueprint("api", __name__)
 
 def load_app_config() -> Dict[str, object]:
     """Load API configuration from environment."""
+    demo_enabled = _env_bool("DEMO_MODE", False)
+    demo_scenario_name = os.getenv("DEMO_SCENARIO", "default")
+    demo_scenario = get_demo_scenario(demo_scenario_name)
+    demo_label = os.getenv("DEMO_LABEL", demo_scenario.label)
     simulation_mode = os.getenv("FOURDSKY_TRANSPORT", "auto") == "simulation" or _env_bool(
         "SIMULATE_IF_UNAVAILABLE",
         True,
@@ -121,6 +127,15 @@ def load_app_config() -> Dict[str, object]:
         "API_PORT": int(os.getenv("API_PORT", "5000")),
         "API_DEBUG": _env_bool("API_DEBUG", False),
         "SIMULATION_MODE": simulation_mode,
+        "DEMO_MODE": demo_enabled,
+        "DEMO_SCENARIO": demo_scenario.slug,
+        "DEMO_READ_ONLY": _env_bool("DEMO_READ_ONLY", demo_enabled),
+        "DEMO_LABEL": demo_label,
+        "DEMO_AUTO_CONNECT": _env_bool("DEMO_AUTO_CONNECT", demo_enabled),
+        "DEMO_SCENARIO_METADATA": {
+            **get_scenario_metadata(demo_scenario.slug),
+            "label": demo_label,
+        },
         "VISUALIZATION_DIR": str(visualization_dir),
     }
 
@@ -281,11 +296,22 @@ def visualization_assets(asset_path: str):
 
 @api_bp.route("/api/system/mode", methods=["GET"])
 def get_system_mode():
-    """Expose whether the current stack is running in simulation mode."""
+    """Expose runtime mode and hosted demo metadata for the frontend."""
+    demo_mode = bool(current_app.config["DEMO_MODE"])
     return jsonify(
         {
-            "mode": "simulation" if current_app.config["SIMULATION_MODE"] else "live",
+            "mode": "demo" if demo_mode else "simulation" if current_app.config["SIMULATION_MODE"] else "live",
             "simulation_mode": bool(current_app.config["SIMULATION_MODE"]),
+            "demo_mode": demo_mode,
+            "demo_read_only": bool(current_app.config["DEMO_READ_ONLY"]),
+            "demo_label": current_app.config["DEMO_LABEL"],
+            "demo_auto_connect": bool(current_app.config["DEMO_AUTO_CONNECT"]),
+            "demo_scenario": current_app.config["DEMO_SCENARIO"],
+            "scenario": current_app.config["DEMO_SCENARIO_METADATA"],
+            "ui": {
+                "read_only": bool(current_app.config["DEMO_READ_ONLY"]),
+                "auto_connect": bool(current_app.config["DEMO_AUTO_CONNECT"]),
+            },
             "receiver_registry_type_hash": os.getenv("RECEIVER_REGISTRY_TYPE_HASH", ""),
             "websocket_available": SocketIO is not None,
         }
@@ -418,6 +444,23 @@ def get_statistics():
 
 @api_bp.route("/api/map/bounds", methods=["GET"])
 def get_map_bounds():
+    scenario = current_app.config.get("DEMO_SCENARIO_METADATA")
+    if current_app.config.get("DEMO_MODE") and scenario:
+        bounds = scenario.get("map", {}).get("bounds")
+        center = scenario.get("map", {}).get("center")
+        if bounds and center:
+            return jsonify({
+                "bounds": {
+                    "north": bounds["north"],
+                    "south": bounds["south"],
+                    "east": bounds["east"],
+                    "west": bounds["west"],
+                    "center": center,
+                },
+                "num_positions": 0,
+                "source": "demo-scenario",
+            })
+
     positions = get_db().get_recent_positions(seconds=300, limit=1000)
     if not positions:
         return jsonify({"error": "No recent positions available"}), 404

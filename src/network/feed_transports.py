@@ -17,6 +17,7 @@ import math
 import random
 import time
 
+from demo_scenarios import scenario_aircraft_states
 from network.ckb_discovery import ReceiverInfo
 
 
@@ -287,35 +288,17 @@ class CommandJsonlFeedTransport(BaseFeedTransport, JsonFeedParsingMixin):
 class SimulationFeedTransport(BaseFeedTransport):
     """Generate a shared simulated 4DSky stream for local development."""
 
-    def __init__(self, receivers: Dict[str, ReceiverInfo]):
+    def __init__(self, receivers: Dict[str, ReceiverInfo], scenario_name: str = "default"):
         super().__init__(receivers)
-        self.simulated_aircraft = [
-            {
-                "icao": "A1B2C3",
-                "lat": 40.20,
-                "lon": -74.70,
-                "alt": 8500.0,
-                "heading": 55.0,
-                "speed_kmh": 120.0,
-            },
-            {
-                "icao": "D4E5F6",
-                "lat": 40.95,
-                "lon": -73.10,
-                "alt": 7800.0,
-                "heading": 205.0,
-                "speed_kmh": 120.0,
-            },
-        ]
+        self.scenario_name = scenario_name
 
     def create_tasks(self, callback: MessageCallback) -> List[asyncio.Task]:
         return [asyncio.create_task(self._simulate_network_traffic(callback))]
 
     async def _simulate_network_traffic(self, callback: MessageCallback):
         while True:
-            for aircraft in self.simulated_aircraft:
-                self._advance_aircraft(aircraft, dt_seconds=0.5)
-
+            replay_states = scenario_aircraft_states(time.time(), self.scenario_name)
+            for aircraft in replay_states:
                 transmit_time = time.time()
                 message = f"8D{aircraft['icao']}202CC371C32CE0576098"
                 receiver_ids = list(self.receivers.keys())
@@ -338,24 +321,6 @@ class SimulationFeedTransport(BaseFeedTransport):
                     await callback(receiver_id, timestamp, message)
 
                 await asyncio.sleep(0.5)
-
-    @staticmethod
-    def _advance_aircraft(aircraft: Dict[str, float], dt_seconds: float):
-        speed_ms = aircraft["speed_kmh"] * 1000.0 / 3600.0
-        distance_m = speed_ms * dt_seconds
-
-        heading_rad = math.radians(aircraft["heading"])
-        dlat = (distance_m * math.cos(heading_rad)) / 111000.0
-        lon_scale = max(math.cos(math.radians(aircraft["lat"])), 0.1)
-        dlon = (distance_m * math.sin(heading_rad)) / (111000.0 * lon_scale)
-
-        aircraft["lat"] += dlat
-        aircraft["lon"] += dlon
-
-        if random.random() < 0.02:
-            aircraft["heading"] = (
-                aircraft["heading"] + random.uniform(-3.0, 3.0)
-            ) % 360.0
 
     def _calculate_reception_time(
         self,

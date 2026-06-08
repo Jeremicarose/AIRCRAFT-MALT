@@ -10,6 +10,7 @@ Stores:
 
 import sqlite3
 import os
+import threading
 from typing import List, Optional, Dict, Tuple
 from dataclasses import dataclass, asdict
 from datetime import datetime, timedelta
@@ -17,6 +18,9 @@ import json
 import logging
 
 logger = logging.getLogger(__name__)
+
+_SCHEMA_LOCK = threading.Lock()
+_SCHEMA_READY_PATHS = set()
 
 
 @dataclass
@@ -70,17 +74,30 @@ class MLATDatabase:
         self.conn = None
         
     def connect(self):
-        """Connect to database and create tables if needed"""
+        """Connect to database and create tables if needed."""
         db_dir = os.path.dirname(self.db_path)
         if db_dir:
             os.makedirs(db_dir, exist_ok=True)
         self.conn = sqlite3.connect(self.db_path)
         self.conn.row_factory = sqlite3.Row
-        self._create_tables()
-        logger.info(f"Connected to database: {self.db_path}")
-    
+        self._ensure_schema()
+        logger.debug("Connected to database: %s", self.db_path)
+
+    def _ensure_schema(self):
+        """Create the database schema once per database path for this process."""
+        normalized_path = os.path.abspath(self.db_path)
+        if normalized_path in _SCHEMA_READY_PATHS:
+            return
+
+        with _SCHEMA_LOCK:
+            if normalized_path in _SCHEMA_READY_PATHS:
+                return
+            self._create_tables()
+            _SCHEMA_READY_PATHS.add(normalized_path)
+            logger.info("Database tables created/verified for %s", self.db_path)
+
     def _create_tables(self):
-        """Create database schema"""
+        """Create database schema."""
         cursor = self.conn.cursor()
         
         # Positions table
@@ -141,7 +158,6 @@ class MLATDatabase:
         """)
         
         self.conn.commit()
-        logger.info("Database tables created/verified")
     
     def store_position(
         self,
@@ -496,6 +512,38 @@ class MLATDatabase:
         
         # Vacuum to reclaim space
         cursor.execute("VACUUM")
+
+    def cleanup_simulation_data(self, position_hours: int = 24, statistics_days: int = 7):
+        """
+        Remove old simulated/demo-era data while preserving recent operational history.
+
+        Args:
+            position_hours: Keep position rows from the last N hours.
+            statistics_days: Keep statistics rows from the last N days.
+        """
+        cursor = self.conn.cursor()
+
+        position_cutoff = datetime.now().timestamp() - (position_hours * 3600)
+        statistics_cutoff = datetime.now().timestamp() - (statistics_days * 86400)
+
+        cursor.execute("DELETE FROM positions WHERE timestamp < ?", (position_cutoff,))
+        positions_deleted = cursor.rowcount
+
+        cursor.execute("DELETE FROM statistics WHERE timestamp < ?", (statistics_cutoff,))
+        stats_deleted = cursor.rowcount
+
+        self.conn.commit()
+
+        if positions_deleted or stats_deleted:
+            logger.info(
+                "Pruned %d old positions and %d old statistics rows "
+                "(retention: %dh positions, %dd statistics)",
+                positions_deleted,
+                stats_deleted,
+                position_hours,
+                statistics_days,
+            )
+            cursor.execute("VACUUM")
     
     def get_database_stats(self) -> Dict:
         """Get database statistics"""
@@ -530,7 +578,8 @@ class MLATDatabase:
         """Close database connection"""
         if self.conn:
             self.conn.close()
-            logger.info("Database connection closed")
+            self.conn = None
+            logger.debug("Database connection closed")
 
 
 # Example usage

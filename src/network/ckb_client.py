@@ -44,6 +44,10 @@ class NetworkConfig:
     # System Configuration
     max_receivers: int = 20
     simulate_if_unavailable: bool = True
+    ssl_verify: bool = True
+    max_record_age_seconds: int = 86400
+    hybrid_simulation_min_receivers: int = 4
+    demo_scenario: str = "default"
 
 
 class CKBReceiverNetworkClient:
@@ -64,6 +68,9 @@ class CKBReceiverNetworkClient:
             ckb_indexer_url=config.ckb_indexer_url,
             receiver_registry_type_hash=config.receiver_registry_type_hash,
             simulate_if_unavailable=config.simulate_if_unavailable,
+            ssl_verify=config.ssl_verify,
+            max_record_age_seconds=config.max_record_age_seconds,
+            demo_scenario=config.demo_scenario,
         )
         self.peer_discovery = CKBPeerDiscovery(ckb_config)
 
@@ -91,6 +98,8 @@ class CKBReceiverNetworkClient:
 
         for receiver in selected:
             self.active_receivers[receiver.receiver_id] = receiver
+
+        self._augment_receivers_for_simulation()
 
         logger.info("=" * 70)
         logger.info(f"✅ Network client ready with {len(self.active_receivers)} receivers")
@@ -147,7 +156,10 @@ class CKBReceiverNetworkClient:
                 )
                 return
 
-        self._feed_transport = SimulationFeedTransport(self.active_receivers)
+        self._feed_transport = SimulationFeedTransport(
+            self.active_receivers,
+            scenario_name=self.config.demo_scenario,
+        )
         self._stream_tasks.extend(self._feed_transport.create_tasks(message_callback))
         logger.info(
             f"✅ Streaming from {len(self.active_receivers)} receivers"
@@ -184,6 +196,36 @@ class CKBReceiverNetworkClient:
             headers[header_name] = token
 
         return headers
+
+    def _augment_receivers_for_simulation(self):
+        """
+        In simulation transport mode, top up the discovered receiver set with
+        simulated peers so the demo can still produce MLAT groups when the live
+        registry has fewer than the minimum receiver count.
+        """
+        transport = self._determine_transport()
+        min_receivers = max(1, self.config.hybrid_simulation_min_receivers)
+
+        if transport != "simulation":
+            return
+        if len(self.active_receivers) >= min_receivers:
+            return
+
+        simulated_receivers = self.peer_discovery._get_simulated_receivers()
+        added = 0
+        for receiver in simulated_receivers:
+            if receiver.receiver_id in self.active_receivers:
+                continue
+            self.active_receivers[receiver.receiver_id] = receiver
+            added += 1
+            if len(self.active_receivers) >= min_receivers:
+                break
+
+        if added > 0:
+            logger.info(
+                "🧪 Added %d simulated receivers to supplement the live registry for hybrid demo mode",
+                added,
+            )
 
     async def shutdown(self):
         """Gracefully shutdown all connections"""

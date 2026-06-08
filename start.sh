@@ -5,6 +5,8 @@
 
 set -e  # Exit on error
 
+RUN_DEMO_MODE=${RUN_DEMO_MODE:-false}
+
 echo ""
 echo "╔════════════════════════════════════════════════════════════╗"
 echo "║                                                            ║"
@@ -89,6 +91,31 @@ fi
 # Create directories
 echo "📁 Creating data directories..."
 mkdir -p data logs
+
+if [ "$RUN_DEMO_MODE" = "true" ]; then
+    echo "🎛️ Configuring hosted demo defaults..."
+    python3 - <<'PY'
+from pathlib import Path
+
+env_path = Path('.env')
+content = env_path.read_text() if env_path.exists() else ''
+def ensure_setting(key: str, value: str):
+    global content
+    if f"{key}=" in content:
+        return
+    content += f"\n{key}={value}"
+
+ensure_setting('FOURDSKY_TRANSPORT', 'simulation')
+ensure_setting('SIMULATE_IF_UNAVAILABLE', 'true')
+ensure_setting('ENABLE_ADMIN_API', 'false')
+ensure_setting('DEMO_MODE', 'true')
+ensure_setting('DEMO_SCENARIO', 'default')
+ensure_setting('DEMO_READ_ONLY', 'true')
+ensure_setting('DEMO_LABEL', 'Hosted demo · Northeast replay')
+ensure_setting('DEMO_AUTO_CONNECT', 'true')
+env_path.write_text(content.lstrip('\n') + '\n')
+PY
+fi
 echo "✅ Directories created"
 echo ""
 

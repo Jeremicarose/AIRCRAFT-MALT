@@ -1,0 +1,41 @@
+services:
+  - type: web
+    name: mlat-hosted-demo
+    runtime: python
+    plan: starter
+    buildCommand: pip install -r requirements.txt
+    startCommand: ./render-entrypoint.sh
+    healthCheckPath: /api/health
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9
+      - key: API_HOST
+        value: 0.0.0.0
+      - key: API_PORT
+        value: 5000
+      - key: DATABASE_PATH
+        value: /var/data/mlat_data.db
+      - key: FOURDSKY_TRANSPORT
+        value: simulation
+      - key: SIMULATE_IF_UNAVAILABLE
+        value: "true"
+      - key: ENABLE_ADMIN_API
+        value: "false"
+      - key: ENABLE_BACKGROUND_BROADCASTER
+        value: "true"
+      - key: DEMO_MODE
+        value: "true"
+      - key: DEMO_SCENARIO
+        value: default
+      - key: DEMO_READ_ONLY
+        value: "true"
+      - key: DEMO_LABEL
+        value: Hosted demo · Northeast replay
+      - key: DEMO_AUTO_CONNECT
+        value: "true"
+      - key: LOG_LEVEL
+        value: INFO
+    disk:
+      name: mlat-demo-data
+      mountPath: /var/data
+      sizeGB: 1

@@ -14,10 +14,7 @@ import asyncio
 import logging
 import signal
 import os
-from typing import Dict
 import time
-import json
-import math
 
 try:
     from dotenv import load_dotenv
@@ -32,8 +29,9 @@ from network.ckb_client import CKBReceiverNetworkClient, NetworkConfig
 from correlation.correlator import RawSignal
 from mlat.robust_solver import RobustMLATSolver, ReceiverPosition, SignalObservation
 from database.mlat_db import MLATDatabase
+from demo_scenarios import get_demo_scenario, scenario_aircraft_states
 from mlat_runtime import BaseMLATRuntime
-from runtime_config import env_bool, load_runtime_settings
+from runtime_config import DemoSettings, env_bool, load_runtime_settings
 
 # Setup logging
 logging.basicConfig(
@@ -47,7 +45,14 @@ class ProductionMLATSystem(BaseMLATRuntime[ReceiverPosition, SignalObservation])
     Production-ready MLAT system with all features integrated.
     """
     
-    def __init__(self, config: NetworkConfig, db_path: str = "mlat_data.db"):
+    def __init__(
+        self,
+        config: NetworkConfig,
+        db_path: str = "mlat_data.db",
+        simulation_retention_hours: int = 24,
+        statistics_retention_days: int = 7,
+        demo_settings: DemoSettings | None = None,
+    ):
         super().__init__(
             config,
             time_window=0.005,  # 5ms
@@ -65,23 +70,19 @@ class ProductionMLATSystem(BaseMLATRuntime[ReceiverPosition, SignalObservation])
             'failed_solves': 0,
             'last_position_time': 0
         }
+        self.demo_settings = demo_settings or DemoSettings(
+            enabled=False,
+            scenario="default",
+            read_only=False,
+            label="",
+            auto_connect=False,
+            scenario_metadata={},
+        )
+        self.demo_scenario = get_demo_scenario(self.demo_settings.scenario)
         self.simulation_mode = config.simulate_if_unavailable and not config.receiver_registry_type_hash
-        self._simulation_tracks = {
-            "A1B2C3": {
-                "latitude": 40.20,
-                "longitude": -74.70,
-                "altitude": 8500.0,
-                "heading": 55.0,
-                "speed_kmh": 120.0,
-            },
-            "D4E5F6": {
-                "latitude": 40.95,
-                "longitude": -73.10,
-                "altitude": 7800.0,
-                "heading": 205.0,
-                "speed_kmh": 120.0,
-            },
-        }
+        self.synthetic_feed_mode = config.fourdsky_transport == "simulation"
+        self.simulation_retention_hours = max(1, simulation_retention_hours)
+        self.statistics_retention_days = max(1, statistics_retention_days)
         
     async def initialize(self):
         """Initialize the system"""
@@ -92,6 +93,19 @@ class ProductionMLATSystem(BaseMLATRuntime[ReceiverPosition, SignalObservation])
         # Connect to database
         self.database.connect()
         logger.info("✅ Database connected")
+        if self.synthetic_feed_mode:
+            logger.info(
+                "🧹 Simulation retention active: positions=%dh, statistics=%dd",
+                self.simulation_retention_hours,
+                self.statistics_retention_days,
+            )
+        if self.demo_settings.enabled:
+            logger.info(
+                "🎛️ Demo mode enabled: scenario=%s label=%s read_only=%s",
+                self.demo_scenario.slug,
+                self.demo_settings.label,
+                self.demo_settings.read_only,
+            )
 
         # Initialize network
         await self.initialize_network()
@@ -148,19 +162,10 @@ class ProductionMLATSystem(BaseMLATRuntime[ReceiverPosition, SignalObservation])
         # Start processing loops
         processing_task = asyncio.create_task(self._processing_loop())
         stats_task = asyncio.create_task(self._statistics_loop())
-        simulation_task = (
-            asyncio.create_task(self._simulation_position_loop())
-            if self.simulation_mode
-            else None
-        )
-        
         logger.info("✅ System running")
         
         # Wait for tasks
-        tasks = [processing_task, stats_task]
-        if simulation_task is not None:
-            tasks.append(simulation_task)
-        await asyncio.gather(*tasks)
+        await asyncio.gather(processing_task, stats_task)
     
     async def _processing_loop(self):
         """Main processing loop - correlate and solve"""
@@ -189,7 +194,7 @@ class ProductionMLATSystem(BaseMLATRuntime[ReceiverPosition, SignalObservation])
         if len(observations) < 4:
             return
 
-        if self.simulation_mode:
+        if self.synthetic_feed_mode:
             await self._store_simulated_position(group, observations)
             return
 
@@ -248,10 +253,11 @@ class ProductionMLATSystem(BaseMLATRuntime[ReceiverPosition, SignalObservation])
         centroid_lon = sum(obs.receiver_position.longitude for obs in observations) / len(observations)
 
         aircraft_id = group.message[2:8] if len(group.message) >= 8 else group.message
-        synthetic_position = {
-            "A1B2C3": {"latitude": 40.20, "longitude": -74.70, "altitude": 8500.0},
-            "D4E5F6": {"latitude": 40.95, "longitude": -73.10, "altitude": 7800.0},
-        }.get(
+        replay_positions = {
+            state["icao"]: state
+            for state in scenario_aircraft_states(observations[0].timestamp, self.demo_scenario.slug)
+        }
+        synthetic_position = replay_positions.get(
             aircraft_id,
             {
                 "latitude": centroid_lat,
@@ -309,6 +315,12 @@ class ProductionMLATSystem(BaseMLATRuntime[ReceiverPosition, SignalObservation])
                 active_receivers=len(self.receiver_positions),
                 avg_uncertainty=avg_uncertainty
             )
+
+            if self.synthetic_feed_mode:
+                self.database.cleanup_simulation_data(
+                    position_hours=self.simulation_retention_hours,
+                    statistics_days=self.statistics_retention_days,
+                )
             
             # Log statistics
             logger.info("=" * 70)
@@ -326,37 +338,6 @@ class ProductionMLATSystem(BaseMLATRuntime[ReceiverPosition, SignalObservation])
             logger.info(f"  Avg uncertainty: {avg_uncertainty:.1f}m")
             logger.info("=" * 70)
 
-    async def _simulation_position_loop(self):
-        """Write deterministic simulated positions for demo mode."""
-        logger.info("🧪 Simulation position loop started")
-        while self.is_running:
-            timestamp = time.time()
-            for aircraft_id, track in self._simulation_tracks.items():
-                self._advance_simulation_track(track, dt_seconds=1.0)
-                self.database.store_position(
-                    aircraft_id=aircraft_id,
-                    timestamp=timestamp,
-                    latitude=track["latitude"],
-                    longitude=track["longitude"],
-                    altitude=track["altitude"],
-                    uncertainty=150.0,
-                    num_receivers=max(4, min(len(self.receiver_positions), 5)),
-                    receiver_ids=list(self.receiver_positions.keys())[:5],
-                    residual=0.0,
-                )
-            await asyncio.sleep(1.0)
-
-    def _advance_simulation_track(self, track: Dict[str, float], dt_seconds: float):
-        """Move a synthetic aircraft slowly for UI/demo purposes."""
-        speed_ms = track["speed_kmh"] * 1000.0 / 3600.0
-        distance_m = speed_ms * dt_seconds
-        heading_rad = math.radians(track["heading"])
-        dlat = (distance_m * math.cos(heading_rad)) / 111000.0
-        lon_scale = max(math.cos(math.radians(track["latitude"])), 0.1)
-        dlon = (distance_m * math.sin(heading_rad)) / (111000.0 * lon_scale)
-        track["latitude"] += dlat
-        track["longitude"] += dlon
-    
     async def stop(self):
         """Stop the system gracefully"""
         logger.info("🛑 Stopping MLAT system...")
@@ -393,7 +374,13 @@ async def main():
     settings = load_runtime_settings(max_receivers_default=10)
     
     # Create system
-    system = ProductionMLATSystem(settings.network_config, db_path=settings.db_path)
+    system = ProductionMLATSystem(
+        settings.network_config,
+        db_path=settings.db_path,
+        simulation_retention_hours=settings.simulation_retention_hours,
+        statistics_retention_days=settings.statistics_retention_days,
+        demo_settings=settings.demo,
+    )
     
     # Setup signal handlers for graceful shutdown
     loop = asyncio.get_event_loop()
