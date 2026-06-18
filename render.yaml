@@ -35,6 +35,10 @@ services:
         value: "true"
       - key: LOG_LEVEL
         value: INFO
+      - key: HEALTH_STALE_SIGNAL_SECONDS
+        value: "120"
+      - key: STATS_INTERVAL_SECONDS
+        value: "60"
     disk:
       name: mlat-demo-data
       mountPath: /var/data

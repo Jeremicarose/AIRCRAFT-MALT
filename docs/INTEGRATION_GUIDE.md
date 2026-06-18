@@ -1,34 +1,52 @@
-# Integration Guide: Connecting to CKB and 4DSky
+# Integration Guide
 
-This guide shows how the project is intended to integrate with its real external systems:
+This guide explains how to connect external infrastructure to MLAT Airspace Console after you understand the product surfaces and output model.
 
-1. **CKB (Nervos Network)** for decentralized receiver discovery
-2. **4DSky** for live Mode-S data streaming
+Read this guide after:
 
-If you need the contract and registry details, read [CKB_INTEGRATION_GUIDE.md](CKB_INTEGRATION_GUIDE.md) alongside this file.
+- [README.md](../README.md) for product framing
+- [GETTING_STARTED.md](GETTING_STARTED.md) for local setup
+- [PROJECT_SUMMARY.md](PROJECT_SUMMARY.md) for architecture and runtime flow
 
-## 🎯 Overview
+If you need contract and registry details, also read [CKB_INTEGRATION_GUIDE.md](CKB_INTEGRATION_GUIDE.md).
 
-The active runtime now expects a CKB-backed receiver registry. The Python entrypoints load configuration from environment variables and then:
+## Integration goal
 
-1. Initialize CKB discovery
-2. Fetch receiver metadata from the on-chain registry
-3. Select MLAT-capable receivers
-4. Start the 4DSky data feed
-5. Correlate and solve positions
+The integration goal is not just to ingest data. It is to produce usable, explainable aircraft outputs with:
 
-For local development, the code can fall back to simulated receivers and a simulated 4DSky feed when `SIMULATE_IF_UNAVAILABLE=true`.
+- receiver-backed positioning
+- normalized quality metadata
+- operational freshness visibility
+- API and stream delivery surfaces
 
-## 📋 Prerequisites
+## Integration layers
 
-- CKB RPC endpoint
-- Receiver registry type hash
-- Optional CKB private key if you want to register receivers
-- 4DSky API credentials when you replace the simulated feed
+1. **Receiver identity and discovery**
+   - CKB-backed registry workflows can provide receiver metadata and ownership context.
+2. **Observation ingress**
+   - 4DSky or another compatible bridge can feed receiver observations into the runtime.
+3. **MLAT processing**
+   - the runtime correlates signals and solves aircraft positions.
+4. **Delivery**
+   - the API, dashboard, and WebSocket surfaces expose the resulting product.
 
-## 🔧 Step 1: Configure CKB Discovery
+## Current behavior
 
-Set the CKB environment variables:
+For local development, the code can use simulated receivers and simulated feed traffic when `SIMULATE_IF_UNAVAILABLE=true`.
+
+That allows you to validate:
+
+- API behavior
+- dashboard behavior
+- quality metadata
+- health and statistics endpoints
+- commercial controls
+
+before wiring live infrastructure.
+
+## Step 1: Configure receiver discovery
+
+Set the CKB-related environment variables when using registry-backed discovery:
 
 ```bash
 CKB_NETWORK=testnet
@@ -38,41 +56,52 @@ RECEIVER_REGISTRY_TYPE_HASH=0xYOUR_TYPE_HASH
 SIMULATE_IF_UNAVAILABLE=false
 ```
 
-The active discovery code lives in:
+Relevant code lives in:
 
 - `src/network/ckb_discovery.py`
 - `src/network/ckb_client.py`
+- `src/production_main.py`
 
-The processor entrypoint loads this config in `src/production_main.py`.
+### What CKB is doing here
 
-## 🔧 Step 2: Register or Discover Receivers
+In this system, CKB is intended to support:
 
-The intended production flow is:
+- receiver identity
+- receiver metadata discovery
+- registry-style ownership workflows
 
-1. Deploy the receiver registry contract
-2. Register receiver metadata on CKB
-3. Query registry cells through the CKB RPC API
-4. Parse receiver coordinates and capabilities
-5. Hand the resulting receiver list to the MLAT pipeline
+It is **not** the main store for aircraft telemetry or the primary product surface.
 
-The current code already supports:
+## Step 2: Provide receiver metadata
 
-- Reading `RECEIVER_REGISTRY_TYPE_HASH`
-- Querying a CKB node when the SDK and RPC are available
-- Falling back to a deterministic local receiver set when not available
+The runtime needs enough receiver metadata to localize aircraft reliably.
 
-## 🔧 Step 3: Connect a Real 4DSky Feed
+At minimum that means:
 
-The network client now supports these feed modes in `src/network/ckb_client.py`:
+- receiver identifier
+- latitude
+- longitude
+- altitude
+- MLAT-relevant capability metadata
 
-- `simulation`: local generated feed
-- `websocket-json`: connect to a websocket that emits JSON records
-- `command-jsonl`: run a local bridge process that prints newline-delimited JSON
-- `auto`: choose a real feed when configured, otherwise fall back to simulation
+The intended flow is:
 
-### Option A: Direct WebSocket JSON Feed
+1. deploy or identify the receiver registry contract
+2. register receiver metadata
+3. query registry cells through RPC or indexer access
+4. parse receiver coordinates and capabilities
+5. hand the resulting receiver set to the MLAT runtime
 
-Use this when 4DSky or your bridge gives you a websocket endpoint:
+## Step 3: Connect a feed source
+
+The client supports multiple feed modes in `src/network/ckb_client.py`:
+
+- `simulation`
+- `websocket-json`
+- `command-jsonl`
+- `auto`
+
+### Option A: WebSocket JSON feed
 
 ```bash
 FOURDSKY_TRANSPORT=websocket-json
@@ -83,41 +112,47 @@ FOURDSKY_AUTH_SCHEME=
 FOURDSKY_SUBSCRIBE_MESSAGE=
 ```
 
-Accepted inbound JSON shapes include records like:
+Accepted records include shapes like:
 
 ```json
 {"receiver_id":"RECV_NYC_001","timestamp":1714400000.123,"message":"8D4840D6202CC371C32CE0576098"}
 ```
 
-### Option B: Local ADEX / Bridge Process
-
-Use this when the 4DSky client or your own bridge can output JSON lines to stdout:
+### Option B: Local bridge process
 
 ```bash
 FOURDSKY_TRANSPORT=command-jsonl
 FOURDSKY_BRIDGE_COMMAND='python bridge.py'
 ```
 
-Each output line should look like:
+Each line should look like:
 
 ```json
 {"receiver_id":"RECV_NYC_001","timestamp":"2026-04-29T12:00:00Z","message":"8D4840D6202CC371C32CE0576098"}
 ```
 
-### Optional Receiver-Level Metadata
+## Step 4: Validate derived outputs
 
-If you want the receiver registry to carry stream metadata too, `src/network/ckb_discovery.py` now supports these optional fields in the stored receiver JSON:
+After integration, validate the product rather than only the transport.
 
-- `stream_endpoint`
-- `stream_protocol`
-- `stream_format`
-- `metadata`
+Check:
 
-That lets you publish per-receiver stream connection details alongside location and capability data.
+- `/api/positions/recent` returns recent positions
+- payloads include `quality`, `solver`, and `correlation` objects
+- `/api/health` reports runtime and freshness details
+- `/api/statistics` behaves according to plan access
+- dashboard selection flows explain estimates clearly
 
-## 🚀 Step 4: Run the System
+## Step 5: Validate access tiers
 
-Local run:
+If you are enabling commercial behavior, also validate:
+
+- public/demo API keys remain limited
+- premium keys can access deeper history or premium metrics
+- live-stream entitlements are required where expected
+- usage events are recorded for billable or tracked resources
+
+## Local run
 
 ```bash
 pip install -r requirements.txt
@@ -126,31 +161,26 @@ mlat-api
 mlat-processor
 ```
 
-Docker run:
+## Validation checklist
 
-```bash
-cp .env.example .env
-docker-compose up -d
-```
+- registry endpoint is reachable if using CKB-backed discovery
+- at least 4 MLAT-capable receivers are discoverable
+- timestamps are synchronized enough for useful MLAT solves
+- API returns recent positions and health data
+- dashboard shows aircraft, receivers, and quality-oriented context
+- access-tier behavior matches plan expectations
 
-## 📊 Validation Checklist
+## Security notes
 
-- `RECEIVER_REGISTRY_TYPE_HASH` points to the deployed registry contract
-- CKB RPC endpoint is reachable
-- At least 4 MLAT-capable receivers are discoverable
-- 4DSky delivers synchronized timestamps
-- Processor logs show correlated groups and solved positions
-- API returns recent positions at `/api/positions/recent`
+- do not commit private keys
+- store secrets in environment variables or a secret manager
+- restrict admin access and secret-bearing endpoints
+- treat registry credentials and feed credentials as separate concerns
 
-## 🔒 Security Notes
+## Related docs
 
-- Do not commit private keys
-- Store secrets in environment variables or a secret manager
-- Restrict access to the CKB RPC endpoint where possible
-- Protect any admin API endpoints before public deployment
-
-## 📚 Related Docs
-
-- [CKB_INTEGRATION_GUIDE.md](CKB_INTEGRATION_GUIDE.md)
-- [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md)
+- [README.md](../README.md)
+- [GETTING_STARTED.md](GETTING_STARTED.md)
 - [PROJECT_SUMMARY.md](PROJECT_SUMMARY.md)
+- [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md)
+- [CKB_INTEGRATION_GUIDE.md](CKB_INTEGRATION_GUIDE.md)

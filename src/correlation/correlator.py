@@ -6,7 +6,7 @@ aircraft transmission. This is crucial because the same signal arrives
 at different receivers at different times.
 """
 
-from typing import List, Dict, Set, Tuple
+from typing import List, Dict, Tuple
 from dataclasses import dataclass, field
 from collections import defaultdict
 import time
@@ -22,13 +22,29 @@ class RawSignal:
 
 
 @dataclass
+class CorrelationQuality:
+    """Normalized quality metadata for a correlated signal group."""
+    quality_score: float
+    quality_bucket: str
+    receiver_count: int
+    correlation_time_span_s: float
+    time_window_s: float
+    min_receivers_required: int
+    mean_signal_strength: float
+    signal_strength_span: float
+    receiver_density_score: float
+    span_score: float
+
+
+@dataclass
 class CorrelatedSignalGroup:
     """A group of signals that came from the same aircraft transmission"""
     message: str  # The Mode-S message content
     signals: List[RawSignal]
     first_timestamp: float
     time_span: float  # Time from first to last reception
-    
+    quality: CorrelationQuality | None = None
+
     def __post_init__(self):
         self.signals.sort(key=lambda x: x.timestamp)
         if len(self.signals) > 0:
@@ -82,14 +98,15 @@ class SignalCorrelator:
         self._cleanup_old_signals()
     
     def _cleanup_old_signals(self) -> None:
-        """Remove signals older than buffer_duration"""
+        """Remove signals older than buffer_duration using buffered signal time."""
         if not self.signal_buffer:
             return
-        
-        current_time = time.time()
+
+        newest_timestamp = max(sig.timestamp for sig in self.signal_buffer)
+        cutoff_timestamp = newest_timestamp - self.buffer_duration
         self.signal_buffer = [
             sig for sig in self.signal_buffer
-            if (current_time - sig.timestamp) < self.buffer_duration
+            if sig.timestamp >= cutoff_timestamp
         ]
     
     def correlate(self) -> List[CorrelatedSignalGroup]:
@@ -127,9 +144,10 @@ class SignalCorrelator:
                         message=message,
                         signals=cluster,
                         first_timestamp=cluster[0].timestamp,
-                        time_span=0.0  # Will be calculated in __post_init__
+                        time_span=0.0,  # Will be calculated in __post_init__
+                        quality=self._build_quality_metadata(cluster),
                     )
-                    
+
                     # Create unique ID for this group
                     group_id = f"{message}_{group.first_timestamp:.6f}"
                     
@@ -173,7 +191,7 @@ class SignalCorrelator:
     def _is_valid_cluster(self, signals: List[RawSignal]) -> bool:
         """
         Check if a cluster is valid for MLAT.
-        
+
         Requirements:
         - At least min_receivers signals
         - Signals from different receivers (not duplicates)
@@ -181,18 +199,68 @@ class SignalCorrelator:
         """
         if len(signals) < self.min_receivers:
             return False
-        
+
         # Check for unique receivers
         receiver_ids = set(sig.receiver_id for sig in signals)
         if len(receiver_ids) < self.min_receivers:
             return False  # Duplicates from same receiver
-        
+
         # Check time span is reasonable (signals should arrive within ~10ms max)
         time_span = signals[-1].timestamp - signals[0].timestamp
         if time_span > 0.010:  # 10 milliseconds
             return False
-        
+
         return True
+
+    def _build_quality_metadata(self, signals: List[RawSignal]) -> CorrelationQuality:
+        """Derive normalized, explainable quality metadata for a valid cluster."""
+        receiver_count = len({sig.receiver_id for sig in signals})
+        time_span = signals[-1].timestamp - signals[0].timestamp if signals else 0.0
+        signal_strengths = [sig.signal_strength for sig in signals]
+        mean_signal_strength = sum(signal_strengths) / len(signal_strengths) if signal_strengths else 0.0
+        signal_strength_span = (
+            max(signal_strengths) - min(signal_strengths)
+            if len(signal_strengths) > 1 else 0.0
+        )
+
+        receiver_density_score = min(1.0, receiver_count / max(self.min_receivers + 2, 1))
+        if self.time_window > 0:
+            span_score = max(0.0, 1.0 - min(time_span / self.time_window, 1.0))
+        else:
+            span_score = 0.0
+        strength_consistency_score = max(0.0, 1.0 - min(signal_strength_span / 40.0, 1.0))
+
+        quality_score = max(
+            0.0,
+            min(
+                1.0,
+                (receiver_density_score * 0.45) +
+                (span_score * 0.4) +
+                (strength_consistency_score * 0.15),
+            ),
+        )
+
+        if quality_score >= 0.85:
+            quality_bucket = "excellent"
+        elif quality_score >= 0.65:
+            quality_bucket = "good"
+        elif quality_score >= 0.4:
+            quality_bucket = "fair"
+        else:
+            quality_bucket = "poor"
+
+        return CorrelationQuality(
+            quality_score=quality_score,
+            quality_bucket=quality_bucket,
+            receiver_count=receiver_count,
+            correlation_time_span_s=time_span,
+            time_window_s=self.time_window,
+            min_receivers_required=self.min_receivers,
+            mean_signal_strength=mean_signal_strength,
+            signal_strength_span=signal_strength_span,
+            receiver_density_score=receiver_density_score,
+            span_score=span_score,
+        )
     
     def get_statistics(self) -> Dict:
         """Get statistics about the correlation process"""
@@ -200,6 +268,19 @@ class SignalCorrelator:
         for signal in self.signal_buffer:
             message_counts[signal.message] += 1
         
+        valid_clusters = []
+        for signals in message_counts:
+            grouped_signals = [sig for sig in self.signal_buffer if sig.message == signals]
+            grouped_signals.sort(key=lambda sig: sig.timestamp)
+            for cluster in self._cluster_by_time(grouped_signals):
+                if self._is_valid_cluster(cluster):
+                    valid_clusters.append(cluster)
+
+        quality_scores = [
+            self._build_quality_metadata(cluster).quality_score
+            for cluster in valid_clusters
+        ]
+
         return {
             "buffer_size": len(self.signal_buffer),
             "unique_messages": len(message_counts),
@@ -207,7 +288,11 @@ class SignalCorrelator:
             "avg_signals_per_message": (
                 sum(message_counts.values()) / len(message_counts)
                 if message_counts else 0
-            )
+            ),
+            "avg_correlation_quality_score": (
+                sum(quality_scores) / len(quality_scores)
+                if quality_scores else 0
+            ),
         }
 
 

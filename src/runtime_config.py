@@ -36,6 +36,8 @@ class RuntimeSettings:
     db_path: str
     simulation_retention_hours: int
     statistics_retention_days: int
+    health_stale_signal_seconds: int
+    stats_interval_seconds: int
     demo: DemoSettings
 
 
@@ -80,6 +82,8 @@ def load_runtime_settings(
         db_path=db_path,
         simulation_retention_hours=int(os.getenv("SIMULATION_RETENTION_HOURS", "24")),
         statistics_retention_days=int(os.getenv("STATISTICS_RETENTION_DAYS", "7")),
+        health_stale_signal_seconds=int(os.getenv("HEALTH_STALE_SIGNAL_SECONDS", "120")),
+        stats_interval_seconds=int(os.getenv("STATS_INTERVAL_SECONDS", "60")),
         demo=DemoSettings(
             enabled=demo_enabled,
             scenario=scenario.slug,

@@ -9,18 +9,21 @@ Stores:
 """
 
 import sqlite3
+import hashlib
 import os
 import threading
-from typing import List, Optional, Dict, Tuple
-from dataclasses import dataclass, asdict
-from datetime import datetime, timedelta
+from typing import Any, List, Optional, Dict, Tuple
+from dataclasses import dataclass
+from datetime import datetime
 import json
 import logging
+import queue
 
 logger = logging.getLogger(__name__)
 
 _SCHEMA_LOCK = threading.Lock()
 _SCHEMA_READY_PATHS = set()
+_EVENT_QUEUES: Dict[str, queue.Queue] = {}
 
 
 @dataclass
@@ -36,6 +39,13 @@ class StoredPosition:
     num_receivers: int
     receiver_ids: str  # JSON array
     residual: float
+    quality_score: float
+    quality_bucket: str
+    solver_method: str
+    solver_residual_m: float
+    solver_iterations: int
+    correlation_time_span_s: float
+    receiver_count: int
     created_at: str
 
 
@@ -62,6 +72,55 @@ class StoredReceiver:
     updated_at: str
 
 
+@dataclass
+class Account:
+    id: Optional[int]
+    account_name: str
+    contact_email: str
+    status: str
+    created_at: str
+    updated_at: str
+
+
+@dataclass
+class Plan:
+    id: Optional[int]
+    plan_code: str
+    display_name: str
+    tier: str
+    description: str
+    max_history_seconds: int
+    can_access_premium: bool
+    can_stream_live: bool
+    created_at: str
+    updated_at: str
+
+
+@dataclass
+class ApiKeyRecord:
+    id: Optional[int]
+    account_id: int
+    key_name: str
+    key_prefix: str
+    key_hash: str
+    status: str
+    plan_id: int
+    created_at: str
+    last_used_at: Optional[str]
+
+
+@dataclass
+class EntitlementRecord:
+    id: Optional[int]
+    account_id: int
+    entitlement_code: str
+    status: str
+    starts_at: Optional[str]
+    ends_at: Optional[str]
+    metadata_json: str
+    created_at: str
+
+
 class MLATDatabase:
     """
     SQLite database for MLAT system.
@@ -78,8 +137,11 @@ class MLATDatabase:
         db_dir = os.path.dirname(self.db_path)
         if db_dir:
             os.makedirs(db_dir, exist_ok=True)
-        self.conn = sqlite3.connect(self.db_path)
+        self.conn = sqlite3.connect(self.db_path, check_same_thread=False)
         self.conn.row_factory = sqlite3.Row
+        self.conn.execute("PRAGMA journal_mode=WAL")
+        self.conn.execute("PRAGMA synchronous=NORMAL")
+        self.conn.execute("PRAGMA busy_timeout=5000")
         self._ensure_schema()
         logger.debug("Connected to database: %s", self.db_path)
 
@@ -113,6 +175,13 @@ class MLATDatabase:
                 num_receivers INTEGER NOT NULL,
                 receiver_ids TEXT NOT NULL,
                 residual REAL NOT NULL,
+                quality_score REAL NOT NULL DEFAULT 0.0,
+                quality_bucket TEXT NOT NULL DEFAULT 'poor',
+                solver_method TEXT NOT NULL DEFAULT 'unknown',
+                solver_residual_m REAL NOT NULL DEFAULT 0.0,
+                solver_iterations INTEGER NOT NULL DEFAULT 0,
+                correlation_time_span_s REAL NOT NULL DEFAULT 0.0,
+                receiver_count INTEGER NOT NULL DEFAULT 0,
                 created_at TEXT NOT NULL,
                 UNIQUE(aircraft_id, timestamp)
             )
@@ -156,9 +225,108 @@ class MLATDatabase:
                 created_at TEXT NOT NULL
             )
         """)
-        
+
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS accounts (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                account_name TEXT NOT NULL UNIQUE,
+                contact_email TEXT NOT NULL UNIQUE,
+                status TEXT NOT NULL,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+            )
+        """)
+
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS plans (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                plan_code TEXT NOT NULL UNIQUE,
+                display_name TEXT NOT NULL,
+                tier TEXT NOT NULL,
+                description TEXT NOT NULL,
+                max_history_seconds INTEGER NOT NULL,
+                can_access_premium INTEGER NOT NULL DEFAULT 0,
+                can_stream_live INTEGER NOT NULL DEFAULT 0,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+            )
+        """)
+
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS api_keys (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                account_id INTEGER NOT NULL,
+                key_name TEXT NOT NULL,
+                key_prefix TEXT NOT NULL,
+                key_hash TEXT NOT NULL UNIQUE,
+                status TEXT NOT NULL,
+                plan_id INTEGER NOT NULL,
+                created_at TEXT NOT NULL,
+                last_used_at TEXT,
+                FOREIGN KEY(account_id) REFERENCES accounts(id),
+                FOREIGN KEY(plan_id) REFERENCES plans(id)
+            )
+        """)
+
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS entitlements (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                account_id INTEGER NOT NULL,
+                entitlement_code TEXT NOT NULL,
+                status TEXT NOT NULL,
+                starts_at TEXT,
+                ends_at TEXT,
+                metadata_json TEXT NOT NULL,
+                created_at TEXT NOT NULL,
+                FOREIGN KEY(account_id) REFERENCES accounts(id)
+            )
+        """)
+
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS usage_events (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                account_id INTEGER,
+                api_key_id INTEGER,
+                event_type TEXT NOT NULL,
+                resource TEXT NOT NULL,
+                quantity INTEGER NOT NULL DEFAULT 1,
+                metadata_json TEXT NOT NULL,
+                created_at TEXT NOT NULL,
+                FOREIGN KEY(account_id) REFERENCES accounts(id),
+                FOREIGN KEY(api_key_id) REFERENCES api_keys(id)
+            )
+        """)
+
+        self._seed_default_plans(cursor)
         self.conn.commit()
     
+    def _seed_default_plans(self, cursor: sqlite3.Cursor):
+        created_at = datetime.now().isoformat()
+        default_plans = [
+            ("public_demo", "Public Demo", "public", "Public demo access with shallow history and no premium outputs.", 900, 0, 0, created_at, created_at),
+            ("premium", "Premium", "premium", "Premium access to quality-enriched outputs, live streams, and deeper history.", 86400, 1, 1, created_at, created_at),
+        ]
+        cursor.executemany(
+            """
+            INSERT INTO plans (
+                plan_code, display_name, tier, description, max_history_seconds,
+                can_access_premium, can_stream_live, created_at, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(plan_code) DO UPDATE SET
+                display_name = excluded.display_name,
+                tier = excluded.tier,
+                description = excluded.description,
+                max_history_seconds = excluded.max_history_seconds,
+                can_access_premium = excluded.can_access_premium,
+                can_stream_live = excluded.can_stream_live,
+                updated_at = excluded.updated_at
+            """,
+            default_plans,
+        )
+
+    def _hash_api_key(self, raw_key: str) -> str:
+        return hashlib.sha256(raw_key.encode("utf-8")).hexdigest()
+
     def store_position(
         self,
         aircraft_id: str,
@@ -169,7 +337,14 @@ class MLATDatabase:
         uncertainty: float,
         num_receivers: int,
         receiver_ids: List[str],
-        residual: float = 0.0
+        residual: float = 0.0,
+        quality_score: float = 0.0,
+        quality_bucket: str = "poor",
+        solver_method: str = "unknown",
+        solver_residual_m: float = 0.0,
+        solver_iterations: int = 0,
+        correlation_time_span_s: float = 0.0,
+        receiver_count: int = 0,
     ) -> int:
         """
         Store a single aircraft position.
@@ -185,16 +360,21 @@ class MLATDatabase:
             cursor.execute("""
                 INSERT INTO positions (
                     aircraft_id, timestamp, latitude, longitude, altitude,
-                    uncertainty, num_receivers, receiver_ids, residual, created_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    uncertainty, num_receivers, receiver_ids, residual,
+                    quality_score, quality_bucket, solver_method, solver_residual_m,
+                    solver_iterations, correlation_time_span_s, receiver_count, created_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (
                 aircraft_id, timestamp, latitude, longitude, altitude,
-                uncertainty, num_receivers, receiver_ids_json, residual, created_at
+                uncertainty, num_receivers, receiver_ids_json, residual,
+                quality_score, quality_bucket, solver_method, solver_residual_m,
+                solver_iterations, correlation_time_span_s, receiver_count, created_at
             ))
             
             self.conn.commit()
             position_id = cursor.lastrowid
-            
+            self.publish_position_event(position_id)
+
             logger.debug(f"Stored position {position_id} for aircraft {aircraft_id}")
             return position_id
             
@@ -211,14 +391,20 @@ class MLATDatabase:
                 UPDATE positions SET
                     latitude = ?, longitude = ?, altitude = ?,
                     uncertainty = ?, num_receivers = ?, receiver_ids = ?,
-                    residual = ?, created_at = ?
+                    residual = ?, quality_score = ?, quality_bucket = ?,
+                    solver_method = ?, solver_residual_m = ?, solver_iterations = ?,
+                    correlation_time_span_s = ?, receiver_count = ?, created_at = ?
                 WHERE aircraft_id = ? AND timestamp = ?
             """, (
                 latitude, longitude, altitude, uncertainty, num_receivers,
-                receiver_ids_json, residual, created_at, aircraft_id, timestamp
+                receiver_ids_json, residual, quality_score, quality_bucket,
+                solver_method, solver_residual_m, solver_iterations,
+                correlation_time_span_s, receiver_count, created_at, aircraft_id, timestamp
             ))
             
             self.conn.commit()
+            if existing_id is not None:
+                self.publish_position_event(existing_id)
             logger.debug(f"Updated position for aircraft {aircraft_id}")
             return existing_id
     
@@ -281,6 +467,13 @@ class MLATDatabase:
                 num_receivers=row['num_receivers'],
                 receiver_ids=row['receiver_ids'],
                 residual=row['residual'],
+                quality_score=row['quality_score'],
+                quality_bucket=row['quality_bucket'],
+                solver_method=row['solver_method'],
+                solver_residual_m=row['solver_residual_m'],
+                solver_iterations=row['solver_iterations'],
+                correlation_time_span_s=row['correlation_time_span_s'],
+                receiver_count=row['receiver_count'],
                 created_at=row['created_at']
             )
             for row in rows
@@ -318,7 +511,7 @@ class MLATDatabase:
         """, (cutoff_time, limit))
         
         rows = cursor.fetchall()
-        
+
         return [
             StoredPosition(
                 id=row['id'],
@@ -331,11 +524,18 @@ class MLATDatabase:
                 num_receivers=row['num_receivers'],
                 receiver_ids=row['receiver_ids'],
                 residual=row['residual'],
+                quality_score=row['quality_score'],
+                quality_bucket=row['quality_bucket'],
+                solver_method=row['solver_method'],
+                solver_residual_m=row['solver_residual_m'],
+                solver_iterations=row['solver_iterations'],
+                correlation_time_span_s=row['correlation_time_span_s'],
+                receiver_count=row['receiver_count'],
                 created_at=row['created_at']
             )
             for row in rows
         ]
-    
+
     def get_active_aircraft(self, seconds: int = 300) -> List[str]:
         """
         Get list of aircraft seen in last N seconds.
@@ -361,24 +561,45 @@ class MLATDatabase:
         total_positions: int,
         active_aircraft: int,
         active_receivers: int,
-        avg_uncertainty: float
+        avg_uncertainty: float,
+        avg_quality_score: float = 0.0,
+        avg_latency_ms: float = 0.0,
+        max_latency_ms: float = 0.0,
+        failed_solves: int = 0,
+        rejected_groups: int = 0,
     ):
         """Store system statistics snapshot"""
         cursor = self.conn.cursor()
-        
+
         timestamp = datetime.now().timestamp()
         created_at = datetime.now().isoformat()
-        
+
+        columns = {row[1] for row in cursor.execute("PRAGMA table_info(statistics)")}
+        if "avg_quality_score" not in columns:
+            cursor.execute("ALTER TABLE statistics ADD COLUMN avg_quality_score REAL NOT NULL DEFAULT 0.0")
+        if "avg_latency_ms" not in columns:
+            cursor.execute("ALTER TABLE statistics ADD COLUMN avg_latency_ms REAL NOT NULL DEFAULT 0.0")
+        if "max_latency_ms" not in columns:
+            cursor.execute("ALTER TABLE statistics ADD COLUMN max_latency_ms REAL NOT NULL DEFAULT 0.0")
+        if "failed_solves" not in columns:
+            cursor.execute("ALTER TABLE statistics ADD COLUMN failed_solves INTEGER NOT NULL DEFAULT 0")
+        if "rejected_groups" not in columns:
+            cursor.execute("ALTER TABLE statistics ADD COLUMN rejected_groups INTEGER NOT NULL DEFAULT 0")
+
         cursor.execute("""
             INSERT INTO statistics (
                 timestamp, total_signals, total_positions,
-                active_aircraft, active_receivers, avg_uncertainty, created_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                active_aircraft, active_receivers, avg_uncertainty,
+                avg_quality_score, avg_latency_ms, max_latency_ms,
+                failed_solves, rejected_groups, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (
             timestamp, total_signals, total_positions,
-            active_aircraft, active_receivers, avg_uncertainty, created_at
+            active_aircraft, active_receivers, avg_uncertainty,
+            avg_quality_score, avg_latency_ms, max_latency_ms,
+            failed_solves, rejected_groups, created_at
         ))
-        
+
         self.conn.commit()
 
     def store_receiver(
@@ -445,6 +666,28 @@ class MLATDatabase:
             for row in rows
         ]
 
+    def _row_to_stored_position(self, row: sqlite3.Row) -> StoredPosition:
+        return StoredPosition(
+            id=row['id'],
+            aircraft_id=row['aircraft_id'],
+            timestamp=row['timestamp'],
+            latitude=row['latitude'],
+            longitude=row['longitude'],
+            altitude=row['altitude'],
+            uncertainty=row['uncertainty'],
+            num_receivers=row['num_receivers'],
+            receiver_ids=row['receiver_ids'],
+            residual=row['residual'],
+            quality_score=row['quality_score'],
+            quality_bucket=row['quality_bucket'],
+            solver_method=row['solver_method'],
+            solver_residual_m=row['solver_residual_m'],
+            solver_iterations=row['solver_iterations'],
+            correlation_time_span_s=row['correlation_time_span_s'],
+            receiver_count=row['receiver_count'],
+            created_at=row['created_at']
+        )
+
     def get_positions_after_id(self, last_id: int, limit: int = 100) -> List[StoredPosition]:
         """Return positions with id greater than last_id in ascending order."""
         cursor = self.conn.cursor()
@@ -456,35 +699,233 @@ class MLATDatabase:
         """, (last_id, limit))
 
         rows = cursor.fetchall()
-        return [
-            StoredPosition(
-                id=row['id'],
-                aircraft_id=row['aircraft_id'],
-                timestamp=row['timestamp'],
-                latitude=row['latitude'],
-                longitude=row['longitude'],
-                altitude=row['altitude'],
-                uncertainty=row['uncertainty'],
-                num_receivers=row['num_receivers'],
-                receiver_ids=row['receiver_ids'],
-                residual=row['residual'],
-                created_at=row['created_at']
+        return [self._row_to_stored_position(row) for row in rows]
+
+    def get_position_by_id(self, position_id: int) -> Optional[StoredPosition]:
+        """Return a position by primary key."""
+        cursor = self.conn.cursor()
+        cursor.execute("SELECT * FROM positions WHERE id = ?", (position_id,))
+        row = cursor.fetchone()
+        return self._row_to_stored_position(row) if row else None
+
+    def get_or_create_position_queue(self) -> queue.Queue:
+        """Return a process-local queue for immediate position events."""
+        normalized_path = os.path.abspath(self.db_path)
+        return _EVENT_QUEUES.setdefault(normalized_path, queue.Queue())
+
+    def publish_position_event(self, position_id: int):
+        """Publish a new or updated position id to the local event queue."""
+        self.get_or_create_position_queue().put(position_id)
+
+    def create_account(self, account_name: str, contact_email: str, status: str = "active") -> int:
+        cursor = self.conn.cursor()
+        now = datetime.now().isoformat()
+        cursor.execute(
+            """
+            INSERT INTO accounts (account_name, contact_email, status, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?)
+            """,
+            (account_name, contact_email, status, now, now),
+        )
+        self.conn.commit()
+        return cursor.lastrowid
+
+    def get_account_by_name(self, account_name: str) -> Optional[Account]:
+        cursor = self.conn.cursor()
+        cursor.execute("SELECT * FROM accounts WHERE account_name = ?", (account_name,))
+        row = cursor.fetchone()
+        if row is None:
+            return None
+        return Account(**dict(row))
+
+    def get_plan_by_code(self, plan_code: str) -> Optional[Plan]:
+        cursor = self.conn.cursor()
+        cursor.execute("SELECT * FROM plans WHERE plan_code = ?", (plan_code,))
+        row = cursor.fetchone()
+        if row is None:
+            return None
+        record = dict(row)
+        record["can_access_premium"] = bool(record["can_access_premium"])
+        record["can_stream_live"] = bool(record["can_stream_live"])
+        return Plan(**record)
+
+    def create_api_key(
+        self,
+        *,
+        account_id: int,
+        key_name: str,
+        raw_key: str,
+        plan_id: int,
+        status: str = "active",
+    ) -> int:
+        cursor = self.conn.cursor()
+        created_at = datetime.now().isoformat()
+        key_prefix = raw_key[:8]
+        key_hash = self._hash_api_key(raw_key)
+        cursor.execute(
+            """
+            INSERT INTO api_keys (
+                account_id, key_name, key_prefix, key_hash, status, plan_id, created_at, last_used_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (account_id, key_name, key_prefix, key_hash, status, plan_id, created_at, None),
+        )
+        self.conn.commit()
+        return cursor.lastrowid
+
+    def create_entitlement(
+        self,
+        *,
+        account_id: int,
+        entitlement_code: str,
+        status: str = "active",
+        starts_at: Optional[str] = None,
+        ends_at: Optional[str] = None,
+        metadata: Optional[Dict[str, Any]] = None,
+    ) -> int:
+        cursor = self.conn.cursor()
+        created_at = datetime.now().isoformat()
+        cursor.execute(
+            """
+            INSERT INTO entitlements (
+                account_id, entitlement_code, status, starts_at, ends_at, metadata_json, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                account_id,
+                entitlement_code,
+                status,
+                starts_at,
+                ends_at,
+                json.dumps(metadata or {}),
+                created_at,
+            ),
+        )
+        self.conn.commit()
+        return cursor.lastrowid
+
+    def authenticate_api_key(self, raw_key: str) -> Optional[Dict[str, Any]]:
+        cursor = self.conn.cursor()
+        key_hash = self._hash_api_key(raw_key)
+        cursor.execute(
+            """
+            SELECT
+                api_keys.id AS api_key_id,
+                api_keys.key_name,
+                api_keys.status AS api_key_status,
+                api_keys.last_used_at,
+                accounts.id AS account_id,
+                accounts.account_name,
+                accounts.contact_email,
+                accounts.status AS account_status,
+                plans.id AS plan_id,
+                plans.plan_code,
+                plans.display_name,
+                plans.tier,
+                plans.max_history_seconds,
+                plans.can_access_premium,
+                plans.can_stream_live
+            FROM api_keys
+            JOIN accounts ON accounts.id = api_keys.account_id
+            JOIN plans ON plans.id = api_keys.plan_id
+            WHERE api_keys.key_hash = ?
+            """,
+            (key_hash,),
+        )
+        row = cursor.fetchone()
+        if row is None:
+            return None
+
+        cursor.execute(
+            """
+            SELECT entitlement_code, status, starts_at, ends_at, metadata_json
+            FROM entitlements
+            WHERE account_id = ?
+            """,
+            (row["account_id"],),
+        )
+        entitlements = []
+        for entitlement in cursor.fetchall():
+            entitlements.append(
+                {
+                    "entitlement_code": entitlement["entitlement_code"],
+                    "status": entitlement["status"],
+                    "starts_at": entitlement["starts_at"],
+                    "ends_at": entitlement["ends_at"],
+                    "metadata": json.loads(entitlement["metadata_json"]),
+                }
             )
-            for row in rows
-        ]
-    
+
+        record = dict(row)
+        record["can_access_premium"] = bool(record["can_access_premium"])
+        record["can_stream_live"] = bool(record["can_stream_live"])
+        record["entitlements"] = entitlements
+        return record
+
+    def touch_api_key(self, api_key_id: int):
+        cursor = self.conn.cursor()
+        cursor.execute(
+            "UPDATE api_keys SET last_used_at = ? WHERE id = ?",
+            (datetime.now().isoformat(), api_key_id),
+        )
+        self.conn.commit()
+
+    def record_usage_event(
+        self,
+        *,
+        account_id: Optional[int],
+        api_key_id: Optional[int],
+        event_type: str,
+        resource: str,
+        quantity: int = 1,
+        metadata: Optional[Dict[str, Any]] = None,
+    ) -> int:
+        cursor = self.conn.cursor()
+        cursor.execute(
+            """
+            INSERT INTO usage_events (
+                account_id, api_key_id, event_type, resource, quantity, metadata_json, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                account_id,
+                api_key_id,
+                event_type,
+                resource,
+                quantity,
+                json.dumps(metadata or {}),
+                datetime.now().isoformat(),
+            ),
+        )
+        self.conn.commit()
+        return cursor.lastrowid
+
+    def get_usage_summary(self, account_id: int) -> List[Dict[str, Any]]:
+        cursor = self.conn.cursor()
+        cursor.execute(
+            """
+            SELECT event_type, resource, SUM(quantity) AS total_quantity
+            FROM usage_events
+            WHERE account_id = ?
+            GROUP BY event_type, resource
+            ORDER BY event_type, resource
+            """,
+            (account_id,),
+        )
+        return [dict(row) for row in cursor.fetchall()]
+
     def get_statistics_history(self, hours: int = 24) -> List[Dict]:
         """Get statistics for last N hours"""
         cursor = self.conn.cursor()
-        
+
         cutoff_time = datetime.now().timestamp() - (hours * 3600)
-        
+
         cursor.execute("""
             SELECT * FROM statistics
             WHERE timestamp >= ?
             ORDER BY timestamp ASC
         """, (cutoff_time,))
-        
+
         return [dict(row) for row in cursor.fetchall()]
     
     def cleanup_old_data(self, days: int = 7):
@@ -565,13 +1006,18 @@ class MLATDatabase:
         cursor.execute("SELECT page_count * page_size as size FROM pragma_page_count(), pragma_page_size()")
         db_size = cursor.fetchone()[0]
         
+        cursor.execute("PRAGMA journal_mode")
+        journal_mode = cursor.fetchone()[0]
+
         return {
             'total_positions': total_positions,
             'unique_aircraft': unique_aircraft,
             'earliest_position': datetime.fromtimestamp(min_time).isoformat() if min_time else None,
             'latest_position': datetime.fromtimestamp(max_time).isoformat() if max_time else None,
             'database_size_bytes': db_size,
-            'database_size_mb': db_size / (1024 * 1024)
+            'database_size_mb': db_size / (1024 * 1024),
+            'journal_mode': journal_mode,
+            'sqlite_single_node_only': True,
         }
     
     def close(self):

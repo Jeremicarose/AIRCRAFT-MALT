@@ -11,6 +11,7 @@ Integrates all components:
 """
 
 import asyncio
+from collections import deque
 import logging
 import signal
 import os
@@ -31,7 +32,7 @@ from mlat.robust_solver import RobustMLATSolver, ReceiverPosition, SignalObserva
 from database.mlat_db import MLATDatabase
 from demo_scenarios import get_demo_scenario, scenario_aircraft_states
 from mlat_runtime import BaseMLATRuntime
-from runtime_config import DemoSettings, env_bool, load_runtime_settings
+from runtime_config import DemoSettings, load_runtime_settings
 
 # Setup logging
 logging.basicConfig(
@@ -40,17 +41,22 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+CURRENT_RUNTIME = None
+
+
 class ProductionMLATSystem(BaseMLATRuntime[ReceiverPosition, SignalObservation]):
     """
     Production-ready MLAT system with all features integrated.
     """
-    
+
     def __init__(
         self,
         config: NetworkConfig,
         db_path: str = "mlat_data.db",
         simulation_retention_hours: int = 24,
         statistics_retention_days: int = 7,
+        health_stale_signal_seconds: int = 120,
+        stats_interval_seconds: int = 60,
         demo_settings: DemoSettings | None = None,
     ):
         super().__init__(
@@ -60,6 +66,14 @@ class ProductionMLATSystem(BaseMLATRuntime[ReceiverPosition, SignalObservation])
         )
         self.solver = RobustMLATSolver(min_receivers=4)
         self.database = MLATDatabase(db_path)
+        self.health_stale_signal_seconds = max(1, health_stale_signal_seconds)
+        self.stats_interval_seconds = max(5, stats_interval_seconds)
+        self.solve_latencies_ms = deque(maxlen=1000)
+        self.store_latencies_ms = deque(maxlen=1000)
+        self.api_latencies_ms = deque(maxlen=1000)
+        self.rejected_groups = 0
+        self.last_successful_solve_at = 0.0
+        self.last_store_at = 0.0
 
         # Statistics
         self.stats = {
@@ -83,6 +97,39 @@ class ProductionMLATSystem(BaseMLATRuntime[ReceiverPosition, SignalObservation])
         self.synthetic_feed_mode = config.fourdsky_transport == "simulation"
         self.simulation_retention_hours = max(1, simulation_retention_hours)
         self.statistics_retention_days = max(1, statistics_retention_days)
+
+    def get_runtime_state(self) -> dict:
+        """Expose current runtime health and performance state."""
+        now = time.time()
+        instrumentation = self.get_runtime_instrumentation()
+        return {
+            "is_running": self.is_running,
+            "start_time": self.stats['start_time'],
+            "uptime_s": max(0.0, now - self.stats['start_time']),
+            "last_signal_at": instrumentation.get("last_signal_at", 0.0),
+            "last_signal_age_s": instrumentation.get("last_signal_age_s"),
+            "last_successful_solve_at": self.last_successful_solve_at,
+            "last_successful_solve_age_s": (max(0.0, now - self.last_successful_solve_at) if self.last_successful_solve_at else None),
+            "last_store_at": self.last_store_at,
+            "last_store_age_s": (max(0.0, now - self.last_store_at) if self.last_store_at else None),
+            "avg_ingest_latency_ms": instrumentation.get("avg_ingest_latency_ms", 0.0),
+            "max_ingest_latency_ms": instrumentation.get("max_ingest_latency_ms", 0.0),
+            "avg_solve_latency_ms": (sum(self.solve_latencies_ms) / len(self.solve_latencies_ms) if self.solve_latencies_ms else 0.0),
+            "max_solve_latency_ms": (max(self.solve_latencies_ms) if self.solve_latencies_ms else 0.0),
+            "avg_store_latency_ms": (sum(self.store_latencies_ms) / len(self.store_latencies_ms) if self.store_latencies_ms else 0.0),
+            "max_store_latency_ms": (max(self.store_latencies_ms) if self.store_latencies_ms else 0.0),
+            "avg_api_latency_ms": (sum(self.api_latencies_ms) / len(self.api_latencies_ms) if self.api_latencies_ms else 0.0),
+            "max_api_latency_ms": (max(self.api_latencies_ms) if self.api_latencies_ms else 0.0),
+            "failed_solves": self.stats['failed_solves'],
+            "rejected_groups": self.rejected_groups,
+            "active_receivers": len(self.receiver_positions),
+            "buffer_size": len(self.correlator.signal_buffer),
+            "stale_signal_threshold_s": self.health_stale_signal_seconds,
+            "signal_fresh": (
+                instrumentation.get("last_signal_age_s") is not None
+                and instrumentation.get("last_signal_age_s") <= self.health_stale_signal_seconds
+            ),
+        }
         
     async def initialize(self):
         """Initialize the system"""
@@ -90,8 +137,11 @@ class ProductionMLATSystem(BaseMLATRuntime[ReceiverPosition, SignalObservation])
         logger.info("🚀 PRODUCTION MLAT SYSTEM INITIALIZING")
         logger.info("=" * 70)
         
+        global CURRENT_RUNTIME
+
         # Connect to database
         self.database.connect()
+        CURRENT_RUNTIME = self
         logger.info("✅ Database connected")
         if self.synthetic_feed_mode:
             logger.info(
@@ -192,6 +242,7 @@ class ProductionMLATSystem(BaseMLATRuntime[ReceiverPosition, SignalObservation])
         observations = self.build_observations_from_group(group)
 
         if len(observations) < 4:
+            self.rejected_groups += 1
             return
 
         if self.synthetic_feed_mode:
@@ -200,14 +251,17 @@ class ProductionMLATSystem(BaseMLATRuntime[ReceiverPosition, SignalObservation])
 
         # Solve position
         self.stats['total_positions'] += 1
+        solve_started_at = time.time()
         position = self.solver.solve_position(observations)
+        self.solve_latencies_ms.append((time.time() - solve_started_at) * 1000)
         
         if position:
             self.stats['successful_solves'] += 1
             self.stats['last_position_time'] = time.time()
+            self.last_successful_solve_at = self.stats['last_position_time']
             
             # Store in database
-            await self._store_position(group.message, position)
+            await self._store_position(group.message, position, group=group)
             
             # Log success
             logger.info(
@@ -219,12 +273,16 @@ class ProductionMLATSystem(BaseMLATRuntime[ReceiverPosition, SignalObservation])
         else:
             self.stats['failed_solves'] += 1
     
-    async def _store_position(self, message: str, position):
+    async def _store_position(self, message: str, position, group=None):
         """Store position in database"""
         # Extract aircraft ID from message
         aircraft_id = message[2:8] if len(message) >= 8 else message
-        
+        correlation_time_span_s = getattr(position, "correlation_time_span_s", 0.0)
+        if group is not None:
+            correlation_time_span_s = group.time_span
+
         try:
+            store_started_at = time.time()
             self.database.store_position(
                 aircraft_id=aircraft_id,
                 timestamp=position.timestamp,
@@ -234,8 +292,17 @@ class ProductionMLATSystem(BaseMLATRuntime[ReceiverPosition, SignalObservation])
                 uncertainty=position.uncertainty,
                 num_receivers=position.num_receivers,
                 receiver_ids=position.receiver_ids,
-                residual=position.residual
+                residual=position.residual,
+                quality_score=getattr(position, "quality_score", 0.0),
+                quality_bucket=getattr(position, "quality_bucket", "poor"),
+                solver_method=getattr(position, "solver_method", getattr(position, "method", "unknown")),
+                solver_residual_m=getattr(position, "solver_residual_m", getattr(position, "residual", 0.0)),
+                solver_iterations=getattr(position, "solver_iterations", getattr(position, "iterations", 0)),
+                correlation_time_span_s=correlation_time_span_s,
+                receiver_count=getattr(position, "receiver_count", position.num_receivers),
             )
+            self.store_latencies_ms.append((time.time() - store_started_at) * 1000)
+            self.last_store_at = time.time()
         except Exception as e:
             logger.error(f"Failed to store position: {e}")
 
@@ -267,6 +334,11 @@ class ProductionMLATSystem(BaseMLATRuntime[ReceiverPosition, SignalObservation])
         )
 
         try:
+            receiver_count = len(observations)
+            correlation_time_span_s = group.time_span if group is not None else 0.0
+            quality_score = 0.72 if receiver_count >= 4 else 0.35
+            quality_bucket = "good" if quality_score >= 0.65 else "fair"
+            store_started_at = time.time()
             self.database.store_position(
                 aircraft_id=aircraft_id,
                 timestamp=observations[0].timestamp,
@@ -274,10 +346,19 @@ class ProductionMLATSystem(BaseMLATRuntime[ReceiverPosition, SignalObservation])
                 longitude=synthetic_position["longitude"],
                 altitude=synthetic_position["altitude"],
                 uncertainty=150.0,
-                num_receivers=len(observations),
+                num_receivers=receiver_count,
                 receiver_ids=[obs.receiver_id for obs in observations],
                 residual=0.0,
+                quality_score=quality_score,
+                quality_bucket=quality_bucket,
+                solver_method="simulated_replay",
+                solver_residual_m=0.0,
+                solver_iterations=0,
+                correlation_time_span_s=correlation_time_span_s,
+                receiver_count=receiver_count,
             )
+            self.store_latencies_ms.append((time.time() - store_started_at) * 1000)
+            self.last_store_at = time.time()
             logger.info(
                 "✈️  Simulated aircraft %s: %.4f°, %.4f°, %.0fm (%d rcv)",
                 aircraft_id,
@@ -294,26 +375,40 @@ class ProductionMLATSystem(BaseMLATRuntime[ReceiverPosition, SignalObservation])
         logger.info("📊 Statistics loop started")
         
         while self.is_running:
-            await asyncio.sleep(60)  # Every minute
+            await asyncio.sleep(self.stats_interval_seconds)
             
             # Calculate statistics
             runtime = time.time() - self.stats['start_time']
             active_aircraft = self.database.get_active_aircraft(seconds=300)
-            
+
             # Get recent positions for uncertainty calculation
             recent_positions = self.database.get_recent_positions(seconds=300)
             avg_uncertainty = (
                 sum(p.uncertainty for p in recent_positions) / len(recent_positions)
                 if recent_positions else 0
             )
-            
+            avg_quality_score = (
+                sum(p.quality_score for p in recent_positions) / len(recent_positions)
+                if recent_positions else 0
+            )
+            avg_latency_ms = (
+                sum(self.solve_latencies_ms) / len(self.solve_latencies_ms)
+                if self.solve_latencies_ms else 0
+            )
+            max_latency_ms = max(self.solve_latencies_ms) if self.solve_latencies_ms else 0
+
             # Store statistics
             self.database.store_statistics(
                 total_signals=self.stats['total_signals'],
                 total_positions=self.stats['total_positions'],
                 active_aircraft=len(active_aircraft),
                 active_receivers=len(self.receiver_positions),
-                avg_uncertainty=avg_uncertainty
+                avg_uncertainty=avg_uncertainty,
+                avg_quality_score=avg_quality_score,
+                avg_latency_ms=avg_latency_ms,
+                max_latency_ms=max_latency_ms,
+                failed_solves=self.stats['failed_solves'],
+                rejected_groups=self.rejected_groups,
             )
 
             if self.synthetic_feed_mode:
@@ -336,6 +431,10 @@ class ProductionMLATSystem(BaseMLATRuntime[ReceiverPosition, SignalObservation])
             logger.info(f"  Active aircraft: {len(active_aircraft)}")
             logger.info(f"  Active receivers: {len(self.receiver_positions)}")
             logger.info(f"  Avg uncertainty: {avg_uncertainty:.1f}m")
+            logger.info(f"  Avg quality score: {avg_quality_score:.2f}")
+            logger.info(f"  Avg solve latency: {avg_latency_ms:.1f}ms")
+            logger.info(f"  Max solve latency: {max_latency_ms:.1f}ms")
+            logger.info(f"  Rejected groups: {self.rejected_groups}")
             logger.info("=" * 70)
 
     async def stop(self):
@@ -372,13 +471,15 @@ class ProductionMLATSystem(BaseMLATRuntime[ReceiverPosition, SignalObservation])
 async def main():
     """Main entry point"""
     settings = load_runtime_settings(max_receivers_default=10)
-    
+
     # Create system
     system = ProductionMLATSystem(
         settings.network_config,
         db_path=settings.db_path,
         simulation_retention_hours=settings.simulation_retention_hours,
         statistics_retention_days=settings.statistics_retention_days,
+        health_stale_signal_seconds=settings.health_stale_signal_seconds,
+        stats_interval_seconds=settings.stats_interval_seconds,
         demo_settings=settings.demo,
     )
     

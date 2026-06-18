@@ -1,5 +1,3 @@
-@import url("https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Manrope:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap");
-
 :root {
     --bg: #081119;
     --bg-deep: #050b11;
@@ -36,7 +34,7 @@ html {
 body {
     margin: 0;
     min-height: 100vh;
-    font-family: "Manrope", "Segoe UI", sans-serif;
+    font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
     color: var(--text);
     background:
         radial-gradient(circle at 18% 14%, rgba(217, 192, 154, 0.08), transparent 24%),
@@ -136,7 +134,7 @@ img {
 .signal-pill,
 .demo-chip,
 .map-dock-status {
-    font-family: "IBM Plex Mono", monospace;
+    font-family: Menlo, Consolas, Monaco, monospace;
 }
 
 .kicker,
@@ -166,7 +164,7 @@ img {
 }
 
 .display {
-    font-family: "Cormorant Garamond", Georgia, serif;
+    font-family: Georgia, "Times New Roman", serif;
     letter-spacing: -0.04em;
     font-weight: 600;
 }
@@ -595,7 +593,7 @@ button.button:hover {
     border-radius: 999px;
     background: #1f2a3a;
     color: #fffbf5;
-    font-family: "IBM Plex Mono", monospace;
+    font-family: Menlo, Consolas, Monaco, monospace;
     font-size: 0.72rem;
     letter-spacing: 0.08em;
     text-transform: uppercase;
@@ -728,7 +726,7 @@ button.button:hover {
     background: rgba(255, 255, 255, 0.88);
     border: 1px solid rgba(33, 48, 72, 0.08);
     color: #566175;
-    font-family: "IBM Plex Mono", monospace;
+    font-family: Menlo, Consolas, Monaco, monospace;
     font-size: 0.7rem;
     letter-spacing: 0.08em;
     text-transform: uppercase;
@@ -772,7 +770,7 @@ button.button:hover {
 
 .tour-step {
     color: #9d7c4c;
-    font-family: "IBM Plex Mono", monospace;
+    font-family: Menlo, Consolas, Monaco, monospace;
     font-size: 0.75rem;
     font-weight: 700;
     letter-spacing: 0.12em;
@@ -1054,7 +1052,7 @@ button.button:hover {
     margin: 10px 0 0;
     font-size: 1.8rem;
     line-height: 1;
-    font-family: "Cormorant Garamond", Georgia, serif;
+    font-family: Georgia, "Times New Roman", serif;
     font-weight: 600;
 }
 
@@ -1250,7 +1248,7 @@ button.button:hover {
     font-size: 0.68rem;
     text-transform: uppercase;
     letter-spacing: 0.1em;
-    font-family: "IBM Plex Mono", monospace;
+    font-family: Menlo, Consolas, Monaco, monospace;
 }
 
 .detail-stat strong {

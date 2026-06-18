@@ -59,6 +59,16 @@ class AircraftPosition:
     uncertainty: float  # meters (geometric dilution of precision)
     num_receivers: int
     receiver_ids: List[str]
+    residual: float = 0.0
+    iterations: int = 0
+    method: str = "legacy_mlat"
+    quality_score: float = 0.0
+    quality_bucket: str = "poor"
+    solver_method: str = "legacy_mlat"
+    solver_residual_m: float = 0.0
+    solver_iterations: int = 0
+    correlation_time_span_s: float = 0.0
+    receiver_count: int = 0
 
 
 class MLATSolver:
@@ -119,19 +129,29 @@ class MLATSolver:
         time_diffs = np.array(time_diffs)
         
         # Solve using iterative least squares (Gauss-Newton method)
-        aircraft_ecef = self._gauss_newton_solver(
+        result = self._gauss_newton_solver(
             ref_pos, positions, time_diffs
         )
-        
-        if aircraft_ecef is None:
+
+        if result is None:
             return None
-        
+
+        aircraft_ecef, residual, iterations = result
+
         # Convert back to lat/lon/alt
         lat, lon, alt = self._ecef_to_lla(aircraft_ecef)
-        
+
         # Calculate uncertainty (simplified GDOP estimation)
         uncertainty = self._estimate_uncertainty(ref_pos, positions, aircraft_ecef)
-        
+        correlation_time_span_s = max(obs.timestamp for obs in observations) - min(obs.timestamp for obs in observations)
+        quality_score, quality_bucket = self._normalize_quality(
+            uncertainty=uncertainty,
+            residual=residual,
+            iterations=iterations,
+            receiver_count=len(observations),
+            correlation_time_span_s=correlation_time_span_s,
+        )
+
         return AircraftPosition(
             latitude=lat,
             longitude=lon,
@@ -139,17 +159,26 @@ class MLATSolver:
             timestamp=ref_obs.timestamp,
             uncertainty=uncertainty,
             num_receivers=len(observations),
-            receiver_ids=[obs.receiver_id for obs in observations]
+            receiver_ids=[obs.receiver_id for obs in observations],
+            residual=residual,
+            iterations=iterations,
+            quality_score=quality_score,
+            quality_bucket=quality_bucket,
+            solver_method="legacy_mlat",
+            solver_residual_m=residual,
+            solver_iterations=iterations,
+            correlation_time_span_s=correlation_time_span_s,
+            receiver_count=len(observations),
         )
     
     def _gauss_newton_solver(
-        self, 
+        self,
         ref_pos: np.ndarray,
         receiver_positions: np.ndarray,
         time_diffs: np.ndarray,
         max_iterations: int = 20,
         tolerance: float = 1.0  # meters
-    ) -> Optional[np.ndarray]:
+    ) -> Optional[Tuple[np.ndarray, float, int]]:
         """
         Iterative solver for MLAT using Gauss-Newton method.
         
@@ -163,11 +192,12 @@ class MLATSolver:
         # Convert time differences to range differences
         range_diffs = time_diffs * SPEED_OF_LIGHT
         
+        residuals = np.array([])
         for iteration in range(max_iterations):
             # Calculate residuals and Jacobian
             residuals = []
             jacobian_rows = []
-            
+
             for i, (pos, r_diff) in enumerate(zip(receiver_positions, range_diffs)):
                 # Distance from aircraft to receiver i
                 r_i = np.linalg.norm(x - pos)
@@ -202,10 +232,12 @@ class MLATSolver:
             
             # Check convergence
             if np.linalg.norm(delta) < tolerance:
-                return x
-        
+                rms_residual = np.sqrt(np.mean(residuals**2)) if len(residuals) else 0.0
+                return x, rms_residual, iteration + 1
+
         # Return even if didn't fully converge
-        return x
+        rms_residual = np.sqrt(np.mean(residuals**2)) if len(residuals) else 0.0
+        return x, rms_residual, max_iterations
     
     def _ecef_to_lla(self, ecef: np.ndarray) -> Tuple[float, float, float]:
         """Convert ECEF coordinates to latitude, longitude, altitude"""
@@ -232,6 +264,45 @@ class MLATSolver:
         
         return np.degrees(lat), np.degrees(lon), alt
     
+    def _normalize_quality(
+        self,
+        *,
+        uncertainty: float,
+        residual: float,
+        iterations: int,
+        receiver_count: int,
+        correlation_time_span_s: float,
+    ) -> Tuple[float, str]:
+        """Convert legacy solver diagnostics into the shared output quality contract."""
+        uncertainty_score = max(0.0, 1.0 - min(uncertainty / 2000.0, 1.0))
+        residual_score = max(0.0, 1.0 - min(residual / 1000.0, 1.0))
+        iteration_score = max(0.0, 1.0 - min(iterations / 20.0, 1.0))
+        receiver_score = min(1.0, receiver_count / max(self.min_receivers + 2, 1))
+        span_score = max(0.0, 1.0 - min(correlation_time_span_s / 0.030, 1.0))
+
+        quality_score = max(
+            0.0,
+            min(
+                1.0,
+                (uncertainty_score * 0.35)
+                + (residual_score * 0.25)
+                + (receiver_score * 0.2)
+                + (span_score * 0.1)
+                + (iteration_score * 0.1),
+            ),
+        )
+
+        if quality_score >= 0.85:
+            quality_bucket = "excellent"
+        elif quality_score >= 0.65:
+            quality_bucket = "good"
+        elif quality_score >= 0.4:
+            quality_bucket = "fair"
+        else:
+            quality_bucket = "poor"
+
+        return quality_score, quality_bucket
+
     def _estimate_uncertainty(
         self,
         ref_pos: np.ndarray,

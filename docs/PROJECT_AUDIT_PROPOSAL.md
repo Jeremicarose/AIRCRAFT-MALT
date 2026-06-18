@@ -12,6 +12,13 @@ The clearest current value proposition is not "blockchain for tracking data", bu
 
 > use CKB to manage receiver identity and registry state, use off-chain infrastructure to ingest and process telemetry, and sell high-quality derived aviation data products through a modern API and operations console.
 
+The commercial case should be judged primarily on four dimensions:
+
+- **quality**: how accurate and trustworthy are the outputs?
+- **latency / freshness**: how old is the data when the customer sees it?
+- **reliability**: does the service remain available and usable consistently?
+- **packaging**: is the output delivered in a form buyers can easily adopt, compare, and pay for?
+
 At its strongest, this becomes:
 
 - a **receiver network control plane**
@@ -27,6 +34,14 @@ The project is already meaningfully beyond concept stage:
 - API, database, processor, and dashboard integrated locally
 
 The major remaining gap is **commercial and operational hardening**, not architectural imagination.
+
+In practice, that means the next phase is not “more architecture.”
+It is proving:
+
+- better or at least acceptable **quality**
+- measurable **freshness**
+- dependable **reliability**
+- clearer **packaging** for paying customers
 
 ---
 
@@ -1483,6 +1498,21 @@ This should be positioned as:
 
 > a decentralized receiver registry and MLAT-derived aviation data platform, with off-chain processing and future low-cost billing via Fiber.
 
+### What should be emphasized commercially
+
+The product story should be led by:
+
+- **quality**
+  - confidence, uncertainty, and solve trustworthiness
+- **latency / freshness**
+  - how quickly customers receive usable positions
+- **reliability**
+  - whether the feed/API/dashboard stay available consistently
+- **packaging**
+  - how clearly the outputs are delivered, tiered, explained, and integrated
+
+These four dimensions are more commercially important than the blockchain mechanism itself.
+
 ### What it should not become
 
 It should not be positioned as:
@@ -1499,6 +1529,11 @@ The highest-value next commercial move is:
 2. keep MLAT processing off-chain
 3. use Fiber later for premium API/stream billing and receiver incentives
 4. sell high-quality derived aviation outputs, not raw packet transport
+5. benchmark and package the product explicitly around:
+   - quality
+   - freshness
+   - reliability
+   - premium data product packaging
 
 ---
 
@@ -1548,6 +1583,10 @@ If it focuses on:
 - decentralized discovery
 - trustworthy receiver coordination
 - valuable processed aviation outputs
+- measurable quality
+- low-latency / fresh delivery
+- operational reliability
+- strong commercial packaging
 - premium access and incentives
 
 then it has a coherent path.

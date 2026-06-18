@@ -107,12 +107,22 @@ function parseCapabilities(raw) {
     return [];
 }
 
+function formatQualityLabel(quality) {
+    if (!quality) {
+        return 'No quality data';
+    }
+    const score = typeof quality.score === 'number' ? `${Math.round(quality.score * 100)}%` : 'n/a';
+    const bucket = quality.bucket || 'unknown';
+    return `${score} · ${bucket}`;
+}
+
 function getAircraftPopup(ac) {
     return `
         <b>Aircraft ${ac.id}</b><br>
         Position: ${ac.lat.toFixed(4)}°, ${ac.lon.toFixed(4)}°<br>
         Altitude: ${Math.round(ac.alt)}m (${Math.round(ac.alt * 3.28084)}ft)<br>
         Receivers: ${ac.numReceivers || 0}<br>
+        Quality: ${formatQualityLabel(ac.quality)}<br>
         Uncertainty: ±${Math.round(ac.uncertainty || 0)}m<br>
         Last update: ${formatClock(ac.timestamp)}
     `;
@@ -282,6 +292,9 @@ function upsertAircraftFromApi(record, countForRate = true) {
             uncertainty: record.uncertainty || 0,
             numReceivers: record.num_receivers || 0,
             timestamp: record.timestamp || Date.now() / 1000,
+            quality: record.quality || null,
+            solver: record.solver || null,
+            correlation: record.correlation || null,
             positions: [],
         };
     }
@@ -293,6 +306,9 @@ function upsertAircraftFromApi(record, countForRate = true) {
     ac.uncertainty = record.uncertainty || 0;
     ac.numReceivers = record.num_receivers || 0;
     ac.timestamp = record.timestamp || Date.now() / 1000;
+    ac.quality = record.quality || ac.quality || null;
+    ac.solver = record.solver || ac.solver || null;
+    ac.correlation = record.correlation || ac.correlation || null;
     ac.positions.push({ lat, lon, time: ac.timestamp });
 
     if (ac.positions.length > 80) {
@@ -404,6 +420,7 @@ function renderSelectedAircraft(ac, mode = 'snapshot') {
         document.getElementById('selected-aircraft-copy').textContent = 'Choose a target from the aircraft list or click a map marker to bring its latest state into focus.';
         document.getElementById('selected-altitude').textContent = '—';
         document.getElementById('selected-receivers').textContent = '—';
+        document.getElementById('selected-quality').textContent = '—';
         document.getElementById('selected-uncertainty').textContent = '—';
         document.getElementById('selected-track-count').textContent = '—';
         document.getElementById('selected-timestamp').textContent = 'Awaiting target';
@@ -417,6 +434,7 @@ function renderSelectedAircraft(ac, mode = 'snapshot') {
         : 'This is the latest state from the current map snapshot. Select it again to refresh the detailed path and bring that estimate back into focus.';
     document.getElementById('selected-altitude').textContent = `${Math.round(ac.alt)}m`;
     document.getElementById('selected-receivers').textContent = String(ac.numReceivers || 0);
+    document.getElementById('selected-quality').textContent = formatQualityLabel(ac.quality);
     document.getElementById('selected-uncertainty').textContent = `±${Math.round(ac.uncertainty || 0)}m`;
     document.getElementById('selected-track-count').textContent = String(ac.positions.length || 0);
     document.getElementById('selected-timestamp').textContent = formatClock(ac.timestamp);
@@ -433,11 +451,13 @@ function updateUI() {
         ? `${formatRelativeTime(aircraftList[0].timestamp)} latest map update`
         : isDemo ? 'Replay loading' : 'Awaiting traffic';
 
-    const perMinute = Math.round(lastSnapshotPositionCount / 10);
-    document.getElementById('rate').textContent = String(perMinute);
-    document.getElementById('rate-detail').textContent = isDemo
-        ? 'Replay update pace in this hosted walkthrough'
-        : websocketAvailable ? 'Update pace from the current stream' : 'Update pace from manual refreshes';
+    const avgQualityScore = aircraftList.length > 0
+        ? Math.round((aircraftList.reduce((sum, ac) => sum + ((ac.quality && ac.quality.score) || 0), 0) / aircraftList.length) * 100)
+        : 0;
+    document.getElementById('quality-score').textContent = `${avgQualityScore}%`;
+    document.getElementById('quality-detail').textContent = isDemo
+        ? 'Replay quality across visible derived positions'
+        : websocketAvailable ? 'Live derived-position quality across visible traffic' : 'Snapshot quality across visible traffic';
 
     const avgUncertainty = aircraftList.length > 0
         ? Math.round(aircraftList.reduce((sum, ac) => sum + (ac.uncertainty || 0), 0) / aircraftList.length)
@@ -462,7 +482,8 @@ function updateUI() {
         <button class="aircraft-item" type="button" data-aircraft-id="${ac.id}">
             <strong>${index === 0 ? `${ac.id} · start here` : ac.id}</strong>
             <span>${formatClock(ac.timestamp)} · ${Math.round(ac.alt)}m · ${ac.numReceivers} receivers</span>
-            <span>Uncertainty ±${Math.round(ac.uncertainty || 0)}m · ${formatCoordinate(ac.lat, ac.lon)}</span>
+            <span>${formatQualityLabel(ac.quality)} · uncertainty ±${Math.round(ac.uncertainty || 0)}m</span>
+            <span>${formatCoordinate(ac.lat, ac.lon)}</span>
         </button>
     `).join('');
 

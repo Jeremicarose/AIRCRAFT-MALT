@@ -20,6 +20,10 @@ def test_correlator_groups_valid_multi_receiver_signals():
     assert groups[0].message == "8DA1B2C3"
     assert len(groups[0].signals) == 4
     assert groups[0].time_span <= 0.005
+    assert groups[0].quality is not None
+    assert 0.0 <= groups[0].quality.quality_score <= 1.0
+    assert groups[0].quality.quality_bucket in {"poor", "fair", "good", "excellent"}
+    assert groups[0].quality.receiver_count == 4
 
 
 def test_correlator_rejects_duplicate_receiver_clusters():

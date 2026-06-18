@@ -50,3 +50,19 @@ def test_robust_solver_rejects_duplicate_receivers():
 
     solver = RobustMLATSolver(min_receivers=4)
     assert solver.solve_position(observations) is None
+
+
+def test_quality_normalization_returns_shared_contract():
+    solver = RobustMLATSolver(min_receivers=4)
+
+    quality_score, quality_bucket = solver._normalize_quality(
+        uncertainty=120.0,
+        residual=18.0,
+        iterations=6,
+        receiver_count=5,
+        correlation_time_span_s=0.0015,
+    )
+
+    assert 0.0 <= quality_score <= 1.0
+    assert quality_bucket in {"poor", "fair", "good", "excellent"}
+    assert quality_score > 0.5

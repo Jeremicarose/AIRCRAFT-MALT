@@ -66,6 +66,13 @@ class AircraftPosition:
     residual: float = 0.0
     iterations: int = 0
     method: str = "robust_mlat"
+    quality_score: float = 0.0
+    quality_bucket: str = "poor"
+    solver_method: str = "robust_mlat"
+    solver_residual_m: float = 0.0
+    solver_iterations: int = 0
+    correlation_time_span_s: float = 0.0
+    receiver_count: int = 0
 
 
 class RobustMLATSolver:
@@ -131,7 +138,14 @@ class RobustMLATSolver:
         
         # Calculate uncertainty
         uncertainty = self._estimate_uncertainty(ref_pos, positions, aircraft_ecef, residual)
-        
+        quality_score, quality_bucket = self._normalize_quality(
+            uncertainty=uncertainty,
+            residual=residual,
+            iterations=iterations,
+            receiver_count=len(observations),
+            correlation_time_span_s=max(obs.timestamp for obs in observations) - min(obs.timestamp for obs in observations),
+        )
+
         return AircraftPosition(
             latitude=lat,
             longitude=lon,
@@ -141,7 +155,14 @@ class RobustMLATSolver:
             num_receivers=len(observations),
             receiver_ids=[obs.receiver_id for obs in observations],
             residual=residual,
-            iterations=iterations
+            iterations=iterations,
+            quality_score=quality_score,
+            quality_bucket=quality_bucket,
+            solver_method="robust_mlat",
+            solver_residual_m=residual,
+            solver_iterations=iterations,
+            correlation_time_span_s=max(obs.timestamp for obs in observations) - min(obs.timestamp for obs in observations),
+            receiver_count=len(observations),
         )
     
     def _validate_observations(self, observations: List[SignalObservation]) -> bool:
@@ -338,6 +359,45 @@ class RobustMLATSolver:
         
         return np.degrees(lat), np.degrees(lon), alt
     
+    def _normalize_quality(
+        self,
+        *,
+        uncertainty: float,
+        residual: float,
+        iterations: int,
+        receiver_count: int,
+        correlation_time_span_s: float,
+    ) -> Tuple[float, str]:
+        """Convert solver diagnostics into a bounded, explainable quality score."""
+        uncertainty_score = max(0.0, 1.0 - min(uncertainty / 2000.0, 1.0))
+        residual_score = max(0.0, 1.0 - min(residual / 1000.0, 1.0))
+        iteration_score = max(0.0, 1.0 - min(iterations / max(self.max_iterations, 1), 1.0))
+        receiver_score = min(1.0, receiver_count / max(self.min_receivers + 2, 1))
+        span_score = max(0.0, 1.0 - min(correlation_time_span_s / 0.010, 1.0))
+
+        quality_score = max(
+            0.0,
+            min(
+                1.0,
+                (uncertainty_score * 0.35)
+                + (residual_score * 0.25)
+                + (receiver_score * 0.2)
+                + (span_score * 0.1)
+                + (iteration_score * 0.1),
+            ),
+        )
+
+        if quality_score >= 0.85:
+            quality_bucket = "excellent"
+        elif quality_score >= 0.65:
+            quality_bucket = "good"
+        elif quality_score >= 0.4:
+            quality_bucket = "fair"
+        else:
+            quality_bucket = "poor"
+
+        return quality_score, quality_bucket
+
     def _estimate_uncertainty(
         self,
         ref_pos: np.ndarray,

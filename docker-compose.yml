@@ -8,6 +8,9 @@ services:
     restart: unless-stopped
     env_file:
       - .env
+    environment:
+      HEALTH_STALE_SIGNAL_SECONDS: 120
+      STATS_INTERVAL_SECONDS: 60
     volumes:
       - ./data:/app/data
       - ./logs:/app/logs
@@ -27,6 +30,9 @@ services:
     restart: unless-stopped
     env_file:
       - .env
+    environment:
+      HEALTH_STALE_SIGNAL_SECONDS: 120
+      STATS_INTERVAL_SECONDS: 60
     ports:
       - "5000:5000"
     volumes:

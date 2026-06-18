@@ -1,513 +1,149 @@
-# MLAT Aircraft Localization System - Complete Production System ✈️
+# MLAT Airspace Console
 
-A **production-ready**, decentralized aircraft tracking system using Multilateration (MLAT) with **CKB blockchain** for receiver discovery on Nervos Network.
+MLAT Airspace Console is an MLAT product platform for delivering explainable aircraft position outputs from distributed receiver timing data.
 
-[![Status](https://img.shields.io/badge/status-production--ready-green)]()
-[![Python](https://img.shields.io/badge/python-3.11+-blue)]()
-[![Docker](https://img.shields.io/badge/docker-ready-blue)]()
-[![CKB](https://img.shields.io/badge/blockchain-CKB-orange)]()
+This repository includes the runtime, storage, API, and map-first product surfaces needed to evaluate the platform around:
 
-## 🎯 What This Is
+- output quality
+- operational freshness and latency
+- single-node reliability
+- public/demo versus premium delivery
 
-A complete system that **tracks aircraft without GPS broadcasts** by using signal timing from multiple ground receivers. This system uses **CKB (Nervos Network) blockchain** for decentralized peer discovery.
+It is a strong local and hosted-demo system. It is **not** a claim that every external integration is already proven in live customer environments.
 
-## 🚨 Why This Exists
+## Product value
 
-This project is designed for a specific infrastructure problem:
+Most receiver networks start with raw observations, not directly usable position products. This platform exists to bridge that gap.
 
-- raw receiver networks produce timing data, not immediately usable aircraft positions
-- receiver fleets need a consistent discovery and metadata layer
-- teams integrating receiver infrastructure often need to bridge decentralized registry state, live feed ingestion, localization, storage, and visualization
+It turns distributed observations into:
 
-Instead of treating those as disconnected systems, this repo combines them into one stack:
+- recent aircraft positions
+- aircraft track history
+- structured quality and solver metadata
+- health and runtime status
+- plan-aware API and stream access
 
-1. a CKB-backed receiver registry model
-2. a transport layer for simulated or live feed ingress
-3. MLAT correlation and solving
-4. persistence, API, and dashboard output
+The commercial direction is to package **derived aviation outputs**, not just expose raw transport or registry plumbing.
 
-## 👥 Target Audience
+## Why this repository matters
 
-This repository is aimed at:
+The useful thing here is the end-to-end composition:
 
-- aviation-data platform engineers
-- distributed receiver-network operators
-- CKB/Nervos integrators exploring registry-style blockchain use cases
-- researchers or teams prototyping decentralized MLAT infrastructure
+- receiver identity and discovery can live outside the runtime
+- feed transport can be swapped independently
+- the runtime normalizes solve quality and correlation semantics
+- the database and API preserve those semantics for downstream use
+- the dashboard explains the product through a map-first workflow
+- the API supports public/demo and premium-style access patterns
 
-It is especially useful when your team already has or expects:
+## Core capabilities
 
-- multiple receivers
-- externally managed feed sources
-- a need for service discovery and metadata ownership
-- downstream systems that want normalized aircraft-position APIs
+### Quality-aware derived outputs
+The position payloads can include:
 
-## 🤝 Why This Makes Sense To Integrate
+- `quality.score`
+- `quality.bucket`
+- `solver.method`
+- `solver.residual_m`
+- `solver.iterations`
+- `correlation.time_span_s`
+- `correlation.receiver_count`
 
-For that audience, the value is not just “another MLAT solver.”
+### Reliability and operational visibility
+The platform includes:
 
-The useful part is the infrastructure composition:
+- health and freshness reporting
+- runtime timing metrics
+- broadcaster/runtime status visibility
+- single-node SQLite hardening
+- simulation cleanup and statistics support
 
-- **receiver registry state lives outside the app runtime**
-- **ownership is separated from validation in the CKB model**
-- **transport adapters can be swapped independently of the solver**
-- **API and dashboard layers are already present**
-- **simulation mode lets you validate architecture before external integrations are ready**
+### Commercial readiness
+The API and database include:
 
-That makes it a practical starting point for teams that want to integrate MLAT capability into an existing receiver or aviation-data stack without inventing every layer themselves.
+- accounts
+- plans
+- API keys
+- entitlements
+- usage metering
+- plan-aware authorization
 
-## ✨ Key Features
+## Product surfaces
 
-### Core Capabilities
-- ✅ **MLAT Algorithm** - Robust Levenberg-Marquardt solver
-- ✅ **Signal Correlation** - Time-window clustering with filtering
-- ✅ **CKB Blockchain Integration** - Decentralized peer discovery
-- ✅ **Real-time Processing** - Handles 1000+ aircraft simultaneously
-- ✅ **Database Storage** - SQLite with historical tracking
-- ✅ **REST API** - Full HTTP/WebSocket interface
-- ✅ **Interactive Dashboard** - Beautiful web visualization
-- ✅ **Production Ready** - Docker, monitoring, logging
+### Dashboard
+The dashboard is designed to explain outputs, not just decorate them:
 
-### Why CKB Blockchain?
+- click an aircraft first to inspect uncertainty, quality, and recent motion
+- use receivers second to understand support and coverage
+- keep replay/demo versus live context visible
 
-✅ **Truly Decentralized** - No central authority required
-✅ **Permanent Storage** - Receiver registry persists on-chain
-✅ **Low Cost** - Affordable transaction fees
-✅ **Flexible** - Store any receiver metadata
-✅ **Trustless** - Cryptographic verification
-✅ **Open** - Anyone can participate
+### REST and WebSocket API
+The API exposes recent positions, history, statistics, health, and live updates. Premium-only behavior can be enforced for deeper history, statistics, and streaming access.
 
-### Technical Highlights
-- **Position Accuracy**: 50-500m (depends on receiver geometry)
-- **Throughput**: 10,000+ signals/second
-- **Latency**: <100ms from signal to position
-- **Scalability**: Horizontal scaling with load balancing
-- **Reliability**: Graceful degradation, auto-recovery
+### Hosted demo mode
+The repository can be deployed as a replay-oriented hosted walkthrough so users can explore the product safely in a read-only environment.
 
-## 📌 Current Maturity
+## Architecture
 
-The project is currently strongest as:
+1. **Registry / identity layer**
+   - CKB can provide receiver identity and registry semantics.
+2. **Feed ingress**
+   - simulated or live transports supply receiver observations.
+3. **MLAT processing**
+   - correlation, solving, normalization, and persistence.
+4. **Operational layer**
+   - health, statistics, freshness, and cleanup.
+5. **Delivery layer**
+   - API, WebSocket, dashboard, hosted demo.
 
-- a **well-structured MLAT platform scaffold**
-- a **working local simulation deployment**
-- a **CKB registry integration model**
-- a **test-backed API/database/runtime stack**
+CKB is important in this design, but it should be understood as **supporting infrastructure**, not the main product promise.
 
-It should not be read as “fully validated against live CKB registry data and live 4DSky provider credentials out of the box.”
+## Current maturity
 
-## 🚀 Quick Start
+This project is currently best described as:
 
-### Run with Docker (Recommended)
+- production-structured
+- test-backed
+- locally deployable
+- simulation-capable
+- hosted-demo-capable
+- commercially aware
 
-```bash
-# 1. Clone repository
-git clone <your-repo>
-cd mlat-system
+It should not be described as a fully validated horizontally scaled production service.
 
-# 2. Create environment file
-cp .env.example .env
-nano .env  # Add your credentials
-
-# 3. Start everything
-docker-compose up -d
-
-# 4. Access dashboard
-open http://localhost:8080
-
-# 5. Check API
-curl http://localhost:5000/api/health
-```
-
-### Run Locally
+## Quick start
 
 ```bash
-# Install dependencies
 pip install -r requirements.txt
-
-# Start API server
-mlat-api
-
-# In another terminal, start processor
-mlat-processor
-
-# Open dashboard
-open src/visualization/dashboard.html
-```
-
-## 📁 Project Structure
-
-```
-mlat-system/
-├── src/                          # Source code
-│   ├── mlat/
-│   │   ├── solver.py            # Original MLAT solver
-│   │   ├── enhanced_solver.py   # Enhanced with better convergence
-│   │   └── robust_solver.py     # Production solver (LM algorithm)
-│   ├── correlation/
-│   │   └── correlator.py        # Signal correlation engine
-│   ├── network/
-│   │   ├── ckb_discovery.py     # CKB receiver discovery
-│   │   └── ckb_client.py        # CKB + 4DSky network integration
-│   ├── database/
-│   │   └── mlat_db.py           # SQLite database layer
-│   ├── api/
-│   │   └── rest_api.py          # REST API + WebSocket
-│   ├── visualization/
-│   │   └── dashboard.html       # Interactive web dashboard
-│   ├── production_main.py       # Production application
-│   └── main.py                  # Simple demo application
-│
-├── examples/                     # Working examples
-│   ├── simple_demo.py           # Component demonstrations
-│   └── simulation_demo.py       # Full system simulation
-│
-├── tests/                        # Test suite
-│   ├── test_solver.py           # Solver regression tests
-│   ├── test_correlator.py       # Signal correlation tests
-│   ├── test_database.py         # Database behavior tests
-│   └── test_api.py              # API endpoint tests
-│
-├── docs/                         # Documentation
-│   ├── GETTING_STARTED.md       # Beginner's guide
-│   ├── PROJECT_SUMMARY.md       # Technical deep dive
-│   ├── INTEGRATION_GUIDE.md     # SDK integration guide
-│   └── DEPLOYMENT_GUIDE.md      # Production deployment
-│
-├── Dockerfile                    # Container definition
-├── docker-compose.yml            # Multi-service orchestration
-├── nginx.conf                    # Web server config
-├── requirements.txt              # Python dependencies
-└── README.md                     # This file
-```
-
-## 🎓 How It Works
-
-```
-┌─────────────────────────────────────────────────┐
-│          1. Aircraft Transmits Signal           │
-│              Mode-S Message                      │
-└──────────────────┬──────────────────────────────┘
-                   │
-        ┌──────────┴──────────┐
-        │                     │
-┌───────▼────────┐   ┌────────▼───────┐
-│  Receiver A    │   │  Receiver B    │
-│  t = 0.000100s │   │  t = 0.000300s │
-└───────┬────────┘   └────────┬───────┘
-        │                     │
-        └──────────┬──────────┘
-                   │
-        ┌──────────▼──────────┐
-        │  Signal Correlator   │
-        │  Groups by message   │
-        │  & time proximity    │
-        └──────────┬──────────┘
-                   │
-        ┌──────────▼──────────┐
-        │    MLAT Solver       │
-        │  TDOA calculation    │
-        │  LM optimization     │
-        └──────────┬──────────┘
-                   │
-        ┌──────────▼──────────┐
-        │ Aircraft Position    │
-        │  Lat/Lon/Alt         │
-        │  ± Uncertainty       │
-        └──────────────────────┘
-```
-
-## 📊 System Components
-
-### 1. MLAT Solver (`src/mlat/robust_solver.py`)
-**What it does**: Calculates 3D aircraft position from time-of-arrival data
-
-**Algorithm**: Levenberg-Marquardt optimization (more stable than Gauss-Newton)
-
-**Key features**:
-- Smart initial position guessing
-- Robust convergence with adaptive damping
-- Extensive validation
-- GDOP-based uncertainty estimation
-
-### 2. Signal Correlator (`src/correlation/correlator.py`)
-**What it does**: Matches signals from different receivers
-
-**Features**:
-- Time-window clustering (5ms default)
-- Duplicate filtering
-- Message-based grouping
-- Quality validation
-
-### 3. Network Client (`src/network/ckb_client.py`)
-**What it does**: Connects to a distributed receiver network via CKB/4DSky
-
-**Status**: Framework complete, ready for SDK integration
-
-**Interfaces**:
-- CKB peer discovery
-- 4DSky data streaming
-- Connection management
-
-### 4. Database (`src/database/mlat_db.py`)
-**What it does**: Stores positions and tracks
-
-**Features**:
-- Aircraft position history
-- Track reconstruction
-- Statistics storage
-- Auto-cleanup
-
-### 5. REST API (`src/api/rest_api.py`)
-**What it does**: HTTP/WebSocket interface
-
-**Endpoints**:
-- `GET /api/aircraft` - Active aircraft
-- `GET /api/positions/recent` - Recent positions
-- `GET /api/aircraft/<id>/track` - Historical track
-- `GET /api/statistics` - System stats
-- WebSocket `/socket.io` - Live updates
-
-### 6. Dashboard (`src/visualization/dashboard.html`)
-**What it does**: Beautiful web interface
-
-**Features**:
-- Real-time map with aircraft
-- Receiver network display
-- Statistics dashboard
-- Interactive controls
-
-## 🔌 API Examples
-
-### Get Recent Positions
-
-```bash
-curl http://localhost:5000/api/positions/recent?seconds=60
-```
-
-Response:
-```json
-{
-  "positions": [
-    {
-      "aircraft_id": "ABC123",
-      "timestamp": 1704067200.123,
-      "position": {
-        "latitude": 40.7128,
-        "longitude": -74.0060,
-        "altitude": 9144
-      },
-      "uncertainty": 145.2,
-      "num_receivers": 5
-    }
-  ],
-  "count": 42
-}
-```
-
-### Get Aircraft Track
-
-```bash
-curl http://localhost:5000/api/aircraft/ABC123/track?limit=100
-```
-
-### WebSocket Live Updates
-
-```javascript
-const socket = io('http://localhost:5000');
-
-socket.on('connect', () => {
-  socket.emit('subscribe_aircraft', {aircraft_id: 'ABC123'});
-});
-
-socket.on('position_update', (data) => {
-  console.log('New position:', data);
-});
-```
-
-## 🎯 Production Deployment
-
-### Prerequisites
-- Docker and Docker Compose
-- CKB node access or testnet RPC
-- Receiver registry type hash
-- 4DSky API credentials
-- Server: 2GB RAM, 2 CPU minimum
-
-### Deploy to Cloud
-
-```bash
-# AWS EC2 / GCP / DigitalOcean
-ssh your-server
-
-# Install Docker
-curl -fsSL https://get.docker.com -o get-docker.sh
-sh get-docker.sh
-
-# Deploy
-git clone <your-repo>
-cd mlat-system
-cp .env.example .env
-nano .env  # Add credentials
-
-docker-compose up -d
-```
-
-See [DEPLOYMENT_GUIDE.md](docs/DEPLOYMENT_GUIDE.md) for detailed instructions.
-
-## 📈 Performance
-
-### Benchmarks (on 2GB RAM server)
-- **Signals/second**: 10,000+
-- **Positions/second**: 500+
-- **Concurrent aircraft**: 1,000+
-- **API response time**: <50ms
-- **Position latency**: <100ms
-
-### Accuracy
-- **Good geometry**: 50-200m
-- **Average geometry**: 200-500m
-- **Poor geometry**: 500-1000m
-
-*Accuracy depends on receiver spacing and time synchronization*
-
-## 🔒 Security
-
-- API key authentication
-- SSL/TLS support
-- Rate limiting
-- Input validation
-- SQL injection prevention
-- CORS configuration
-
-## 📚 Documentation
-
-- **[Getting Started](docs/GETTING_STARTED.md)** - Learn the basics
-- **[Project Summary](docs/PROJECT_SUMMARY.md)** - Technical details
-- **[Integration Guide](docs/INTEGRATION_GUIDE.md)** - Connect to CKB/4DSky
-- **[CKB Integration Guide](docs/CKB_INTEGRATION_GUIDE.md)** - Receiver registry setup
-- **[Deployment Guide](docs/DEPLOYMENT_GUIDE.md)** - Production setup
-
-## 🧪 Testing
-
-```bash
-# Run tests
 python -m pytest
-
-# Run demos
-PYTHONPATH=src python examples/simple_demo.py
-PYTHONPATH=src python examples/simulation_demo.py
+mlat-api
+mlat-processor
 ```
 
-## 🛠️ Development
+Then open:
 
-```bash
-# Install dev dependencies
-pip install -r requirements.txt
+- `/` for the product page
+- `/dashboard.html` for the console
+- `/api` for the API root
 
-# Format code
-black src/
+## Documentation
 
-# Lint
-flake8 src/
+- [Getting Started](docs/GETTING_STARTED.md)
+- [Project Summary](docs/PROJECT_SUMMARY.md)
+- [Integration Guide](docs/INTEGRATION_GUIDE.md)
+- [Deployment Guide](docs/DEPLOYMENT_GUIDE.md)
+- [CKB Integration Guide](docs/CKB_INTEGRATION_GUIDE.md)
 
-# Type checking
-mypy src/
-```
+## Recommended framing
 
-## 📊 Monitoring
+If you are presenting this system, lead with:
 
-The system includes:
-- Health check endpoints
-- Prometheus metrics (optional)
-- Structured JSON logging
-- Database statistics
-- Real-time dashboard
+1. aircraft outputs
+2. quality and trust signals
+3. latency and reliability visibility
+4. access tiers and packaging
+5. registry and transport infrastructure
 
-## 🤝 Integration Status
-
-| Component | Status | Notes |
-|-----------|--------|-------|
-| MLAT Solver | ✅ Complete | Production-ready |
-| Signal Correlation | ✅ Complete | Fully tested |
-| Database | ✅ Complete | With migrations |
-| REST API | ✅ Complete | Full CRUD + WebSocket |
-| Dashboard | ✅ Complete | Interactive map |
-| CKB Integration | ⚠️ Framework | Configure registry + RPC |
-| 4DSky Integration | ⚠️ Framework | Add SDK |
-| Docker | ✅ Complete | Multi-service |
-| Tests | ⚠️ Partial | Core components |
-
-## 🎯 Roadmap
-
-- [x] Core MLAT algorithm
-- [x] Signal correlation
-- [x] Database layer
-- [x] REST API
-- [x] Web dashboard
-- [x] Docker deployment
-- [ ] CKB registry wiring with deployed contract
-- [ ] 4DSky SDK integration
-- [ ] Kalman filtering for tracks
-- [ ] Machine learning enhancements
-- [ ] Mobile app
-
-## 🐛 Troubleshooting
-
-**Database locked?**
-```bash
-docker-compose down
-rm data/*.db-shm data/*.db-wal
-docker-compose up -d
-```
-
-**No positions calculated?**
-- Check receiver positions are correct
-- Verify time synchronization
-- Check correlator settings
-- Review logs for errors
-
-**API not responding?**
-```bash
-docker-compose logs mlat-api
-docker-compose restart mlat-api
-```
-
-## 📞 Support
-
-- Review documentation in `/docs`
-- Check examples in `/examples`
-- Read inline code comments
-- Open GitHub issues
-
-## 📄 License
+## License
 
 [Add your license here]
-
-## 🙏 Acknowledgments
-
-Built as a decentralized MLAT infrastructure prototype
-
-Uses:
-- Distributed receiver networks
-- CKB for decentralized peer discovery
-- 4DSky for Mode-S data streaming
-- Community-powered infrastructure
-
----
-
-## 🎉 You're Ready!
-
-This is a **complete, production-ready MLAT system**:
-
-✅ 3000+ lines of tested code
-✅ Full database layer
-✅ REST API + WebSocket
-✅ Interactive dashboard
-✅ Docker deployment
-✅ Comprehensive documentation
-
-**Next step**: Add your CKB and 4DSky configuration, deploy, and start tracking aircraft! ✈️🎯
-
----
-
-*Made with ❤️ for decentralized aviation tracking*

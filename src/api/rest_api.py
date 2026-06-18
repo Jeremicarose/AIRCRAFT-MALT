@@ -6,15 +6,17 @@ This module uses an app-factory pattern and request-scoped database access.
 
 from __future__ import annotations
 
-from flask import Blueprint, Flask, current_app, g, jsonify, request, send_from_directory
+from flask import Blueprint, Flask, current_app, g, jsonify, make_response, request, send_from_directory
 import json
 import logging
 import os
 from pathlib import Path
+import queue
 import threading
 import time
 from datetime import datetime
-from typing import Dict, List, Optional
+from functools import wraps
+from typing import Any, Dict, List, Optional
 
 from demo_scenarios import get_demo_scenario, get_scenario_metadata
 
@@ -33,7 +35,8 @@ try:
 except ImportError:
     SocketIO = None
 
-from database.mlat_db import MLATDatabase
+from database.mlat_db import MLATDatabase, StoredPosition
+from production_main import CURRENT_RUNTIME
 
 
 if load_dotenv is not None:
@@ -99,6 +102,15 @@ else:
 api_bp = Blueprint("api", __name__)
 
 
+def _render_minified_html(filename: str):
+    visualization_dir = Path(current_app.config["VISUALIZATION_DIR"])
+    html = (visualization_dir / filename).read_text(encoding="utf-8")
+    compact = "\n".join(line.rstrip() for line in html.splitlines() if line.strip())
+    response = make_response(compact)
+    response.mimetype = "text/html"
+    return response
+
+
 def load_app_config() -> Dict[str, object]:
     """Load API configuration from environment."""
     demo_enabled = _env_bool("DEMO_MODE", False)
@@ -123,9 +135,12 @@ def load_app_config() -> Dict[str, object]:
         "ENABLE_BACKGROUND_BROADCASTER": _env_bool("ENABLE_BACKGROUND_BROADCASTER", True),
         "ADMIN_API_KEY": os.getenv("ADMIN_API_KEY") or os.getenv("API_KEY"),
         "API_KEY_HEADER": os.getenv("API_KEY_HEADER", "X-API-Key"),
+        "PUBLIC_PLAN_CODE": os.getenv("PUBLIC_PLAN_CODE", "public_demo"),
+        "PREMIUM_PLAN_CODE": os.getenv("PREMIUM_PLAN_CODE", "premium"),
         "API_HOST": os.getenv("API_HOST", "0.0.0.0"),
         "API_PORT": int(os.getenv("API_PORT", "5000")),
         "API_DEBUG": _env_bool("API_DEBUG", False),
+        "HEALTH_STALE_SIGNAL_SECONDS": int(os.getenv("HEALTH_STALE_SIGNAL_SECONDS", "120")),
         "SIMULATION_MODE": simulation_mode,
         "DEMO_MODE": demo_enabled,
         "DEMO_SCENARIO": demo_scenario.slug,
@@ -146,6 +161,17 @@ def create_app(config_overrides: Optional[Dict[str, object]] = None) -> Flask:
     app.config.update(load_app_config())
     if config_overrides:
         app.config.update(config_overrides)
+
+    @app.after_request
+    def apply_response_headers(response):
+        path = request.path or ""
+        is_html = path in {"/", "/dashboard.html"} or response.mimetype == "text/html"
+        if is_html:
+            response.headers["Cache-Control"] = "no-cache, must-revalidate"
+        elif path.endswith((".css", ".js", ".woff2", ".svg", ".png", ".jpg", ".jpeg", ".webp", ".ico")):
+            response.headers["Cache-Control"] = "public, max-age=31536000, immutable"
+        response.headers.setdefault("X-Content-Type-Options", "nosniff")
+        return response
 
     allowed_origins = app.config["CORS_ALLOWED_ORIGINS"]
     if CORS is not None:
@@ -199,6 +225,67 @@ def _validate_api_key() -> bool:
     return request.headers.get(header_name) == api_key
 
 
+def _resolve_request_auth() -> Optional[Dict[str, Any]]:
+    header_name = current_app.config["API_KEY_HEADER"]
+    raw_key = request.headers.get(header_name)
+    if not raw_key:
+        return None
+
+    auth = get_db().authenticate_api_key(raw_key)
+    if auth is None:
+        return None
+    if auth["api_key_status"] != "active" or auth["account_status"] != "active":
+        return None
+
+    get_db().touch_api_key(auth["api_key_id"])
+    g.auth = auth
+    return auth
+
+
+def get_request_auth() -> Optional[Dict[str, Any]]:
+    auth = getattr(g, "auth", None)
+    if auth is not None:
+        return auth
+    return _resolve_request_auth()
+
+
+def _has_active_entitlement(auth: Dict[str, Any], entitlement_code: str) -> bool:
+    for entitlement in auth.get("entitlements", []):
+        if entitlement["entitlement_code"] == entitlement_code and entitlement["status"] == "active":
+            return True
+    return False
+
+
+def require_plan_access(*, require_premium: bool = False, stream_required: bool = False):
+    def decorator(func):
+        @wraps(func)
+        def wrapped(*args, **kwargs):
+            auth = get_request_auth()
+            if auth is None:
+                return jsonify({"error": "Unauthorized"}), 403
+            if require_premium and not auth.get("can_access_premium", False):
+                return jsonify({"error": "Premium plan required"}), 403
+            if stream_required and not auth.get("can_stream_live", False):
+                return jsonify({"error": "Streaming entitlement required"}), 403
+            return func(*args, **kwargs)
+        return wrapped
+    return decorator
+
+
+def record_usage(event_type: str, resource: str, quantity: int = 1, metadata: Optional[Dict[str, Any]] = None):
+    auth = get_request_auth()
+    if auth is None:
+        return
+    get_db().record_usage_event(
+        account_id=auth["account_id"],
+        api_key_id=auth["api_key_id"],
+        event_type=event_type,
+        resource=resource,
+        quantity=quantity,
+        metadata=metadata,
+    )
+
+
 def _parse_cleanup_days() -> int:
     data = request.get_json(silent=True)
     if not isinstance(data, dict):
@@ -212,6 +299,48 @@ def _parse_cleanup_days() -> int:
     return days
 
 
+def get_runtime_state() -> Optional[Dict[str, object]]:
+    if CURRENT_RUNTIME is None:
+        return None
+    return CURRENT_RUNTIME.get_runtime_state()
+
+
+def record_api_latency(started_at: float):
+    runtime = CURRENT_RUNTIME
+    if runtime is not None:
+        runtime.api_latencies_ms.append((time.time() - started_at) * 1000)
+
+
+def _build_position_payload(position: StoredPosition) -> Dict:
+    return {
+        "id": position.id,
+        "aircraft_id": position.aircraft_id,
+        "timestamp": position.timestamp,
+        "position": {
+            "latitude": position.latitude,
+            "longitude": position.longitude,
+            "altitude": position.altitude,
+        },
+        "uncertainty": position.uncertainty,
+        "num_receivers": position.num_receivers,
+        "quality": {
+            "score": position.quality_score,
+            "bucket": position.quality_bucket,
+            "uncertainty_m": position.uncertainty,
+        },
+        "solver": {
+            "method": position.solver_method,
+            "residual_m": position.solver_residual_m,
+            "iterations": position.solver_iterations,
+        },
+        "correlation": {
+            "time_span_s": position.correlation_time_span_s,
+            "receiver_count": position.receiver_count,
+        },
+        "created_at": position.created_at,
+    }
+
+
 def broadcast_position_update(aircraft_id: str, position_data: Dict):
     """Broadcast a position update to websocket clients."""
     payload = {
@@ -223,7 +352,7 @@ def broadcast_position_update(aircraft_id: str, position_data: Dict):
 
 
 def _start_background_broadcaster(app: Flask):
-    """Poll the database for new positions and emit websocket updates."""
+    """Emit websocket updates from the local DB event queue with DB fallback polling."""
     with _broadcast_lock:
         if app.extensions.get("mlat_broadcaster_started"):
             return
@@ -232,6 +361,7 @@ def _start_background_broadcaster(app: Flask):
     def _poll_new_positions():
         poll_db = MLATDatabase(app.config["DATABASE_PATH"])
         poll_db.connect()
+        position_queue = poll_db.get_or_create_position_queue()
         last_position_id = 0
 
         try:
@@ -240,58 +370,231 @@ def _start_background_broadcaster(app: Flask):
                 last_position_id = existing[0].id
 
             while True:
-                new_positions = poll_db.get_positions_after_id(last_position_id, limit=200)
-                for position in new_positions:
+                try:
+                    position_id = position_queue.get(timeout=1.0)
+                    position = poll_db.get_position_by_id(position_id)
+                    if position is None:
+                        continue
                     last_position_id = max(last_position_id, position.id or 0)
+                    payload = _build_position_payload(position)
                     broadcast_position_update(
                         aircraft_id=position.aircraft_id,
                         position_data={
-                            "id": position.id,
-                            "timestamp": position.timestamp,
-                            "latitude": position.latitude,
-                            "longitude": position.longitude,
-                            "altitude": position.altitude,
-                            "uncertainty": position.uncertainty,
-                            "num_receivers": position.num_receivers,
-                            "created_at": position.created_at,
+                            "id": payload["id"],
+                            "timestamp": payload["timestamp"],
+                            "latitude": payload["position"]["latitude"],
+                            "longitude": payload["position"]["longitude"],
+                            "altitude": payload["position"]["altitude"],
+                            "uncertainty": payload["uncertainty"],
+                            "num_receivers": payload["num_receivers"],
+                            "quality": payload["quality"],
+                            "solver": payload["solver"],
+                            "correlation": payload["correlation"],
+                            "created_at": payload["created_at"],
                         },
                     )
-
-                socketio.sleep(1.0)
+                except queue.Empty:
+                    new_positions = poll_db.get_positions_after_id(last_position_id, limit=200)
+                    for position in new_positions:
+                        last_position_id = max(last_position_id, position.id or 0)
+                        payload = _build_position_payload(position)
+                        broadcast_position_update(
+                            aircraft_id=position.aircraft_id,
+                            position_data={
+                                "id": payload["id"],
+                                "timestamp": payload["timestamp"],
+                                "latitude": payload["position"]["latitude"],
+                                "longitude": payload["position"]["longitude"],
+                                "altitude": payload["position"]["altitude"],
+                                "uncertainty": payload["uncertainty"],
+                                "num_receivers": payload["num_receivers"],
+                                "quality": payload["quality"],
+                                "solver": payload["solver"],
+                                "correlation": payload["correlation"],
+                                "created_at": payload["created_at"],
+                            },
+                        )
         finally:
             poll_db.close()
 
     socketio.start_background_task(_poll_new_positions)
 
 
+@api_bp.before_app_request
+def _start_request_timer():
+    g.request_started_at = time.time()
+
+
+@api_bp.after_app_request
+def _record_request_latency(response):
+    started_at = getattr(g, "request_started_at", None)
+    if started_at is not None:
+        record_api_latency(started_at)
+    return response
+
+
 @api_bp.route("/api/health", methods=["GET"])
 def health_check():
+    db = get_db()
+    db_stats = db.get_database_stats()
+    runtime_state = get_runtime_state() or {}
+    recent_receivers = db.get_receivers()
+    now = time.time()
+    receiver_freshness = [max(0.0, now - receiver.last_seen) for receiver in recent_receivers]
+    last_signal_age_s = runtime_state.get("last_signal_age_s")
+    status = "ok"
+    if last_signal_age_s is None or last_signal_age_s > current_app.config["HEALTH_STALE_SIGNAL_SECONDS"]:
+        status = "degraded"
+
     return jsonify({
-        "status": "ok",
+        "status": status,
         "timestamp": datetime.now().isoformat(),
         "service": "MLAT API",
+        "database": {
+            "path": current_app.config["DATABASE_PATH"],
+            "journal_mode": db_stats.get("journal_mode"),
+            "sqlite_single_node_only": db_stats.get("sqlite_single_node_only", True),
+            "size_mb": db_stats.get("database_size_mb", 0),
+        },
+        "runtime": runtime_state,
+        "freshness": {
+            "last_signal_age_s": last_signal_age_s,
+            "last_successful_solve_age_s": runtime_state.get("last_successful_solve_age_s"),
+            "last_store_age_s": runtime_state.get("last_store_age_s"),
+            "receiver_last_seen_age_s": min(receiver_freshness) if receiver_freshness else None,
+            "receiver_stale_count": sum(1 for age in receiver_freshness if age > current_app.config["HEALTH_STALE_SIGNAL_SECONDS"]),
+        },
+        "broadcaster": {
+            "enabled": bool(current_app.config["ENABLE_BACKGROUND_BROADCASTER"]),
+            "started": bool(current_app.extensions.get("mlat_broadcaster_started")),
+            "websocket_available": SocketIO is not None,
+        },
+    })
+
+
+@api_bp.route("/api/readiness", methods=["GET"])
+def readiness_check():
+    """
+    Summarize whether the current runtime looks operationally ready on
+    quality, freshness, reliability, and packaging dimensions.
+    """
+    db = get_db()
+    runtime_state = get_runtime_state() or {}
+    recent_positions = db.get_recent_positions(seconds=300, limit=500)
+    receiver_rows = db.get_receivers()
+
+    position_count = len(recent_positions)
+    avg_quality_score = (
+        sum(position.quality_score for position in recent_positions) / position_count
+        if position_count else 0.0
+    )
+    avg_uncertainty = (
+        sum(position.uncertainty for position in recent_positions) / position_count
+        if position_count else 0.0
+    )
+    avg_residual = (
+        sum(position.solver_residual_m for position in recent_positions) / position_count
+        if position_count else 0.0
+    )
+    avg_receiver_count = (
+        sum(position.receiver_count for position in recent_positions) / position_count
+        if position_count else 0.0
+    )
+    simulated_positions = sum(
+        1 for position in recent_positions
+        if position.solver_method in {"simulated_replay", "simulation", "unknown"}
+    )
+    benchmarkable_output = position_count > 0 and simulated_positions == 0
+    max_last_store_age = runtime_state.get("last_store_age_s")
+    signal_fresh = bool(runtime_state.get("signal_fresh"))
+    failed_solves = int(runtime_state.get("failed_solves", 0))
+    rejected_groups = int(runtime_state.get("rejected_groups", 0))
+    active_receivers = len([row for row in receiver_rows if row.status == "online"])
+
+    quality_ready = position_count > 0 and avg_quality_score >= 0.65 and avg_receiver_count >= 4
+    freshness_ready = max_last_store_age is not None and max_last_store_age <= 30
+    reliability_ready = signal_fresh and active_receivers >= 4 and failed_solves == 0
+    packaging_ready = True
+
+    return jsonify({
+        "ready": quality_ready and freshness_ready and reliability_ready and packaging_ready,
+        "dimensions": {
+            "quality": {
+                "ready": quality_ready,
+                "recent_position_count": position_count,
+                "avg_quality_score": avg_quality_score,
+                "avg_uncertainty_m": avg_uncertainty,
+                "avg_solver_residual_m": avg_residual,
+                "avg_receiver_count": avg_receiver_count,
+                "simulated_positions": simulated_positions,
+                "benchmarkable_output": benchmarkable_output,
+            },
+            "freshness": {
+                "ready": freshness_ready,
+                "last_store_age_s": max_last_store_age,
+                "avg_ingest_latency_ms": runtime_state.get("avg_ingest_latency_ms", 0.0),
+                "avg_solve_latency_ms": runtime_state.get("avg_solve_latency_ms", 0.0),
+                "avg_store_latency_ms": runtime_state.get("avg_store_latency_ms", 0.0),
+                "avg_api_latency_ms": runtime_state.get("avg_api_latency_ms", 0.0),
+            },
+            "reliability": {
+                "ready": reliability_ready,
+                "signal_fresh": signal_fresh,
+                "active_receivers": active_receivers,
+                "failed_solves": failed_solves,
+                "rejected_groups": rejected_groups,
+                "uptime_s": runtime_state.get("uptime_s", 0.0),
+            },
+            "packaging": {
+                "ready": packaging_ready,
+                "premium_statistics_endpoint": True,
+                "health_endpoint": True,
+                "positions_endpoint": True,
+                "track_endpoint": True,
+                "quality_fields_exposed": position_count > 0,
+            },
+        },
+        "not_yet_proven": {
+            "more_accurate_than_incumbents": False,
+            "more_complete_than_incumbents": False,
+            "cheaper_than_incumbents": False,
+            "faster_than_incumbents": False,
+            "better_coverage_than_incumbents": False,
+            "better_analytics_than_incumbents": False,
+            "reason": (
+                "The project captures internal quality/freshness/reliability metrics, "
+                "but it still lacks external benchmark evidence against trusted competitors "
+                "and reference feeds. If output is simulated or replay-derived, the current "
+                "dataset is not benchmarkable for real-world quality claims."
+            ),
+        },
     })
 
 
 @api_bp.route("/", methods=["GET"])
 def landing_page():
-    visualization_dir = current_app.config["VISUALIZATION_DIR"]
-    return send_from_directory(visualization_dir, "index.html")
+    return _render_minified_html("index.html")
 
 
 @api_bp.route("/dashboard.html", methods=["GET"])
 def dashboard_page():
-    visualization_dir = current_app.config["VISUALIZATION_DIR"]
-    return send_from_directory(visualization_dir, "dashboard.html")
+    return _render_minified_html("dashboard.html")
 
 
 @api_bp.route("/<path:asset_path>", methods=["GET"])
 def visualization_assets(asset_path: str):
-    visualization_dir = current_app.config["VISUALIZATION_DIR"]
+    visualization_dir = Path(current_app.config["VISUALIZATION_DIR"])
     asset = Path(asset_path)
     if asset.name in {"index.html", "dashboard.html"}:
-        return send_from_directory(visualization_dir, asset.name)
-    return send_from_directory(visualization_dir, asset_path)
+        return _render_minified_html(asset.name)
+
+    response = send_from_directory(str(visualization_dir), asset_path)
+    suffix = asset.suffix.lower()
+    if suffix in {".css", ".js", ".woff2", ".svg", ".png", ".jpg", ".jpeg", ".webp", ".ico"}:
+        response.cache_control.public = True
+        response.cache_control.max_age = 31536000
+        response.cache_control.immutable = True
+    return response
 
 
 @api_bp.route("/api/system/mode", methods=["GET"])
@@ -322,6 +625,7 @@ def get_system_mode():
 def get_aircraft_list():
     seconds = request.args.get("seconds", default=300, type=int)
     aircraft_ids = get_db().get_active_aircraft(seconds=seconds)
+    record_usage("rest_request", "aircraft_list", metadata={"seconds": seconds})
     return jsonify({
         "aircraft": aircraft_ids,
         "count": len(aircraft_ids),
@@ -331,25 +635,16 @@ def get_aircraft_list():
 
 @api_bp.route("/api/positions/recent", methods=["GET"])
 def get_recent_positions():
+    auth = get_request_auth()
     seconds = request.args.get("seconds", default=60, type=int)
     limit = request.args.get("limit", default=100, type=int)
+    if auth is not None:
+        seconds = min(seconds, auth["max_history_seconds"])
+        if limit > 100 and not auth.get("can_access_premium", False):
+            return jsonify({"error": "Premium plan required for deeper recent-position queries"}), 403
     positions = get_db().get_recent_positions(seconds=seconds, limit=limit)
-    positions_data = [
-        {
-            "id": position.id,
-            "aircraft_id": position.aircraft_id,
-            "timestamp": position.timestamp,
-            "position": {
-                "latitude": position.latitude,
-                "longitude": position.longitude,
-                "altitude": position.altitude,
-            },
-            "uncertainty": position.uncertainty,
-            "num_receivers": position.num_receivers,
-            "created_at": position.created_at,
-        }
-        for position in positions
-    ]
+    positions_data = [_build_position_payload(position) for position in positions]
+    record_usage("rest_request", "recent_positions", quantity=len(positions_data), metadata={"seconds": seconds, "limit": limit})
     return jsonify({
         "positions": positions_data,
         "count": len(positions_data),
@@ -378,15 +673,24 @@ def get_receivers():
 
 @api_bp.route("/api/aircraft/<aircraft_id>/track", methods=["GET"])
 def get_aircraft_track(aircraft_id: str):
+    auth = get_request_auth()
     start_time = request.args.get("start_time", type=float)
     end_time = request.args.get("end_time", type=float)
     limit = request.args.get("limit", default=1000, type=int)
+    if auth is not None:
+        if limit > 250 and not auth.get("can_access_premium", False):
+            return jsonify({"error": "Premium plan required for deep track history"}), 403
+        if start_time is not None and end_time is not None:
+            requested_window = max(0, end_time - start_time)
+            if requested_window > auth["max_history_seconds"]:
+                return jsonify({"error": "Requested history exceeds plan limit"}), 403
     track = get_db().get_aircraft_track(
         aircraft_id=aircraft_id,
         start_time=start_time,
         end_time=end_time,
         limit=limit,
     )
+    record_usage("rest_request", "aircraft_track", quantity=track.num_positions, metadata={"aircraft_id": aircraft_id, "limit": limit})
     return jsonify({
         "aircraft_id": track.aircraft_id,
         "start_time": track.start_time,
@@ -400,6 +704,20 @@ def get_aircraft_track(aircraft_id: str):
                 "altitude": position.altitude,
                 "uncertainty": position.uncertainty,
                 "num_receivers": position.num_receivers,
+                "quality": {
+                    "score": position.quality_score,
+                    "bucket": position.quality_bucket,
+                    "uncertainty_m": position.uncertainty,
+                },
+                "solver": {
+                    "method": position.solver_method,
+                    "residual_m": position.solver_residual_m,
+                    "iterations": position.solver_iterations,
+                },
+                "correlation": {
+                    "time_span_s": position.correlation_time_span_s,
+                    "receiver_count": position.receiver_count,
+                },
             }
             for position in track.positions
         ],
@@ -413,30 +731,37 @@ def get_latest_position(aircraft_id: str):
         return jsonify({"error": "Aircraft not found or no recent positions"}), 404
 
     latest = track.positions[0]
-    return jsonify({
-        "aircraft_id": aircraft_id,
-        "timestamp": latest.timestamp,
-        "position": {
-            "latitude": latest.latitude,
-            "longitude": latest.longitude,
-            "altitude": latest.altitude,
-        },
-        "uncertainty": latest.uncertainty,
-        "num_receivers": latest.num_receivers,
-        "created_at": latest.created_at,
-    })
+    payload = _build_position_payload(latest)
+    payload["aircraft_id"] = aircraft_id
+    record_usage("rest_request", "latest_position", metadata={"aircraft_id": aircraft_id})
+    return jsonify(payload)
 
 
 @api_bp.route("/api/statistics", methods=["GET"])
+@require_plan_access(require_premium=True)
 def get_statistics():
     hours = request.args.get("hours", default=24, type=int)
     db = get_db()
     active_aircraft = db.get_active_aircraft(seconds=300)
+    runtime_state = get_runtime_state() or {}
+    recent_positions = db.get_recent_positions(seconds=300)
+    avg_quality_score = (
+        sum(position.quality_score for position in recent_positions) / len(recent_positions)
+        if recent_positions else 0
+    )
+    record_usage("rest_request", "statistics", metadata={"hours": hours})
     return jsonify({
         "current": {
             "active_aircraft": len(active_aircraft),
             "timestamp": datetime.now().isoformat(),
+            "avg_quality_score": avg_quality_score,
+            "avg_ingest_latency_ms": runtime_state.get("avg_ingest_latency_ms", 0.0),
+            "avg_solve_latency_ms": runtime_state.get("avg_solve_latency_ms", 0.0),
+            "avg_api_latency_ms": runtime_state.get("avg_api_latency_ms", 0.0),
+            "failed_solves": runtime_state.get("failed_solves", 0),
+            "rejected_groups": runtime_state.get("rejected_groups", 0),
         },
+        "runtime": runtime_state,
         "database": db.get_database_stats(),
         "history": db.get_statistics_history(hours=hours),
     })
@@ -507,20 +832,26 @@ def api_documentation():
         "version": "1.0.0",
         "name": "MLAT Aircraft Tracking API",
         "endpoints": {
-            "GET /api/health": "Health check",
+            "GET /api/health": "Health and readiness status including DB and runtime freshness",
             "GET /api/aircraft": "List active aircraft",
             "GET /api/positions/recent": "Recent positions for all aircraft",
             "GET /api/aircraft/<id>/track": "Historical track for aircraft",
             "GET /api/aircraft/<id>/latest": "Latest position for aircraft",
-            "GET /api/statistics": "System statistics",
+            "GET /api/statistics": "Premium operational statistics and latency metrics",
             "GET /api/map/bounds": "Bounding box for map view",
             "POST /api/admin/cleanup": "Clean up old data (admin only)",
+        },
+        "commercial": {
+            "public_plan": current_app.config["PUBLIC_PLAN_CODE"],
+            "premium_plan": current_app.config["PREMIUM_PLAN_CODE"],
+            "usage_metering": ["rest_request", "stream_subscription"],
+            "premium_features": ["statistics", "deep_history", "live_stream"],
         },
         "websocket": {
             "url": "/socket.io",
             "events": {
                 "connect": "Connect to live updates",
-                "subscribe_aircraft": "Subscribe to aircraft updates",
+                "subscribe_aircraft": "Subscribe to aircraft updates (api_key required)",
                 "position_update": "Receive position updates",
             },
         },
@@ -552,7 +883,32 @@ def handle_disconnect():
 @socketio.on("subscribe_aircraft")
 def handle_subscribe(data):
     aircraft_id = data.get("aircraft_id")
+    api_key = data.get("api_key")
     logger.info("Client subscribed to aircraft: %s", aircraft_id)
+
+    if not api_key:
+        emit("subscription_response", {"aircraft_id": aircraft_id, "status": "denied", "error": "API key required"})
+        return
+
+    auth = get_db().authenticate_api_key(api_key)
+    if auth is None or auth["api_key_status"] != "active" or auth["account_status"] != "active":
+        emit("subscription_response", {"aircraft_id": aircraft_id, "status": "denied", "error": "Invalid API key"})
+        return
+    if not auth.get("can_stream_live", False):
+        emit("subscription_response", {"aircraft_id": aircraft_id, "status": "denied", "error": "Streaming plan required"})
+        return
+    if not _has_active_entitlement(auth, "live_stream"):
+        emit("subscription_response", {"aircraft_id": aircraft_id, "status": "denied", "error": "Live stream entitlement required"})
+        return
+
+    get_db().touch_api_key(auth["api_key_id"])
+    get_db().record_usage_event(
+        account_id=auth["account_id"],
+        api_key_id=auth["api_key_id"],
+        event_type="stream_subscription",
+        resource="aircraft_live",
+        metadata={"aircraft_id": aircraft_id},
+    )
 
     if SocketIO is not None:
         from flask_socketio import join_room
@@ -562,6 +918,7 @@ def handle_subscribe(data):
     emit("subscription_response", {
         "aircraft_id": aircraft_id,
         "status": "subscribed",
+        "plan": auth["plan_code"],
     })
 
 

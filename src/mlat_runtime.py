@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
-from typing import Dict, Generic, Optional, TypeVar
+from collections import deque
+from typing import Deque, Dict, Generic, Optional, TypeVar
+import time
 
 from correlation.correlator import RawSignal, SignalCorrelator
 from network.ckb_client import CKBReceiverNetworkClient, NetworkConfig
@@ -31,6 +33,13 @@ class BaseMLATRuntime(Generic[ReceiverPositionT, ObservationT]):
         )
         self.receiver_positions: Dict[str, ReceiverPositionT] = {}
         self.is_running = False
+        self.instrumentation = {
+            "last_signal_at": 0.0,
+            "last_signal_age_s": None,
+            "last_receiver_id": None,
+            "last_message": None,
+        }
+        self.ingest_latencies_ms: Deque[float] = deque(maxlen=1000)
 
     async def initialize_network(self):
         """Initialize discovery/streaming inputs and cache receiver geometry."""
@@ -76,6 +85,17 @@ class BaseMLATRuntime(Generic[ReceiverPositionT, ObservationT]):
             message=message,
             signal_strength=0.0,
         )
+        now = time.time()
+        ingest_latency_ms = max(0.0, (now - timestamp) * 1000)
+        self.instrumentation.update(
+            {
+                "last_signal_at": now,
+                "last_signal_age_s": max(0.0, now - timestamp),
+                "last_receiver_id": receiver_id,
+                "last_message": message,
+            }
+        )
+        self.ingest_latencies_ms.append(ingest_latency_ms)
         self.on_signal_received(signal)
         self.correlator.add_signal(signal)
 
@@ -88,3 +108,14 @@ class BaseMLATRuntime(Generic[ReceiverPositionT, ObservationT]):
                 continue
             observations.append(self.build_observation(signal, receiver_position))
         return observations
+
+    def get_runtime_instrumentation(self) -> Dict[str, object]:
+        """Expose recent ingest timing for health and stats reporting."""
+        latencies = list(self.ingest_latencies_ms)
+        avg_ingest_latency_ms = sum(latencies) / len(latencies) if latencies else 0.0
+        max_ingest_latency_ms = max(latencies) if latencies else 0.0
+        return {
+            **self.instrumentation,
+            "avg_ingest_latency_ms": avg_ingest_latency_ms,
+            "max_ingest_latency_ms": max_ingest_latency_ms,
+        }
