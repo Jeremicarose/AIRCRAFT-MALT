@@ -20,6 +20,11 @@ The platform accepts receiver observations, correlates signals that likely came 
 - a map-first dashboard
 - a hosted replay/demo surface
 
+The most practical first live ingest path in the current repo is the
+`command-jsonl` transport mode, which lets a local decoder or bridge command
+stream newline-delimited JSON observations into the runtime without requiring a
+hosted websocket integration on day one.
+
 Instead of selling raw packet transport, the product direction is to sell **derived aviation outputs** that are easier to inspect, trust, and package.
 
 ## What makes the outputs useful

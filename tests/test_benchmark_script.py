@@ -13,6 +13,7 @@ if str(SRC) not in sys.path:
 
 from pathlib import Path as _Path
 sys.path.insert(0, str(_Path(__file__).resolve().parents[1] / "scripts"))
+from bridge_adapter import normalize_record
 from fetch_opensky_reference import normalize_state_vector
 
 
@@ -147,3 +148,38 @@ def test_normalize_opensky_state_vector():
     assert normalized["aircraft_id"] == "A1B2C3"
     assert normalized["timestamp"] == 1710000000.0
     assert normalized["altitude"] == 9050.0
+
+
+def test_sample_live_bridge_once_outputs_valid_json():
+    result = subprocess.run(
+        [
+            sys.executable,
+            "scripts/sample_live_bridge.py",
+            "--once",
+            "--receiver-id",
+            "RECV_NYC_001",
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    payload = json.loads(result.stdout.strip())
+    assert payload["receiver_id"] == "RECV_NYC_001"
+    assert "timestamp" in payload
+    assert "message" in payload
+
+
+def test_bridge_adapter_normalizes_and_maps_receiver_ids():
+    payload = {
+        "sensor_id": "raw-sensor-1",
+        "time": "2026-06-18T12:00:00Z",
+        "hex": "8D4840D6202CC371C32CE0576098",
+    }
+    records = normalize_record(
+        payload,
+        receiver_map={"raw-sensor-1": "RECV_NYC_001"},
+        default_receiver_id=None,
+    )
+    assert len(records) == 1
+    assert records[0]["receiver_id"] == "RECV_NYC_001"
+    assert records[0]["message"] == "8D4840D6202CC371C32CE0576098"

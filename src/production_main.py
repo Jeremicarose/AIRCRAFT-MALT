@@ -57,6 +57,7 @@ class ProductionMLATSystem(BaseMLATRuntime[ReceiverPosition, SignalObservation])
         statistics_retention_days: int = 7,
         health_stale_signal_seconds: int = 120,
         stats_interval_seconds: int = 60,
+        require_live_benchmarkable_output: bool = False,
         demo_settings: DemoSettings | None = None,
     ):
         super().__init__(
@@ -68,6 +69,7 @@ class ProductionMLATSystem(BaseMLATRuntime[ReceiverPosition, SignalObservation])
         self.database = MLATDatabase(db_path)
         self.health_stale_signal_seconds = max(1, health_stale_signal_seconds)
         self.stats_interval_seconds = max(5, stats_interval_seconds)
+        self.require_live_benchmarkable_output = require_live_benchmarkable_output
         self.solve_latencies_ms = deque(maxlen=1000)
         self.store_latencies_ms = deque(maxlen=1000)
         self.api_latencies_ms = deque(maxlen=1000)
@@ -104,6 +106,8 @@ class ProductionMLATSystem(BaseMLATRuntime[ReceiverPosition, SignalObservation])
         instrumentation = self.get_runtime_instrumentation()
         return {
             "is_running": self.is_running,
+            "synthetic_feed_mode": self.synthetic_feed_mode,
+            "require_live_benchmarkable_output": self.require_live_benchmarkable_output,
             "start_time": self.stats['start_time'],
             "uptime_s": max(0.0, now - self.stats['start_time']),
             "last_signal_at": instrumentation.get("last_signal_at", 0.0),
@@ -149,6 +153,11 @@ class ProductionMLATSystem(BaseMLATRuntime[ReceiverPosition, SignalObservation])
                 self.simulation_retention_hours,
                 self.statistics_retention_days,
             )
+            if self.require_live_benchmarkable_output:
+                logger.warning(
+                    "⚠️ REQUIRE_LIVE_BENCHMARKABLE_OUTPUT=true but FOURDSKY_TRANSPORT=simulation. "
+                    "Current output is not suitable for real external benchmarking."
+                )
         if self.demo_settings.enabled:
             logger.info(
                 "🎛️ Demo mode enabled: scenario=%s label=%s read_only=%s",
@@ -480,6 +489,7 @@ async def main():
         statistics_retention_days=settings.statistics_retention_days,
         health_stale_signal_seconds=settings.health_stale_signal_seconds,
         stats_interval_seconds=settings.stats_interval_seconds,
+        require_live_benchmarkable_output=settings.require_live_benchmarkable_output,
         demo_settings=settings.demo,
     )
     

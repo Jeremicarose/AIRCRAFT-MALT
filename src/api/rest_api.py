@@ -601,6 +601,7 @@ def visualization_assets(asset_path: str):
 def get_system_mode():
     """Expose runtime mode and hosted demo metadata for the frontend."""
     demo_mode = bool(current_app.config["DEMO_MODE"])
+    runtime_state = get_runtime_state() or {}
     return jsonify(
         {
             "mode": "demo" if demo_mode else "simulation" if current_app.config["SIMULATION_MODE"] else "live",
@@ -617,6 +618,7 @@ def get_system_mode():
             },
             "receiver_registry_type_hash": os.getenv("RECEIVER_REGISTRY_TYPE_HASH", ""),
             "websocket_available": SocketIO is not None,
+            "synthetic_feed_mode": bool(runtime_state.get("synthetic_feed_mode", current_app.config["SIMULATION_MODE"])),
         }
     )
 

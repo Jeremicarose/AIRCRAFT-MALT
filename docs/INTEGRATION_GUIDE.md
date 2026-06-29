@@ -122,13 +122,52 @@ Accepted records include shapes like:
 
 ```bash
 FOURDSKY_TRANSPORT=command-jsonl
-FOURDSKY_BRIDGE_COMMAND='python bridge.py'
+FOURDSKY_BRIDGE_COMMAND='python3 scripts/bridge_adapter.py --source stdin'
 ```
 
 Each line should look like:
 
 ```json
 {"receiver_id":"RECV_NYC_001","timestamp":"2026-04-29T12:00:00Z","message":"8D4840D6202CC371C32CE0576098"}
+```
+
+You can validate the bridge interface immediately with:
+
+```bash
+python3 scripts/sample_live_bridge.py --once
+```
+
+That proves the transport path and payload shape. Replace it with a real
+decoder, 4DSky bridge, or local ingest adapter when you are ready for actual
+live aircraft output.
+
+### Stronger local bridge adapter
+
+For a reusable bridge process, use:
+
+```bash
+python3 scripts/bridge_adapter.py --source stdin
+python3 scripts/bridge_adapter.py --source tcp --tcp-host 127.0.0.1 --tcp-port 5001
+python3 scripts/bridge_adapter.py --source unix --unix-path /tmp/aircraft.sock
+python3 scripts/bridge_adapter.py --source subprocess --command 'python3 your_source.py'
+```
+
+Optional receiver-id mapping:
+
+```bash
+python3 scripts/bridge_adapter.py \
+  --source stdin \
+  --receiver-map receiver_map.json \
+  --default-receiver-id RECV_NYC_001
+```
+
+### Multi-receiver Beast bridge
+
+If you have several local Beast endpoints, use:
+
+```bash
+python3 scripts/multi_receiver_beast_bridge.py \
+  --config docs/MULTI_RECEIVER_BEAST_BRIDGE_CONFIG.example.json
 ```
 
 ## Step 4: Validate derived outputs

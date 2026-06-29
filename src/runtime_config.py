@@ -38,6 +38,7 @@ class RuntimeSettings:
     statistics_retention_days: int
     health_stale_signal_seconds: int
     stats_interval_seconds: int
+    require_live_benchmarkable_output: bool
     demo: DemoSettings
 
 
@@ -84,6 +85,7 @@ def load_runtime_settings(
         statistics_retention_days=int(os.getenv("STATISTICS_RETENTION_DAYS", "7")),
         health_stale_signal_seconds=int(os.getenv("HEALTH_STALE_SIGNAL_SECONDS", "120")),
         stats_interval_seconds=int(os.getenv("STATS_INTERVAL_SECONDS", "60")),
+        require_live_benchmarkable_output=env_bool("REQUIRE_LIVE_BENCHMARKABLE_OUTPUT", False),
         demo=DemoSettings(
             enabled=demo_enabled,
             scenario=scenario.slug,

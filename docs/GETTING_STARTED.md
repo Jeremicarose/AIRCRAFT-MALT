@@ -56,6 +56,18 @@ Start the processor in another terminal:
 mlat-processor
 ```
 
+### Most practical first non-simulation path
+
+If you want to move away from replay/simulation transport first, use:
+
+```bash
+FOURDSKY_TRANSPORT=command-jsonl
+FOURDSKY_BRIDGE_COMMAND='python3 scripts/sample_live_bridge.py --once'
+```
+
+That validates the live bridge interface in this repo. Replace the sample
+bridge with a real local decoder/adapter when you have one.
+
 Then open:
 
 - `http://localhost:5000/`
