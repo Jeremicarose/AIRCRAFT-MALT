@@ -578,7 +578,20 @@ def landing_page():
 
 @api_bp.route("/dashboard.html", methods=["GET"])
 def dashboard_page():
-    return _render_minified_html("dashboard.html")
+    return _render_minified_html("app/localization.html")
+
+
+@api_bp.route("/app/<path:page_name>", methods=["GET"])
+def app_pages(page_name: str):
+    visualization_dir = Path(current_app.config["VISUALIZATION_DIR"]) / "app"
+    if not page_name.endswith(".html"):
+        return jsonify({"error": "Endpoint not found"}), 404
+    candidate = visualization_dir / page_name
+    if not candidate.exists():
+        return jsonify({"error": "Endpoint not found"}), 404
+    response = send_from_directory(str(visualization_dir), page_name)
+    response.headers["Cache-Control"] = "no-cache, must-revalidate"
+    return response
 
 
 @api_bp.route("/<path:asset_path>", methods=["GET"])

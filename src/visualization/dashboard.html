@@ -173,10 +173,10 @@
             <section class="dashboard-hero panel-surface">
                 <div class="dashboard-hero-copy">
                     <div class="dashboard-hero-intro">
-                        <span class="kicker">Map-first walkthrough</span>
-                        <h1 class="panel-title display">Start with one aircraft on the map. Use receivers after that to understand the estimate behind it.</h1>
+                        <span class="kicker">Localization surface</span>
+                        <h1 class="panel-title display">Use this page for map-based localization, not full system management.</h1>
                         <p id="mode-description" class="panel-copy dashboard-intro-copy">
-                            This page explains whether you are viewing replay, demo, or live traffic, what MLAT means in practice, and what to click first.
+                            Aircraft management, receiver review, analytics, payments, and settings now live on dedicated pages. This surface stays focused on the active airspace view and map-driven inspection.
                         </p>
                     </div>
                     <div class="dashboard-hero-aside">
@@ -195,8 +195,8 @@
                             </div>
                         </div>
                         <div class="first-step-card">
-                            <span class="tour-callout-label">What to do first</span>
-                            <p>Click any aircraft marker or aircraft card. That opens the clearest explanation of MLAT on this page: position, recent path, uncertainty, and receiver support together.</p>
+                            <span class="tour-callout-label">Navigation reminder</span>
+                            <p>Use the dedicated Aircraft and Receivers pages for management and detailed review. This page stays optimized for map-first localization and track inspection.</p>
                         </div>
                     </div>
                 </div>
@@ -281,72 +281,24 @@
                 <section class="detail-card panel-surface detail-section">
                     <div class="section-title-row">
                         <div>
-                            <span class="kicker">Selected aircraft</span>
-                            <h3 id="selected-aircraft-title">No aircraft selected</h3>
+                            <span class="kicker">Localization quick actions</span>
+                            <h3>Map-specific work stays here</h3>
                         </div>
-                        <span class="signal-pill quiet-pill">Primary view</span>
+                        <span class="signal-pill quiet-pill">Localization only</span>
                     </div>
-                    <p id="selected-aircraft-copy" class="detail-copy">Choose a target from the aircraft list or click a map marker to bring its latest state into focus.</p>
-                    <div class="detail-grid">
-                        <div class="detail-stat">
-                            <span>Altitude</span>
-                            <strong id="selected-altitude">—</strong>
-                        </div>
-                        <div class="detail-stat">
-                            <span>Receivers</span>
-                            <strong id="selected-receivers">—</strong>
-                        </div>
-                        <div class="detail-stat">
-                            <span>Quality</span>
-                            <strong id="selected-quality">—</strong>
-                        </div>
-                        <div class="detail-stat">
-                            <span>Uncertainty</span>
-                            <strong id="selected-uncertainty">—</strong>
-                        </div>
-                        <div class="detail-stat">
-                            <span>Track points</span>
-                            <strong id="selected-track-count">—</strong>
-                        </div>
-                    </div>
-                    <div class="detail-meta compact-tags">
-                        <span class="tag" id="selected-timestamp">Awaiting target</span>
-                        <span class="tag" id="selected-position">No coordinates</span>
-                    </div>
-                </section>
-
-                <section class="receiver-context panel-surface detail-section">
-                    <div class="section-title-row">
-                        <div>
-                            <span class="kicker">Receiver context</span>
-                            <h3>Follow with receivers</h3>
-                        </div>
-                        <span class="tag">Secondary view</span>
-                    </div>
-                    <p class="side-copy receiver-context-copy">After you inspect an aircraft, use receivers to understand the support network behind that estimate. Selecting a receiver recenters the map so coverage and contribution are easier to read.</p>
+                    <p class="detail-copy">
+                        Use this page to localize and inspect current airspace outputs. For deeper aircraft detail, receiver management, analytics, payments, and settings, use the dedicated navigation pages in the app shell.
+                    </p>
                     <div class="receiver-context-summary">
                         <article class="context-note">
-                            <span class="tour-callout-label">Why it matters</span>
-                            <p>Receivers explain where support comes from, how distributed the network is, and why two nearby aircraft can still have different confidence.</p>
+                            <span class="tour-callout-label">Aircraft page</span>
+                            <p>Go there for aircraft-level detail, path history, solver context, and focused quality review.</p>
                         </article>
                         <article class="context-note">
-                            <span class="tour-callout-label">What selection does</span>
-                            <p>Clicking a receiver recenters the map on the station side of the story so you can move from an aircraft estimate back to the network that supports it.</p>
+                            <span class="tour-callout-label">Receiver page</span>
+                            <p>Go there for receiver metadata, capabilities, coordinates, and node status without map clutter.</p>
                         </article>
                     </div>
-                    <div id="receiver-list" class="receiver-list"></div>
-                </section>
-
-                <section class="rail-card panel-surface detail-section aircraft-explorer-section">
-                    <div class="rail-top">
-                        <div>
-                            <span class="kicker">Aircraft explorer</span>
-                            <h3>Keep exploring traffic</h3>
-                            <p id="aircraft-rail-copy" class="rail-copy">Choose an aircraft to inspect motion, receiver participation, and uncertainty from the current map view.</p>
-                        </div>
-                        <span class="signal-pill quiet-pill">Start here</span>
-                    </div>
-                    <div id="aircraft-list" class="aircraft-list"></div>
                 </section>
             </section>
         </main>

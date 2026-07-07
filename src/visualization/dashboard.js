@@ -17,7 +17,6 @@ let refreshTimer = null;
 let websocketAvailable = false;
 let lastSnapshotPositionCount = 0;
 let lastBoundsFitAt = 0;
-let selectedAircraftId = null;
 let systemMode = null;
 
 const aircraftIcon = L.divIcon({
@@ -158,7 +157,7 @@ function getExperienceCopy(modeData) {
             bannerTitle: scenarioLabel,
             bannerCopy: `${scenarioSummary} Expect a hosted replay unless the product explicitly says live. Start with one aircraft, then move to receivers for context.`,
             bannerBadge: modeData.demo_read_only ? 'Read only' : 'Hosted replay',
-            aircraftRailCopy: 'Replay aircraft ordered by latest update. Click one first to inspect path, uncertainty, and receiver support before moving into receiver context.',
+            aircraftRailCopy: '',
             feedLabel: websocketAvailable ? 'Replay stream' : 'Replay refresh',
         };
     }
@@ -172,7 +171,7 @@ function getExperienceCopy(modeData) {
             bannerTitle: '',
             bannerCopy: '',
             bannerBadge: '',
-            aircraftRailCopy: 'Sample aircraft ordered by latest update. Start with one aircraft, then use receivers to understand the network behind it.',
+            aircraftRailCopy: '',
             feedLabel: websocketAvailable ? 'Sample stream' : 'Sample refresh',
         };
     }
@@ -185,7 +184,7 @@ function getExperienceCopy(modeData) {
         bannerTitle: '',
         bannerCopy: '',
         bannerBadge: '',
-        aircraftRailCopy: 'Live aircraft ordered by latest update. Start with one aircraft to inspect movement, uncertainty, and receiver support.',
+        aircraftRailCopy: '',
         feedLabel: websocketAvailable ? 'Live stream' : 'Live refresh',
     };
 }
@@ -200,7 +199,6 @@ function updateModeBanner(modeData) {
     const demoBannerTitle = document.getElementById('demo-banner-title');
     const demoBannerCopy = document.getElementById('demo-banner-copy');
     const demoBannerBadge = document.getElementById('demo-banner-badge');
-    const aircraftRailCopy = document.getElementById('aircraft-rail-copy');
 
     const copy = getExperienceCopy(modeData);
     const isDemo = Boolean(modeData && modeData.demo_mode);
@@ -211,7 +209,6 @@ function updateModeBanner(modeData) {
     heroMode.textContent = copy.heroMode;
     heroFeed.textContent = copy.heroFeed;
     description.textContent = copy.description;
-    aircraftRailCopy.textContent = copy.aircraftRailCopy;
 
     demoChip.hidden = !isDemo;
     demoBanner.hidden = !isDemo;
@@ -414,33 +411,6 @@ function updateReceiverList() {
     document.getElementById('receiver-detail').textContent = `${receiverList.filter((recv) => String(recv.status).toLowerCase() === 'active').length} currently reporting`;
 }
 
-function renderSelectedAircraft(ac, mode = 'snapshot') {
-    if (!ac) {
-        document.getElementById('selected-aircraft-title').textContent = 'No aircraft selected';
-        document.getElementById('selected-aircraft-copy').textContent = 'Choose a target from the aircraft list or click a map marker to bring its latest state into focus.';
-        document.getElementById('selected-altitude').textContent = '—';
-        document.getElementById('selected-receivers').textContent = '—';
-        document.getElementById('selected-quality').textContent = '—';
-        document.getElementById('selected-uncertainty').textContent = '—';
-        document.getElementById('selected-track-count').textContent = '—';
-        document.getElementById('selected-timestamp').textContent = 'Awaiting target';
-        document.getElementById('selected-position').textContent = 'No coordinates';
-        return;
-    }
-
-    document.getElementById('selected-aircraft-title').textContent = `Aircraft ${ac.id}`;
-    document.getElementById('selected-aircraft-copy').textContent = mode === 'focus'
-        ? 'This focused aircraft view is the main explanation surface: compare the current estimate, recent path, uncertainty, and receiver support before moving on to receiver context.'
-        : 'This is the latest state from the current map snapshot. Select it again to refresh the detailed path and bring that estimate back into focus.';
-    document.getElementById('selected-altitude').textContent = `${Math.round(ac.alt)}m`;
-    document.getElementById('selected-receivers').textContent = String(ac.numReceivers || 0);
-    document.getElementById('selected-quality').textContent = formatQualityLabel(ac.quality);
-    document.getElementById('selected-uncertainty').textContent = `±${Math.round(ac.uncertainty || 0)}m`;
-    document.getElementById('selected-track-count').textContent = String(ac.positions.length || 0);
-    document.getElementById('selected-timestamp').textContent = formatClock(ac.timestamp);
-    document.getElementById('selected-position').textContent = formatCoordinate(ac.lat, ac.lon);
-}
-
 function updateUI() {
     const aircraftList = Object.values(aircraft).sort((a, b) => b.timestamp - a.timestamp);
     const isDemo = Boolean(systemMode && systemMode.demo_mode);
@@ -468,33 +438,29 @@ function updateUI() {
         : 'No aircraft in the current view';
 
     const list = document.getElementById('aircraft-list');
-    if (aircraftList.length === 0) {
-        list.innerHTML = `<div class="empty-state">${isDemo
-            ? 'Replay traffic is still loading. Refresh the walkthrough and the hosted sample feed will populate the map again.'
-            : isSimulation
-                ? 'Sample traffic is not visible yet. Refresh the map to load the latest staged positions.'
-                : 'No aircraft are visible yet. Refresh the map to load the latest live positions.'}</div>`;
-        renderSelectedAircraft(null);
-        return;
+    if (list) {
+        if (aircraftList.length === 0) {
+            list.innerHTML = `<div class="empty-state">${isDemo
+                ? 'Replay traffic is still loading. Refresh the walkthrough and the hosted sample feed will populate the map again.'
+                : isSimulation
+                    ? 'Sample traffic is not visible yet. Refresh the map to load the latest staged positions.'
+                    : 'No aircraft are visible yet. Refresh the map to load the latest live positions.'}</div>`;
+            return;
+        }
+
+        list.innerHTML = aircraftList.map((ac, index) => `
+            <button class="aircraft-item" type="button" data-aircraft-id="${ac.id}">
+                <strong>${index === 0 ? `${ac.id} · start here` : ac.id}</strong>
+                <span>${formatClock(ac.timestamp)} · ${Math.round(ac.alt)}m · ${ac.numReceivers} receivers</span>
+                <span>${formatQualityLabel(ac.quality)} · uncertainty ±${Math.round(ac.uncertainty || 0)}m</span>
+                <span>${formatCoordinate(ac.lat, ac.lon)}</span>
+            </button>
+        `).join('');
+
+        list.querySelectorAll('[data-aircraft-id]').forEach((button) => {
+            button.addEventListener('click', () => focusAircraft(button.dataset.aircraftId));
+        });
     }
-
-    list.innerHTML = aircraftList.map((ac, index) => `
-        <button class="aircraft-item" type="button" data-aircraft-id="${ac.id}">
-            <strong>${index === 0 ? `${ac.id} · start here` : ac.id}</strong>
-            <span>${formatClock(ac.timestamp)} · ${Math.round(ac.alt)}m · ${ac.numReceivers} receivers</span>
-            <span>${formatQualityLabel(ac.quality)} · uncertainty ±${Math.round(ac.uncertainty || 0)}m</span>
-            <span>${formatCoordinate(ac.lat, ac.lon)}</span>
-        </button>
-    `).join('');
-
-    list.querySelectorAll('[data-aircraft-id]').forEach((button) => {
-        button.addEventListener('click', () => focusAircraft(button.dataset.aircraftId));
-    });
-
-    if (!selectedAircraftId || !aircraft[selectedAircraftId]) {
-        selectedAircraftId = aircraftList[0].id;
-    }
-    renderSelectedAircraft(aircraft[selectedAircraftId], 'snapshot');
 }
 
 async function loadReceivers() {
@@ -615,8 +581,6 @@ async function hydrateSelectedAircraft(aircraftId, centerMap = true) {
         return;
     }
 
-    selectedAircraftId = aircraftId;
-
     try {
         const [latest, track] = await Promise.all([
             fetchJson(`/api/aircraft/${encodeURIComponent(aircraftId)}/latest`),
@@ -641,7 +605,6 @@ async function hydrateSelectedAircraft(aircraftId, centerMap = true) {
         return;
     }
 
-    renderSelectedAircraft(ac, 'focus');
     if (centerMap) {
         map.setView([ac.lat, ac.lon], 10);
     }
