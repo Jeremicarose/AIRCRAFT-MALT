@@ -150,6 +150,7 @@ class CKBConfig:
     receiver_registry_type_hash: str = ""  # Type script hash for receiver registry
     api_timeout: int = 30
     simulate_if_unavailable: bool = True
+    strict_production_mode: bool = False
     ssl_verify: bool = True
     max_record_age_seconds: int = 86400
     demo_scenario: str = "default"
@@ -175,6 +176,10 @@ class CKBPeerDiscovery:
         logger.info(f"Initializing CKB peer discovery on {self.config.network}")
 
         if not self.config.receiver_registry_type_hash:
+            if self.config.strict_production_mode:
+                raise RuntimeError(
+                    "STRICT_PRODUCTION_MODE requires RECEIVER_REGISTRY_TYPE_HASH and forbids simulated CKB discovery"
+                )
             self._enable_simulation(
                 "No receiver registry type hash configured; using simulated CKB receivers"
             )
@@ -184,12 +189,16 @@ class CKBPeerDiscovery:
             tip = await self._get_tip_block_number()
             logger.info(f"✅ Connected to CKB node, current block: {tip}")
         except Exception as e:
-            if self.config.simulate_if_unavailable:
+            if self.config.simulate_if_unavailable and not self.config.strict_production_mode:
                 self._enable_simulation(
                     f"Failed to connect to CKB node ({e}); using simulated receiver discovery"
                 )
                 return
             logger.error(f"❌ Failed to connect to CKB node: {e}")
+            if self.config.strict_production_mode:
+                raise RuntimeError(
+                    "STRICT_PRODUCTION_MODE forbids simulated CKB discovery when live registry access fails"
+                ) from e
             raise
     
     async def _get_tip_block_number(self) -> int:

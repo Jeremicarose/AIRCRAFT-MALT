@@ -10,6 +10,7 @@ from dataclasses import dataclass
 import asyncio
 import contextlib
 import logging
+import time
 
 from network.ckb_discovery import CKBPeerDiscovery, CKBConfig, ReceiverInfo
 from network.feed_transports import (
@@ -44,6 +45,7 @@ class NetworkConfig:
     # System Configuration
     max_receivers: int = 20
     simulate_if_unavailable: bool = True
+    strict_production_mode: bool = False
     ssl_verify: bool = True
     max_record_age_seconds: int = 86400
     hybrid_simulation_min_receivers: int = 4
@@ -68,6 +70,7 @@ class CKBReceiverNetworkClient:
             ckb_indexer_url=config.ckb_indexer_url,
             receiver_registry_type_hash=config.receiver_registry_type_hash,
             simulate_if_unavailable=config.simulate_if_unavailable,
+            strict_production_mode=config.strict_production_mode,
             ssl_verify=config.ssl_verify,
             max_record_age_seconds=config.max_record_age_seconds,
             demo_scenario=config.demo_scenario,
@@ -77,6 +80,7 @@ class CKBReceiverNetworkClient:
         self.active_receivers: Dict[str, ReceiverInfo] = {}
         self._stream_tasks: List[asyncio.Task] = []
         self._feed_transport: Optional[BaseFeedTransport] = None
+        self.discovery_latency_ms = 0.0
 
     async def initialize(self):
         """Initialize the network client"""
@@ -90,7 +94,9 @@ class CKBReceiverNetworkClient:
         else:
             logger.info("✅ CKB blockchain connection established")
 
+        discovery_started_at = time.perf_counter()
         receivers = await self.peer_discovery.discover_peers()
+        self.discovery_latency_ms = (time.perf_counter() - discovery_started_at) * 1000
         logger.info(f"✅ Discovered {len(receivers)} receivers from CKB")
 
         selected = self._select_receivers(receivers)
@@ -155,6 +161,15 @@ class CKBReceiverNetworkClient:
                     f"✅ Streaming from {len(self.active_receivers)} receivers via WebSocket JSON feed"
                 )
                 return
+            if self.config.strict_production_mode:
+                raise RuntimeError(
+                    "STRICT_PRODUCTION_MODE forbids falling back to simulation when live WebSocket streaming is unavailable"
+                )
+
+        if self.config.strict_production_mode:
+            raise RuntimeError(
+                f"STRICT_PRODUCTION_MODE forbids selecting {transport!r} synthetic feed transport"
+            )
 
         self._feed_transport = SimulationFeedTransport(
             self.active_receivers,
@@ -170,6 +185,10 @@ class CKBReceiverNetworkClient:
         """Resolve the active 4DSky transport."""
         configured = (self.config.fourdsky_transport or "auto").strip().lower()
         if configured != "auto":
+            if self.config.strict_production_mode and configured == "simulation":
+                raise RuntimeError(
+                    "STRICT_PRODUCTION_MODE requires a live 4DSky transport and forbids FOURDSKY_TRANSPORT=simulation"
+                )
             return configured
 
         if self.config.fourdsky_bridge_command:
@@ -179,6 +198,11 @@ class CKBReceiverNetworkClient:
             receiver.stream_endpoint for receiver in self.active_receivers.values()
         ):
             return "websocket-json"
+
+        if self.config.strict_production_mode:
+            raise RuntimeError(
+                "STRICT_PRODUCTION_MODE forbids FOURDSKY_TRANSPORT=auto from resolving to simulation"
+            )
 
         return "simulation"
 
@@ -206,7 +230,7 @@ class CKBReceiverNetworkClient:
         transport = self._determine_transport()
         min_receivers = max(1, self.config.hybrid_simulation_min_receivers)
 
-        if transport != "simulation":
+        if self.config.strict_production_mode or transport != "simulation":
             return
         if len(self.active_receivers) >= min_receivers:
             return
@@ -243,6 +267,11 @@ class CKBReceiverNetworkClient:
         await self.peer_discovery.shutdown()
         self.active_receivers.clear()
         logger.info("✅ Network client shut down")
+
+    @property
+    def stream_tasks(self) -> tuple[asyncio.Task, ...]:
+        """Return active feed tasks so the owning runtime can monitor them."""
+        return tuple(self._stream_tasks)
 
     def get_receiver_positions(self) -> Dict[str, tuple]:
         """Get positions of all active receivers"""

@@ -39,7 +39,39 @@ class RuntimeSettings:
     health_stale_signal_seconds: int
     stats_interval_seconds: int
     require_live_benchmarkable_output: bool
+    strict_production_mode: bool
     demo: DemoSettings
+
+
+def _validate_runtime_settings(
+    *,
+    strict_production_mode: bool,
+    demo_enabled: bool,
+    config: NetworkConfig,
+) -> None:
+    """Reject invalid demo/live combinations before runtime startup."""
+    if not strict_production_mode:
+        return
+
+    configured_transport = (config.fourdsky_transport or "auto").strip().lower()
+    violations: list[str] = []
+
+    if demo_enabled:
+        violations.append("DEMO_MODE=true")
+    if configured_transport == "simulation":
+        violations.append("FOURDSKY_TRANSPORT=simulation")
+    if configured_transport == "auto":
+        violations.append("FOURDSKY_TRANSPORT=auto")
+    if config.simulate_if_unavailable:
+        violations.append("SIMULATE_IF_UNAVAILABLE=true")
+
+    if violations:
+        joined = ", ".join(violations)
+        raise ValueError(
+            "STRICT_PRODUCTION_MODE requires explicit live ingest configuration and forbids: "
+            f"{joined}."
+        )
+
 
 
 def load_runtime_settings(
@@ -50,6 +82,7 @@ def load_runtime_settings(
     """Load shared network and storage settings from environment."""
     fourdsky_endpoint = os.getenv("FOURDSKYENDPOINT") or os.getenv("FOURDSKY_ENDPOINT", "")
     fourdsky_api_key = os.getenv("FOURDSKYAPIKEY") or os.getenv("FOURDSKY_API_KEY")
+    strict_production_mode = env_bool("STRICT_PRODUCTION_MODE", False)
 
     config = NetworkConfig(
         ckb_network=os.getenv("CKB_NETWORK", "testnet"),
@@ -66,6 +99,7 @@ def load_runtime_settings(
         fourdsky_bridge_command=os.getenv("FOURDSKY_BRIDGE_COMMAND") or None,
         max_receivers=int(os.getenv("MAX_RECEIVERS", str(max_receivers_default))),
         simulate_if_unavailable=env_bool("SIMULATE_IF_UNAVAILABLE", True),
+        strict_production_mode=strict_production_mode,
         ssl_verify=env_bool("CKB_SSL_VERIFY", True),
         max_record_age_seconds=int(os.getenv("CKB_MAX_RECORD_AGE_SECONDS", "86400")),
         hybrid_simulation_min_receivers=int(
@@ -78,6 +112,13 @@ def load_runtime_settings(
     demo_scenario = os.getenv("DEMO_SCENARIO", "default")
     scenario = get_demo_scenario(demo_scenario)
     demo_label = os.getenv("DEMO_LABEL", scenario.label)
+
+    _validate_runtime_settings(
+        strict_production_mode=strict_production_mode,
+        demo_enabled=demo_enabled,
+        config=config,
+    )
+
     return RuntimeSettings(
         network_config=config,
         db_path=db_path,
@@ -86,6 +127,7 @@ def load_runtime_settings(
         health_stale_signal_seconds=int(os.getenv("HEALTH_STALE_SIGNAL_SECONDS", "120")),
         stats_interval_seconds=int(os.getenv("STATS_INTERVAL_SECONDS", "60")),
         require_live_benchmarkable_output=env_bool("REQUIRE_LIVE_BENCHMARKABLE_OUTPUT", False),
+        strict_production_mode=strict_production_mode,
         demo=DemoSettings(
             enabled=demo_enabled,
             scenario=scenario.slug,

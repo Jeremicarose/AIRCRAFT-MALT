@@ -1,4 +1,5 @@
 import importlib
+import json
 import sys
 import time
 
@@ -123,6 +124,225 @@ def test_api_health_and_data_endpoints(monkeypatch, tmp_path):
     assert payload["solver"]["residual_m"] == 12.3
     assert payload["correlation"]["time_span_s"] == 0.0012
     assert payload["correlation"]["receiver_count"] == 4
+    assert payload["correlation"]["receiver_ids"] == [
+        "RECV_NYC_001",
+        "RECV_BOS_001",
+        "RECV_PHL_001",
+        "RECV_DC_001",
+    ]
+
+
+def test_api_reads_processor_telemetry_from_shared_database(monkeypatch, tmp_path):
+    module = _load_api_module(
+        monkeypatch,
+        tmp_path,
+        FOURDSKY_TRANSPORT="command-jsonl",
+        SIMULATE_IF_UNAVAILABLE="false",
+    )
+    app = module.create_app()
+    _seed_api_db(module, app)
+    with app.app_context():
+        module.get_db().store_statistics(
+            total_signals=100,
+            total_positions=10,
+            successful_solves=10,
+            active_aircraft=1,
+            active_receivers=4,
+            avg_uncertainty=120.5,
+            avg_quality_score=0.82,
+            avg_latency_ms=3.5,
+            avg_ingest_latency_ms=1.5,
+            avg_store_latency_ms=2.5,
+            discovery_latency_ms=38.0,
+            registry_discovery_live=True,
+            process_rss_mb=170.0,
+            uptime_s=300.0,
+            last_signal_age_s=0.5,
+            last_store_age_s=0.7,
+            synthetic_feed_mode=False,
+            failed_solves=0,
+            rejected_groups=1,
+        )
+    client = app.test_client()
+
+    health = client.get("/api/health").get_json()
+    readiness = client.get("/api/readiness").get_json()
+    mode = client.get("/api/system/mode").get_json()
+
+    assert health["runtime"]["telemetry_source"] == "database"
+    assert health["runtime"]["telemetry_fresh"] is True
+    assert health["runtime"]["avg_ingest_latency_ms"] == 1.5
+    assert health["runtime"]["avg_store_latency_ms"] == 2.5
+    assert health["runtime"]["process_rss_mb"] == 170.0
+    assert readiness["dimensions"]["reliability"]["active_receivers"] == 4
+    assert readiness["dimensions"]["reliability"]["signal_fresh"] is True
+    assert mode["runtime_status"] == "active"
+    assert mode["mode"] == "live"
+    assert mode["registry_discovery_live"] is True
+    assert mode["benchmarkable_output"] is True
+
+
+def test_public_pipeline_and_metrics_evidence_endpoints(monkeypatch, tmp_path):
+    module = _load_api_module(
+        monkeypatch,
+        tmp_path,
+        FOURDSKY_TRANSPORT="command-jsonl",
+        SIMULATE_IF_UNAVAILABLE="false",
+        RECEIVER_REGISTRY_TYPE_HASH="0x1234",
+    )
+    app = module.create_app()
+    _seed_api_db(module, app)
+    with app.app_context():
+        module.get_db().store_statistics(
+            total_signals=120,
+            total_positions=12,
+            successful_solves=11,
+            active_aircraft=1,
+            active_receivers=4,
+            avg_uncertainty=120.5,
+            avg_quality_score=0.82,
+            avg_latency_ms=3.5,
+            avg_ingest_latency_ms=1.5,
+            avg_store_latency_ms=2.5,
+            discovery_latency_ms=38.0,
+            registry_discovery_live=True,
+            process_rss_mb=170.0,
+            uptime_s=300.0,
+            last_signal_age_s=0.5,
+            last_store_age_s=0.7,
+            synthetic_feed_mode=False,
+            failed_solves=1,
+            rejected_groups=2,
+        )
+    client = app.test_client()
+
+    pipeline = client.get("/api/pipeline")
+    metrics = client.get("/api/evidence/metrics?hours=24&limit=100")
+
+    assert pipeline.status_code == 200
+    pipeline_payload = pipeline.get_json()
+    assert pipeline_payload["provenance"]["mode"] == "live"
+    assert pipeline_payload["provenance"]["registry_discovery_live"] is True
+    assert pipeline_payload["stages"][0]["status"] == "pass"
+    assert pipeline_payload["stages"][0]["id"] == "registry"
+    assert pipeline_payload["stages"][-1]["id"] == "dashboard"
+    assert any(stage["id"] == "ingest" for stage in pipeline_payload["stages"])
+
+    assert metrics.status_code == 200
+    metrics_payload = metrics.get_json()
+    assert metrics_payload["sample_count"] == 1
+    assert metrics_payload["current"]["total_signals"] == 120
+    assert metrics_payload["current"]["solve_success_percent"] == 91.67
+    assert metrics_payload["history"][0]["process_rss_mb"] == 170.0
+
+
+def test_public_performance_evidence_artifact(monkeypatch, tmp_path):
+    report_path = tmp_path / "performance-latest.json"
+    report_path.write_text(json.dumps({
+        "schema_version": 1,
+        "generated_at": "2026-07-17T12:00:00Z",
+        "evidence_status": "local_baseline",
+        "provenance": {"environment": "local", "live_data": False},
+        "metrics": {"api_latency_ms": {"median": 12.0, "p95": 18.0}},
+    }), encoding="utf-8")
+    module = _load_api_module(
+        monkeypatch,
+        tmp_path,
+        PERFORMANCE_REPORT_PATH=str(report_path),
+    )
+    app = module.create_app()
+    client = app.test_client()
+
+    response = client.get("/api/evidence/performance/latest")
+
+    assert response.status_code == 200
+    assert response.get_json()["evidence_status"] == "local_baseline"
+
+
+def test_evidence_metrics_handles_processor_counter_reset(monkeypatch, tmp_path):
+    module = _load_api_module(monkeypatch, tmp_path)
+    app = module.create_app()
+    with app.app_context():
+        database = module.get_db()
+        database.store_statistics(
+            total_signals=1000,
+            total_positions=100,
+            successful_solves=100,
+            active_aircraft=2,
+            active_receivers=4,
+            avg_uncertainty=20.0,
+            uptime_s=100.0,
+        )
+        database.store_statistics(
+            total_signals=20,
+            total_positions=4,
+            successful_solves=4,
+            active_aircraft=1,
+            active_receivers=4,
+            avg_uncertainty=20.0,
+            uptime_s=10.0,
+        )
+
+    response = app.test_client().get("/api/evidence/metrics?hours=1&limit=2")
+    history = response.get_json()["history"]
+
+    assert response.status_code == 200
+    assert history[-1]["signals_per_minute"] == 120.0
+    assert history[-1]["positions_per_minute"] == 24.0
+
+
+def test_system_mode_does_not_claim_live_activity_without_processor_telemetry(monkeypatch, tmp_path):
+    module = _load_api_module(
+        monkeypatch,
+        tmp_path,
+        FOURDSKY_TRANSPORT="command-jsonl",
+        SIMULATE_IF_UNAVAILABLE="false",
+    )
+    app = module.create_app()
+    client = app.test_client()
+
+    mode = client.get("/api/system/mode").get_json()
+
+    assert mode["mode"] == "configured_live"
+    assert mode["runtime_status"] == "unavailable"
+    assert mode["benchmarkable_output"] is False
+
+
+def test_system_mode_does_not_treat_fallback_capability_as_simulation(monkeypatch, tmp_path):
+    module = _load_api_module(
+        monkeypatch,
+        tmp_path,
+        FOURDSKY_TRANSPORT="command-jsonl",
+        SIMULATE_IF_UNAVAILABLE="true",
+    )
+    app = module.create_app()
+    client = app.test_client()
+
+    mode = client.get("/api/system/mode").get_json()
+
+    assert mode["simulation_mode"] is False
+    assert mode["mode"] == "configured_live"
+    assert mode["synthetic_feed_mode"] is False
+
+
+
+def test_system_mode_exposes_strict_production_configuration(monkeypatch, tmp_path):
+    module = _load_api_module(
+        monkeypatch,
+        tmp_path,
+        STRICT_PRODUCTION_MODE="true",
+        FOURDSKY_TRANSPORT="command-jsonl",
+        SIMULATE_IF_UNAVAILABLE="false",
+    )
+    app = module.create_app()
+    client = app.test_client()
+
+    mode = client.get("/api/system/mode").get_json()
+
+    assert mode["strict_production_mode"] is True
+    assert mode["startup_guardrail_status"] == "strict_waiting"
+    assert mode["configured_transport"] == "command-jsonl"
+    assert mode["simulate_if_unavailable"] is False
 
 
 def test_api_restricts_cors_to_allowed_origins(monkeypatch, tmp_path):
@@ -217,6 +437,35 @@ def test_websocket_subscription_requires_stream_entitlement(monkeypatch, tmp_pat
     assert emitted[1][1]["status"] == "subscribed"
 
 
+def test_broadcast_position_update_includes_receiver_ids(monkeypatch, tmp_path):
+    module = _load_api_module(monkeypatch, tmp_path)
+    app = module.create_app()
+    _seed_api_db(module, app)
+
+    emitted = []
+
+    class _FakeSocket:
+        def emit(self, event, payload, room=None):
+            emitted.append((event, payload, room))
+
+    module.socketio = _FakeSocket()
+
+    with app.app_context():
+        position = module.get_db().get_latest_position()
+        payload = module._build_position_payload(position)
+        module.broadcast_position_update(position.aircraft_id, payload)
+
+    assert emitted[0][0] == "position_update"
+    assert emitted[0][1]["aircraft_id"] == "A1B2C3"
+    assert emitted[0][1]["position"]["correlation"]["receiver_ids"] == [
+        "RECV_NYC_001",
+        "RECV_BOS_001",
+        "RECV_PHL_001",
+        "RECV_DC_001",
+    ]
+    assert emitted[1][2] == "A1B2C3"
+
+
 def test_statistics_exposes_operational_metrics(monkeypatch, tmp_path):
     module = _load_api_module(monkeypatch, tmp_path)
     app = module.create_app()
@@ -251,3 +500,50 @@ def test_readiness_exposes_internal_gates_and_unproven_claims(monkeypatch, tmp_p
     assert "packaging" in payload["dimensions"]
     assert payload["not_yet_proven"]["more_accurate_than_incumbents"] is False
     assert payload["dimensions"]["quality"]["benchmarkable_output"] is True
+    assert payload["external_benchmark"]["available"] is False
+
+
+def test_api_publishes_valid_benchmark_artifact(monkeypatch, tmp_path):
+    report_path = tmp_path / "latest.json"
+    report = {
+        "schema_version": 1,
+        "generated_at": "2026-07-16T12:00:00Z",
+        "evidence_status": "publishable",
+        "provenance": {"benchmarkable": True},
+        "sample": {"matched_records": 10},
+        "accuracy": {"horizontal_error_median_m": 42.0},
+        "freshness": {"end_to_store_age_p95_ms": 180.0},
+    }
+    report_path.write_text(json.dumps(report), encoding="utf-8")
+    module = _load_api_module(
+        monkeypatch,
+        tmp_path,
+        BENCHMARK_REPORT_PATH=str(report_path),
+    )
+    app = module.create_app()
+    client = app.test_client()
+
+    response = client.get("/api/benchmark/latest")
+    readiness = client.get("/api/readiness")
+
+    assert response.status_code == 200
+    assert response.get_json()["provenance"]["benchmarkable"] is True
+    assert readiness.get_json()["external_benchmark"]["publishable"] is True
+
+
+def test_api_rejects_malformed_benchmark_artifact(monkeypatch, tmp_path):
+    report_path = tmp_path / "latest.json"
+    report_path.write_text('{"schema_version": 1}', encoding="utf-8")
+    module = _load_api_module(
+        monkeypatch,
+        tmp_path,
+        BENCHMARK_REPORT_PATH=str(report_path),
+    )
+    app = module.create_app()
+    client = app.test_client()
+
+    response = client.get("/api/benchmark/latest")
+
+    assert response.status_code == 503
+    assert response.get_json()["available"] is False
+    assert response.get_json()["status"] == "invalid"

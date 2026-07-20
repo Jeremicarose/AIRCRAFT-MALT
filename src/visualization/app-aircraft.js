@@ -1,92 +1,91 @@
+function aircraftText(value) {
+  return String(value ?? '')
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#039;');
+}
+
+function aircraftAge(timestamp) {
+  const seconds = Math.max(0, Math.round((Date.now() / 1000) - Number(timestamp || 0)));
+  if (seconds < 60) return `${seconds}s`;
+  return `${Math.round(seconds / 60)}m`;
+}
+
 window.pageHydrators.aircraft = async function ({ fetchJson }) {
   const target = document.getElementById('aircraft-table');
   const detailTarget = document.getElementById('aircraft-detail-panel');
-  if (!target) return;
+  if (!target || !detailTarget) return;
 
-  const data = await fetchJson('/api/positions/recent?seconds=600&limit=50').catch(() => null);
-  if (!data || !data.positions.length) {
-        target.innerHTML = '<div class="empty-state">No aircraft positions available in the last 10 minutes.</div>';
-        if (detailTarget) {
-          detailTarget.innerHTML = '<div class="empty-state">Select an aircraft once traffic is available to inspect path, quality, uncertainty, and solver context.</div>';
-        }
-        return;
+  const data = await fetchJson('/api/positions/recent?seconds=600&limit=250').catch(() => null);
+  const latestByAircraft = new Map();
+  (data?.positions || []).forEach((position) => {
+    if (!latestByAircraft.has(position.aircraft_id)) latestByAircraft.set(position.aircraft_id, position);
+  });
+  const positions = [...latestByAircraft.values()];
+
+  if (!positions.length) {
+    target.innerHTML = `
+      <table class="app-table">
+        <thead><tr><th>ICAO</th><th>Altitude</th><th>Receivers</th><th>Quality</th><th>Age</th></tr></thead>
+        <tbody><tr><td colspan="5">No recent aircraft positions.</td></tr></tbody>
+      </table>
+    `;
+    detailTarget.innerHTML = `
+      <div class="panel-head"><div><h2>No aircraft selected</h2><p>Waiting for solved output</p></div></div>
+      <div class="empty-state">Connect a receiver feed or inspect the live map.</div>
+    `;
+    return;
   }
 
   target.innerHTML = `
-    <div class="list-card">
-      <div class="head">
-        <div>
-          <span class="kicker">Recent aircraft</span>
-          <h3>Pick an aircraft, then inspect its solve context</h3>
-          <p>Aircraft detail is now separated from the localization map so operators can compare quality, solver residuals, and track history without map clutter.</p>
-        </div>
-        <div class="inline-pills">
-          <span class="inline-pill">Last 10 minutes</span>
-          <span class="inline-pill">${data.count} rows</span>
-        </div>
-      </div>
-      <div class="list-rows">
-        ${data.positions.map((position) => `
-          <div class="list-row">
-            <strong>${position.aircraft_id}</strong>
-            <span>${Math.round(position.position.altitude)}m · ${position.num_receivers} receivers · ${Math.round((position.quality.score || 0) * 100)}% quality</span>
-            <span>Residual ${position.solver.residual_m} · ${new Date(position.timestamp * 1000).toLocaleTimeString()}</span>
-            <button class="inline-action" type="button" data-track-id="${position.aircraft_id}">Inspect aircraft</button>
-          </div>
+    <table class="app-table">
+      <thead><tr><th>ICAO</th><th>Altitude</th><th>Receivers</th><th>Quality</th><th>Age</th></tr></thead>
+      <tbody>
+        ${positions.map((position) => `
+          <tr>
+            <td><button class="data-list-button" type="button" data-aircraft-id="${aircraftText(position.aircraft_id)}">${aircraftText(position.aircraft_id)}</button></td>
+            <td>${Math.round(position.position.altitude).toLocaleString()}m</td>
+            <td>${position.num_receivers}</td>
+            <td>${Math.round(Number(position.quality?.score || 0) * 100)}%</td>
+            <td>${aircraftAge(position.timestamp)}</td>
+          </tr>
         `).join('')}
-      </div>
-    </div>
+      </tbody>
+    </table>
   `;
 
-  async function renderAircraftDetail(aircraftId) {
-    if (!detailTarget) return;
+  async function renderDetail(aircraftId) {
     const [latest, track] = await Promise.all([
       fetchJson(`/api/aircraft/${encodeURIComponent(aircraftId)}/latest`).catch(() => null),
-      fetchJson(`/api/aircraft/${encodeURIComponent(aircraftId)}/track?limit=40`).catch(() => null),
+      fetchJson(`/api/aircraft/${encodeURIComponent(aircraftId)}/track?limit=20`).catch(() => null),
     ]);
-
-    if (!latest || !track) {
-      detailTarget.innerHTML = '<div class="empty-state">Unable to load aircraft detail right now.</div>';
-      return;
-    }
+    if (!latest || !track) return;
 
     detailTarget.innerHTML = `
-      <div class="split-summary">
-        <article class="app-panel">
-          <span class="kicker">Aircraft detail</span>
-          <h2>${aircraftId}</h2>
-          <p>Latest derived state with solver and correlation context separated from the map-first localization surface.</p>
-          <div class="detail-kv">
-            <div class="detail-kv-row"><strong>Altitude</strong><span>${Math.round(latest.position.altitude)}m</span></div>
-            <div class="detail-kv-row"><strong>Receivers</strong><span>${latest.num_receivers}</span></div>
-            <div class="detail-kv-row"><strong>Quality</strong><span>${Math.round((latest.quality.score || 0) * 100)}% (${latest.quality.bucket})</span></div>
-            <div class="detail-kv-row"><strong>Residual</strong><span>${latest.solver.residual_m}</span></div>
-            <div class="detail-kv-row"><strong>Iterations</strong><span>${latest.solver.iterations}</span></div>
-            <div class="detail-kv-row"><strong>Time span</strong><span>${latest.correlation.time_span_s}</span></div>
-          </div>
-        </article>
-        <article class="app-panel">
-          <span class="kicker">Track history</span>
-          <h2>${track.num_positions} recent points</h2>
-          <div class="list-rows">
-            ${track.positions.slice(-10).reverse().map((point) => `
-              <div class="list-row">
-                <strong>${new Date(point.timestamp * 1000).toLocaleTimeString()}</strong>
-                <span>${point.latitude.toFixed(3)}°, ${point.longitude.toFixed(3)}° · ${Math.round(point.altitude)}m</span>
-                <span>${Math.round((point.quality.score || 0) * 100)}% quality · ±${Math.round(point.uncertainty)}m</span>
-              </div>
-            `).join('')}
-          </div>
-        </article>
+      <div class="panel-head"><div><h2>${aircraftText(aircraftId)}</h2><p>Latest derived state</p></div><span class="status-pill mode-live">Tracked</span></div>
+      <div class="detail-kv">
+        <div class="detail-kv-row"><strong>Position</strong><span>${latest.position.latitude.toFixed(4)}, ${latest.position.longitude.toFixed(4)}</span></div>
+        <div class="detail-kv-row"><strong>Altitude</strong><span>${Math.round(latest.position.altitude).toLocaleString()}m</span></div>
+        <div class="detail-kv-row"><strong>Uncertainty</strong><span>±${Math.round(latest.uncertainty)}m</span></div>
+        <div class="detail-kv-row"><strong>Receivers</strong><span>${latest.num_receivers}</span></div>
+        <div class="detail-kv-row"><strong>Quality</strong><span>${Math.round(Number(latest.quality?.score || 0) * 100)}% / ${aircraftText(latest.quality?.bucket || 'unknown')}</span></div>
+        <div class="detail-kv-row"><strong>Solver</strong><span>${aircraftText(latest.solver?.method || 'unknown')}</span></div>
+        <div class="detail-kv-row"><strong>Residual</strong><span>${Number(latest.solver?.residual_m || 0).toFixed(1)}m</span></div>
+        <div class="detail-kv-row"><strong>Track points</strong><span>${track.num_positions}</span></div>
+      </div>
+      <div class="ops-rail-title">Recent track</div>
+      <div class="list-rows">
+        ${track.positions.slice(-6).reverse().map((point) => `
+          <div class="list-row"><strong>${new Date(point.timestamp * 1000).toLocaleTimeString()}</strong><span>${point.latitude.toFixed(3)}, ${point.longitude.toFixed(3)} · ${Math.round(point.altitude)}m</span></div>
+        `).join('')}
       </div>
     `;
   }
 
-  target.querySelectorAll('[data-track-id]').forEach((button) => {
-    button.addEventListener('click', () => {
-      renderAircraftDetail(button.dataset.trackId).catch(() => null);
-    });
+  target.querySelectorAll('[data-aircraft-id]').forEach((button) => {
+    button.addEventListener('click', () => renderDetail(button.dataset.aircraftId));
   });
-
-  renderAircraftDetail(data.positions[0].aircraft_id).catch(() => null);
+  renderDetail(positions[0].aircraft_id);
 };

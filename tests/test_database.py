@@ -21,6 +21,10 @@ def test_database_stores_receivers_and_positions(tmp_path):
     assert len(receivers) == 1
     assert receivers[0].receiver_id == "RECV_NYC_001"
 
+    assert db.touch_receiver("RECV_NYC_001", last_seen=1_700_000_050.0)
+    assert db.get_receivers()[0].last_seen == 1_700_000_050.0
+    assert not db.touch_receiver("UNKNOWN", last_seen=1_700_000_050.0)
+
     position_id = db.store_position(
         aircraft_id="A1B2C3",
         timestamp=1_700_000_100.0,
@@ -161,6 +165,7 @@ def test_database_exposes_position_events_and_sqlite_hardening(tmp_path):
     stats = db.get_database_stats()
     assert stats["journal_mode"].lower() == "wal"
     assert stats["sqlite_single_node_only"] is True
+    assert db.get_latest_position().id == position_id
 
     db.close()
 
@@ -201,4 +206,46 @@ def test_database_supports_commercial_models_and_metering(tmp_path):
     usage = db.get_usage_summary(account_id)
     assert usage[0]["total_quantity"] == 2
 
+    db.close()
+
+
+def test_database_returns_latest_processor_statistics(tmp_path):
+    db = MLATDatabase(str(tmp_path / "mlat_stats.db"))
+    db.connect()
+    db.store_statistics(
+        total_signals=20,
+        total_positions=2,
+        successful_solves=1,
+        active_aircraft=1,
+        active_receivers=4,
+        avg_uncertainty=80.0,
+        avg_quality_score=0.9,
+        avg_latency_ms=4.5,
+        avg_ingest_latency_ms=1.2,
+        avg_store_latency_ms=2.3,
+        discovery_latency_ms=38.0,
+        registry_discovery_live=True,
+        process_rss_mb=170.0,
+        uptime_s=120.0,
+        last_signal_age_s=0.8,
+        last_store_age_s=1.1,
+        synthetic_feed_mode=False,
+        failed_solves=1,
+        rejected_groups=2,
+    )
+
+    latest = db.get_latest_statistics()
+
+    assert latest is not None
+    assert latest["active_receivers"] == 4
+    assert latest["avg_latency_ms"] == 4.5
+    assert latest["avg_ingest_latency_ms"] == 1.2
+    assert latest["avg_store_latency_ms"] == 2.3
+    assert latest["discovery_latency_ms"] == 38.0
+    assert latest["registry_discovery_live"] == 1
+    assert latest["process_rss_mb"] == 170.0
+    assert latest["successful_solves"] == 1
+    assert latest["synthetic_feed_mode"] == 0
+    assert latest["failed_solves"] == 1
+    assert len(db.get_statistics_history(hours=1)) == 1
     db.close()

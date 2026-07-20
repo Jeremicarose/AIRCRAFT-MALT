@@ -324,12 +324,16 @@ class SimulationFeedTransport(BaseFeedTransport):
 
     def _calculate_reception_time(
         self,
-        aircraft: Dict[str, float],
+        aircraft: Dict[str, float | str],
         receiver: ReceiverInfo,
         transmit_time: float,
     ) -> float:
         speed_of_light = 299792458.0
-        aircraft_ecef = self._to_ecef(aircraft["lat"], aircraft["lon"], aircraft["alt"])
+        aircraft_ecef = self._to_ecef(
+            float(aircraft["latitude"]),
+            float(aircraft["longitude"]),
+            float(aircraft["altitude"]),
+        )
         receiver_ecef = self._to_ecef(receiver.latitude, receiver.longitude, receiver.altitude)
 
         distance = math.sqrt(

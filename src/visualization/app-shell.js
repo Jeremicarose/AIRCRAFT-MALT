@@ -26,6 +26,31 @@ function markActiveNav() {
   });
 }
 
+function prepareCommandBar() {
+  const labels = {
+    overview: 'Overview',
+    aircraft: 'Aircraft',
+    receivers: 'Receivers',
+    localization: 'Live map',
+    pipeline: 'Pipeline',
+    analytics: 'Metrics',
+    settings: 'Settings',
+  };
+  document.querySelectorAll('[data-app-nav]').forEach((link) => {
+    const label = labels[link.dataset.appNav];
+    const text = link.querySelector('span');
+    if (label && text) text.textContent = label;
+  });
+
+  const brand = document.querySelector('.app-brand');
+  if (brand) {
+    brand.innerHTML = `
+      <div class="app-brand-mark" aria-hidden="true">⌁</div>
+      <div><strong>MLAT / Airspace</strong><span>Receiver control plane</span></div>
+    `;
+  }
+}
+
 function setShellMetric(id, value, detail) {
   const valueNode = document.querySelector(`[data-shell-value="${id}"]`);
   const detailNode = document.querySelector(`[data-shell-detail="${id}"]`);
@@ -33,14 +58,17 @@ function setShellMetric(id, value, detail) {
   if (detailNode && detail) detailNode.textContent = detail;
 }
 
+window.setShellMetric = setShellMetric;
+
 function setShellMode(modeData) {
   const pill = document.getElementById('shell-mode-pill');
   const freshness = document.getElementById('shell-freshness-pill');
   if (!pill || !freshness) return;
 
   const isDemo = Boolean(modeData && modeData.demo_mode);
-  const isSimulation = Boolean(modeData && modeData.simulation_mode);
-  const isLive = Boolean(modeData && !modeData.demo_mode && !modeData.simulation_mode);
+  const isSimulation = Boolean(modeData && (modeData.simulation_mode || modeData.synthetic_feed_mode));
+  const isStrict = Boolean(modeData && modeData.strict_production_mode);
+  const isLive = Boolean(modeData && modeData.runtime_status === 'active' && !isDemo && !isSimulation);
 
   if (!modeData) {
     pill.textContent = 'Mode unavailable';
@@ -53,9 +81,21 @@ function setShellMode(modeData) {
     ? (modeData.demo_label || 'Hosted walkthrough')
     : isSimulation
       ? 'Simulation mode'
-      : 'Live mode';
+      : isLive
+        ? (isStrict ? 'Strict live mode' : 'Live mode')
+        : modeData.runtime_status === 'stale'
+          ? (isStrict ? 'Strict runtime stale' : 'Runtime stale')
+          : isStrict
+            ? 'Strict live configured'
+            : 'Live configured';
   pill.className = `status-pill ${isLive ? 'mode-live' : 'mode-sim'}`;
-  freshness.textContent = modeData.synthetic_feed_mode ? 'Replay / synthetic feed' : 'Benchmarkable feed';
+  freshness.textContent = modeData.runtime_status !== 'active'
+    ? (isStrict ? 'Strict startup blocked until live runtime is available' : 'Processor unavailable')
+    : modeData.benchmarkable_output
+      ? 'Benchmarkable output'
+      : modeData.synthetic_feed_mode
+        ? 'Replay / synthetic feed'
+        : 'Awaiting solved output';
 }
 
 function renderOverviewCards(target, cards) {
@@ -73,6 +113,7 @@ function renderSimpleList(target, rows, formatter) {
 }
 
 async function hydrateShell() {
+  prepareCommandBar();
   markActiveNav();
 
   const [modeData, healthData, aircraftData, receiverData] = await Promise.all([

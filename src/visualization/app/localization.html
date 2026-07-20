@@ -2,195 +2,143 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>MLAT Airspace Console · Localization</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="description" content="Live MLAT aircraft positions and receiver coverage map.">
+  <title>MLAT Airspace · Live Map</title>
   <link rel="stylesheet" href="/vendor/leaflet.css">
-  <link rel="stylesheet" href="/app-shell.css">
-  <link rel="stylesheet" href="/styles.css" media="print" onload="this.media='all'">
-  <noscript><link rel="stylesheet" href="/styles.css"></noscript>
+  <link rel="stylesheet" href="/app-shell.css?v=20260720a">
 </head>
-<body class="dashboard-body app-body" data-app-page="localization">
-  <div class="page-shell console-shell">
-    <div class="app-shell">
-      <aside class="app-sidebar">
-        <div class="app-brand">
-          <div class="app-brand-mark">⌁</div>
-          <div><strong>MLAT Console</strong><span>Scalable operations surface</span></div>
+<body class="app-body" data-app-page="localization">
+  <div class="app-shell">
+    <aside class="app-sidebar">
+      <div class="app-brand"><div class="app-brand-mark">⌁</div><div><strong>MLAT Console</strong><span>Receiver control plane</span></div></div>
+      <nav class="app-nav" aria-label="Primary navigation">
+        <a href="/app/overview.html" data-app-nav="overview"><span>Overview</span></a>
+        <a href="/app/localization.html" data-app-nav="localization"><span>Live map</span></a>
+        <a href="/app/aircraft.html" data-app-nav="aircraft"><span>Aircraft</span></a>
+        <a href="/app/receivers.html" data-app-nav="receivers"><span>Receivers</span></a>
+      </nav>
+      <nav class="app-nav" aria-label="System navigation">
+        <a href="/app/pipeline.html" data-app-nav="pipeline"><span>Pipeline</span></a>
+        <a href="/app/analytics.html" data-app-nav="analytics"><span>Metrics</span></a>
+        <a href="/app/settings.html" data-app-nav="settings"><span>Settings</span></a>
+      </nav>
+    </aside>
+
+    <main class="app-main">
+      <header class="app-topbar">
+        <div class="app-title">
+          <h1>Aircraft localization</h1>
+          <p>Track aircraft, inspect confidence, and see which receivers supported the latest solved position.</p>
         </div>
-        <div class="app-sidebar-section"><span class="app-sidebar-label">Core views</span></div>
-        <nav class="app-nav" aria-label="Application navigation">
-          <a href="/app/overview.html" data-app-nav="overview"><span>Dashboard / Home</span><small>status</small></a>
-          <a href="/app/aircraft.html" data-app-nav="aircraft"><span>Aircraft Management</span><small>fleet</small></a>
-          <a href="/app/receivers.html" data-app-nav="receivers"><span>Receiver Registry</span><small>nodes</small></a>
-          <a href="/app/localization.html" data-app-nav="localization"><span>Localization</span><small>map</small></a>
-        </nav>
-        <div class="app-sidebar-section"><span class="app-sidebar-label">Operations</span></div>
-        <nav class="app-nav" aria-label="Operations navigation">
-          <a href="/app/payments.html" data-app-nav="payments"><span>Payments</span><small>ckb/fiber</small></a>
-          <a href="/app/agent.html" data-app-nav="agent"><span>AI Agent</span><small>activity</small></a>
-          <a href="/app/analytics.html" data-app-nav="analytics"><span>Analytics</span><small>history</small></a>
-          <a href="/app/settings.html" data-app-nav="settings"><span>Settings</span><small>config</small></a>
-        </nav>
-        <div class="app-sidebar-note">This page is for spatial interpretation. Use Aircraft and Receivers pages when you need detail without the map dominating your attention.</div>
-      </aside>
-
-      <main class="app-main">
-        <div class="app-topbar">
-          <div class="app-title">
-            <h1>Localization</h1>
-            <p>Map-first localization view for active airspace output. Aircraft and receiver management now live on their own pages.</p>
-          </div>
-          <div class="shell-badges">
-            <span id="mode-pill" class="status-pill mode-sim">Loading mode</span>
-            <span id="feed-pill" class="signal-pill">Feed pending</span>
-            <span id="demo-chip" class="demo-chip" hidden>Hosted demo</span>
-          </div>
+        <div class="shell-badges" aria-label="Map status">
+          <span id="mode-pill" class="status-pill mode-sim">Loading mode</span>
+          <span id="feed-pill" class="signal-pill">Feed pending</span>
+          <span id="demo-chip" class="demo-chip" hidden>Demo replay</span>
         </div>
+      </header>
 
-        <section class="app-metrics">
-          <article class="metric-card"><strong>Tracked aircraft</strong><span id="aircraft-count">0</span><small id="aircraft-detail">Recent aircraft visible on the map</small></article>
-          <article class="metric-card"><strong>Visible receivers</strong><span id="receiver-count">0</span><small id="receiver-detail">Stations contributing network context</small></article>
-          <article class="metric-card"><strong>Quality score</strong><span id="quality-score">0%</span><small id="quality-detail">Average derived-output confidence for visible aircraft</small></article>
-          <article class="metric-card"><strong>Average uncertainty</strong><span id="avg-uncertainty">0m</span><small id="uncertainty-detail">Across the aircraft shown right now</small></article>
-        </section>
+      <section class="localization-source-banner app-panel" aria-label="Source summary">
+        <div class="localization-source-copy">
+          <span class="kicker">Live map status</span>
+          <h2 id="source-summary-title">Loading map source</h2>
+          <p id="source-summary-copy">Checking whether positions are live, replayed, sampled, or currently unavailable.</p>
+        </div>
+        <div class="localization-source-badges">
+          <span id="source-runtime-pill" class="status-pill mode-sim">Waiting</span>
+          <span id="connection-status" class="inline-pill">Disconnected</span>
+        </div>
+        <div class="localization-source-story localization-source-story-compact" aria-label="Localization story">
+          <div class="localization-source-step"><strong>Aircraft</strong></div>
+          <div class="localization-source-step"><strong>Receivers</strong></div>
+          <div class="localization-source-step"><strong>Timing</strong></div>
+          <div class="localization-source-step"><strong>Solver</strong></div>
+          <div class="localization-source-step"><strong>Position</strong></div>
+        </div>
+        <div id="source-facts" class="localization-source-facts" aria-label="Source facts"></div>
+      </section>
 
-        <section class="dashboard-hero panel-surface">
-          <div class="dashboard-hero-copy">
-            <div class="dashboard-hero-intro">
-              <span class="kicker">Localization surface</span>
-              <h1 class="panel-title display">Use this page for map-based localization, not full system management.</h1>
-              <p id="mode-description" class="panel-copy dashboard-intro-copy">
-                Aircraft management, receiver review, analytics, payments, and settings now live on dedicated pages. This surface stays focused on the active airspace view and map-driven inspection.
-              </p>
-            </div>
-            <div class="dashboard-hero-aside">
-              <div class="panel-stat-grid compact-stats">
-                <div class="panel-stat">
-                  <span class="label">Traffic mode</span>
-                  <span class="value" id="hero-mode">Loading</span>
-                </div>
-                <div class="panel-stat">
-                  <span class="label">Updates</span>
-                  <span class="value" id="hero-feed">Pending</span>
-                </div>
-                <div class="panel-stat">
-                  <span class="label">Map status</span>
-                  <span class="value" id="hero-status">Cold</span>
-                </div>
-              </div>
-              <div class="first-step-card">
-                <span class="tour-callout-label">Navigation reminder</span>
-                <p>Use the dedicated Aircraft and Receivers pages for management and detailed review. This page stays optimized for map-first localization and track inspection.</p>
-              </div>
-            </div>
-          </div>
+      <section class="localization-layout">
+        <div class="localization-map-stage">
+          <section class="localization-map-panel map-workspace" aria-label="Map workspace">
+            <div id="map" aria-label="Aircraft and receiver map"></div>
 
-          <div id="demo-banner" class="demo-banner" hidden>
-            <div>
-              <span class="demo-banner-label">Hosted walkthrough</span>
-              <strong id="demo-banner-title">Sample traffic replay</strong>
-              <p id="demo-banner-copy">Read-only public exploration with a stable replay and receiver coverage cues.</p>
+            <div class="map-hud localization-map-hud" aria-label="In-map status">
+              <div class="map-hud-title">MLAT localization map</div>
+              <div id="map-hud-status" class="map-hud-status">Waiting for positions</div>
             </div>
-            <span id="demo-banner-badge" class="tag">Read only</span>
-          </div>
 
-          <div class="dashboard-toolbar panel-section">
-            <div class="panel-row">
-              <div>
-                <span class="kicker">Connection</span>
-                <p class="toolbar-copy">Use the hosted endpoint below, then connect or refresh to load the latest map state.</p>
-              </div>
-              <div id="connection-status" class="status-text">Disconnected</div>
+            <div id="demo-banner" class="demo-banner" hidden>
+              <strong id="demo-banner-title">Demo replay</strong>
+              <p id="demo-banner-copy">Replay traffic is active.</p>
             </div>
-            <div class="control-stack dashboard-toolbar-controls">
-              <input id="api-url" class="control-input" type="text" aria-label="API base URL">
-              <div class="map-dock panel-surface" aria-label="Map controls">
-                <div class="map-dock-group" role="group" aria-label="Connection controls">
-                  <button id="connect-btn" class="button button-primary map-dock-button" type="button" aria-label="Connect">
-                    <span class="map-dock-icon" aria-hidden="true">
-                      <svg viewBox="0 0 24 24" focusable="false">
-                        <path d="M12 5a7 7 0 1 0 7 7" />
-                        <path d="M15 3h4v4" />
-                        <path d="M19 3l-5 5" />
-                      </svg>
-                    </span>
-                    <span>Connect</span>
-                  </button>
-                  <button id="refresh-btn" class="button button-secondary map-dock-button is-active" type="button" aria-label="Refresh">
-                    <span class="map-dock-icon" aria-hidden="true">
-                      <svg viewBox="0 0 24 24" focusable="false">
-                        <path d="M20 12a8 8 0 1 1-2.34-5.66" />
-                        <path d="M20 4v6h-6" />
-                      </svg>
-                    </span>
-                    <span>Refresh</span>
-                  </button>
-                  <button id="disconnect-btn" class="button button-danger map-dock-button" type="button" aria-label="Disconnect">
-                    <span class="map-dock-icon" aria-hidden="true">
-                      <svg viewBox="0 0 24 24" focusable="false">
-                        <path d="M6 6l12 12" />
-                        <path d="M18 6L6 18" />
-                      </svg>
-                    </span>
-                    <span>Disconnect</span>
-                  </button>
-                </div>
-                <div class="map-dock-status" id="map-dock-status">Offline</div>
-              </div>
-            </div>
-          </div>
-        </section>
 
-        <section class="map-stage panel-surface hero-map-stage">
-          <div class="map-stage-head hero-map-head">
-            <div>
-              <span class="kicker">Hero map</span>
-              <h2>See traffic first. Interpret the network second.</h2>
+            <div class="localization-legend" aria-label="Map legend">
+              <span><i class="legend-dot aircraft"></i>Aircraft</span>
+              <span><i class="legend-dot receiver"></i>Receiver</span>
+              <span><i class="legend-dot link"></i>Contributing receiver link</span>
+              <span><i class="legend-dot confidence"></i>Selected uncertainty ring</span>
             </div>
-            <aside class="legend-card panel-surface">
-              <div class="legend-row">
-                <div class="legend-item"><span class="legend-dot aircraft"></span><span>Aircraft track</span></div>
-                <div class="legend-item"><span class="legend-dot receiver"></span><span>Receiver station</span></div>
-              </div>
-            </aside>
-          </div>
-          <p class="map-stage-copy">MLAT uses multiple receivers to estimate where an aircraft is. The fastest way to understand that on this page is to click an aircraft on the map, then compare it with the receiver network around it.</p>
-          <div class="map-frame hero-map-frame">
-            <div id="map" aria-label="Airspace map"></div>
-            <div class="map-overlay"></div>
-          </div>
-        </section>
 
-        <section class="details-flow">
-          <section class="detail-card panel-surface detail-section">
-            <div class="section-title-row">
-              <div>
-                <span class="kicker">Localization quick actions</span>
-                <h3>Map-specific work stays here</h3>
-              </div>
-              <span class="signal-pill quiet-pill">Localization only</span>
-            </div>
-            <p class="detail-copy">
-              Use this page to localize and inspect current airspace outputs. For deeper aircraft detail, receiver management, analytics, payments, and settings, use the dedicated navigation pages in the app shell.
-            </p>
-            <div class="receiver-context-summary">
-              <article class="context-note">
-                <span class="tour-callout-label">Aircraft page</span>
-                <p>Go there for aircraft-level detail, path history, solver context, and focused quality review.</p>
-              </article>
-              <article class="context-note">
-                <span class="tour-callout-label">Receiver page</span>
-                <p>Go there for receiver metadata, capabilities, coordinates, and node status without map clutter.</p>
-              </article>
+            <div class="localization-metrics" aria-label="Current map metrics">
+              <div class="localization-metric"><span>Aircraft</span><strong id="aircraft-count">0</strong><small id="aircraft-detail">Waiting for positions</small></div>
+              <div class="localization-metric"><span>Receivers</span><strong id="receiver-count">0</strong><small id="receiver-detail">Waiting for receivers</small></div>
+              <div class="localization-metric"><span>Quality</span><strong id="quality-score">0%</strong><small id="quality-detail">No aircraft selected</small></div>
+              <div class="localization-metric"><span>Uncertainty</span><strong id="avg-uncertainty">0m</strong><small id="uncertainty-detail">No aircraft selected</small></div>
             </div>
           </section>
-        </section>
-      </main>
-    </div>
 
-    <script src="/vendor/leaflet.js" defer></script>
-    <script src="/vendor/socket.io.min.js" defer></script>
-    <script src="/dashboard.js" defer></script>
+          <section class="localization-secondary-panel app-panel" aria-label="Session controls and receiver browser">
+            <div class="panel-head">
+              <div>
+                <h2>Connection</h2>
+                <p>Switch the endpoint and refresh the current map state.</p>
+              </div>
+              <span id="map-dock-status" class="map-dock-status">Disconnected</span>
+            </div>
+            <div class="localization-controls-block localization-controls-block-compact">
+              <div class="localization-connection-grid localization-connection-grid-compact">
+                <div class="localization-connection-main">
+                  <label class="control-label" for="api-url">API endpoint</label>
+                  <input id="api-url" class="control-input localization-control-input" type="text" aria-label="API base URL">
+                  <div class="map-dock-group localization-button-row" role="group" aria-label="Connection controls">
+                    <button id="connect-btn" class="map-dock-button" type="button">Reconnect</button>
+                    <button id="refresh-btn" class="map-dock-button is-active" type="button">Refresh</button>
+                    <button id="disconnect-btn" class="map-dock-button" type="button">Disconnect</button>
+                  </div>
+                </div>
+                <div class="detail-kv localization-session-kv">
+                  <div class="detail-kv-row"><strong>Status</strong><span id="hero-status">Waiting</span></div>
+                  <div class="detail-kv-row"><strong>Mode</strong><span id="hero-mode">Loading</span></div>
+                  <div class="detail-kv-row"><strong>Updates</strong><span id="hero-feed">Pending</span></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="panel-head localization-subsection-head">
+              <div>
+                <h2>Receivers</h2>
+                <p>Current receiver registry.</p>
+              </div>
+            </div>
+            <div id="receiver-list"></div>
+          </section>
+        </div>
+
+        <aside class="workspace-detail localization-detail-rail" aria-label="Selected object detail">
+          <div id="selection-detail-panel"></div>
+          <section class="traffic-section localization-aircraft-section">
+            <div class="traffic-section-head"><strong>Aircraft</strong><span>Recent positions</span></div>
+            <div id="aircraft-list"></div>
+          </section>
+        </aside>
+      </section>
+    </main>
   </div>
+
+  <script src="/vendor/leaflet.js" defer></script>
+  <script src="/vendor/socket.io.min.js" defer></script>
+  <script src="/app-shell.js?v=20260720a" defer></script>
+  <script src="/dashboard.js?v=20260720a" defer></script>
 </body>
 </html>

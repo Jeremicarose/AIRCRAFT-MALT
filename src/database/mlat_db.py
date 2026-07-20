@@ -219,9 +219,26 @@ class MLATDatabase:
                 timestamp REAL NOT NULL,
                 total_signals INTEGER NOT NULL,
                 total_positions INTEGER NOT NULL,
+                successful_solves INTEGER NOT NULL DEFAULT 0,
                 active_aircraft INTEGER NOT NULL,
                 active_receivers INTEGER NOT NULL,
                 avg_uncertainty REAL NOT NULL,
+                avg_quality_score REAL NOT NULL DEFAULT 0.0,
+                avg_latency_ms REAL NOT NULL DEFAULT 0.0,
+                max_latency_ms REAL NOT NULL DEFAULT 0.0,
+                avg_ingest_latency_ms REAL NOT NULL DEFAULT 0.0,
+                max_ingest_latency_ms REAL NOT NULL DEFAULT 0.0,
+                avg_store_latency_ms REAL NOT NULL DEFAULT 0.0,
+                max_store_latency_ms REAL NOT NULL DEFAULT 0.0,
+                discovery_latency_ms REAL NOT NULL DEFAULT 0.0,
+                registry_discovery_live INTEGER NOT NULL DEFAULT 0,
+                process_rss_mb REAL NOT NULL DEFAULT 0.0,
+                uptime_s REAL NOT NULL DEFAULT 0.0,
+                last_signal_age_s REAL,
+                last_store_age_s REAL,
+                synthetic_feed_mode INTEGER NOT NULL DEFAULT 0,
+                failed_solves INTEGER NOT NULL DEFAULT 0,
+                rejected_groups INTEGER NOT NULL DEFAULT 0,
                 created_at TEXT NOT NULL
             )
         """)
@@ -567,6 +584,18 @@ class MLATDatabase:
         max_latency_ms: float = 0.0,
         failed_solves: int = 0,
         rejected_groups: int = 0,
+        successful_solves: int = 0,
+        avg_ingest_latency_ms: float = 0.0,
+        max_ingest_latency_ms: float = 0.0,
+        avg_store_latency_ms: float = 0.0,
+        max_store_latency_ms: float = 0.0,
+        discovery_latency_ms: float = 0.0,
+        registry_discovery_live: bool = False,
+        process_rss_mb: float = 0.0,
+        uptime_s: float = 0.0,
+        last_signal_age_s: Optional[float] = None,
+        last_store_age_s: Optional[float] = None,
+        synthetic_feed_mode: bool = False,
     ):
         """Store system statistics snapshot"""
         cursor = self.conn.cursor()
@@ -575,30 +604,63 @@ class MLATDatabase:
         created_at = datetime.now().isoformat()
 
         columns = {row[1] for row in cursor.execute("PRAGMA table_info(statistics)")}
-        if "avg_quality_score" not in columns:
-            cursor.execute("ALTER TABLE statistics ADD COLUMN avg_quality_score REAL NOT NULL DEFAULT 0.0")
-        if "avg_latency_ms" not in columns:
-            cursor.execute("ALTER TABLE statistics ADD COLUMN avg_latency_ms REAL NOT NULL DEFAULT 0.0")
-        if "max_latency_ms" not in columns:
-            cursor.execute("ALTER TABLE statistics ADD COLUMN max_latency_ms REAL NOT NULL DEFAULT 0.0")
-        if "failed_solves" not in columns:
-            cursor.execute("ALTER TABLE statistics ADD COLUMN failed_solves INTEGER NOT NULL DEFAULT 0")
-        if "rejected_groups" not in columns:
-            cursor.execute("ALTER TABLE statistics ADD COLUMN rejected_groups INTEGER NOT NULL DEFAULT 0")
+        migrations = {
+            "avg_quality_score": "REAL NOT NULL DEFAULT 0.0",
+            "avg_latency_ms": "REAL NOT NULL DEFAULT 0.0",
+            "max_latency_ms": "REAL NOT NULL DEFAULT 0.0",
+            "failed_solves": "INTEGER NOT NULL DEFAULT 0",
+            "rejected_groups": "INTEGER NOT NULL DEFAULT 0",
+            "successful_solves": "INTEGER NOT NULL DEFAULT 0",
+            "avg_ingest_latency_ms": "REAL NOT NULL DEFAULT 0.0",
+            "max_ingest_latency_ms": "REAL NOT NULL DEFAULT 0.0",
+            "avg_store_latency_ms": "REAL NOT NULL DEFAULT 0.0",
+            "max_store_latency_ms": "REAL NOT NULL DEFAULT 0.0",
+            "discovery_latency_ms": "REAL NOT NULL DEFAULT 0.0",
+            "registry_discovery_live": "INTEGER NOT NULL DEFAULT 0",
+            "process_rss_mb": "REAL NOT NULL DEFAULT 0.0",
+            "uptime_s": "REAL NOT NULL DEFAULT 0.0",
+            "last_signal_age_s": "REAL",
+            "last_store_age_s": "REAL",
+            "synthetic_feed_mode": "INTEGER NOT NULL DEFAULT 0",
+        }
+        for column_name, definition in migrations.items():
+            if column_name not in columns:
+                cursor.execute(
+                    f"ALTER TABLE statistics ADD COLUMN {column_name} {definition}"
+                )
 
-        cursor.execute("""
-            INSERT INTO statistics (
-                timestamp, total_signals, total_positions,
-                active_aircraft, active_receivers, avg_uncertainty,
-                avg_quality_score, avg_latency_ms, max_latency_ms,
-                failed_solves, rejected_groups, created_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """, (
-            timestamp, total_signals, total_positions,
-            active_aircraft, active_receivers, avg_uncertainty,
-            avg_quality_score, avg_latency_ms, max_latency_ms,
-            failed_solves, rejected_groups, created_at
-        ))
+        payload = {
+            "timestamp": timestamp,
+            "total_signals": total_signals,
+            "total_positions": total_positions,
+            "successful_solves": successful_solves,
+            "active_aircraft": active_aircraft,
+            "active_receivers": active_receivers,
+            "avg_uncertainty": avg_uncertainty,
+            "avg_quality_score": avg_quality_score,
+            "avg_latency_ms": avg_latency_ms,
+            "max_latency_ms": max_latency_ms,
+            "avg_ingest_latency_ms": avg_ingest_latency_ms,
+            "max_ingest_latency_ms": max_ingest_latency_ms,
+            "avg_store_latency_ms": avg_store_latency_ms,
+            "max_store_latency_ms": max_store_latency_ms,
+            "discovery_latency_ms": discovery_latency_ms,
+            "registry_discovery_live": int(registry_discovery_live),
+            "process_rss_mb": process_rss_mb,
+            "uptime_s": uptime_s,
+            "last_signal_age_s": last_signal_age_s,
+            "last_store_age_s": last_store_age_s,
+            "synthetic_feed_mode": int(synthetic_feed_mode),
+            "failed_solves": failed_solves,
+            "rejected_groups": rejected_groups,
+            "created_at": created_at,
+        }
+        column_sql = ", ".join(payload)
+        placeholder_sql = ", ".join("?" for _ in payload)
+        cursor.execute(
+            f"INSERT INTO statistics ({column_sql}) VALUES ({placeholder_sql})",
+            tuple(payload.values()),
+        )
 
         self.conn.commit()
 
@@ -666,6 +728,20 @@ class MLATDatabase:
             for row in rows
         ]
 
+    def touch_receiver(self, receiver_id: str, last_seen: float) -> bool:
+        """Update receiver freshness after an observation is ingested."""
+        cursor = self.conn.cursor()
+        cursor.execute(
+            """
+            UPDATE receivers
+            SET last_seen = ?, status = 'online', updated_at = ?
+            WHERE receiver_id = ?
+            """,
+            (last_seen, datetime.now().isoformat(), receiver_id),
+        )
+        self.conn.commit()
+        return cursor.rowcount > 0
+
     def _row_to_stored_position(self, row: sqlite3.Row) -> StoredPosition:
         return StoredPosition(
             id=row['id'],
@@ -705,6 +781,13 @@ class MLATDatabase:
         """Return a position by primary key."""
         cursor = self.conn.cursor()
         cursor.execute("SELECT * FROM positions WHERE id = ?", (position_id,))
+        row = cursor.fetchone()
+        return self._row_to_stored_position(row) if row else None
+
+    def get_latest_position(self) -> Optional[StoredPosition]:
+        """Return the most recently stored position across all aircraft."""
+        cursor = self.conn.cursor()
+        cursor.execute("SELECT * FROM positions ORDER BY id DESC LIMIT 1")
         row = cursor.fetchone()
         return self._row_to_stored_position(row) if row else None
 
@@ -927,6 +1010,13 @@ class MLATDatabase:
         """, (cutoff_time,))
 
         return [dict(row) for row in cursor.fetchall()]
+
+    def get_latest_statistics(self) -> Optional[Dict[str, Any]]:
+        """Return the newest processor statistics snapshot."""
+        cursor = self.conn.cursor()
+        cursor.execute("SELECT * FROM statistics ORDER BY timestamp DESC LIMIT 1")
+        row = cursor.fetchone()
+        return dict(row) if row else None
     
     def cleanup_old_data(self, days: int = 7):
         """

@@ -84,10 +84,12 @@ CKB_NETWORK=testnet
 CKB_RPC_URL=https://testnet.ckb.dev/rpc
 CKB_INDEXER_URL=https://testnet.ckb.dev/indexer
 RECEIVER_REGISTRY_TYPE_HASH=0xYOUR_TYPE_HASH
+STRICT_PRODUCTION_MODE=true
 SIMULATE_IF_UNAVAILABLE=false
 
 FOURDSKYAPIKEY=your_api_key_here
 FOURDSKYENDPOINT=wss://your-feed-endpoint
+FOURDSKY_TRANSPORT=command-jsonl
 
 DATABASE_PATH=/app/data/mlat_data.db
 API_HOST=0.0.0.0
@@ -96,6 +98,34 @@ LOG_LEVEL=INFO
 ```
 
 Additional runtime controls may include health/stats and demo-mode settings depending on deployment goals.
+
+## Production-intended live deployment
+
+If a deployment is meant to represent live ingest, enable `STRICT_PRODUCTION_MODE=true`.
+That mode makes startup fail closed instead of degrading into simulation.
+
+When `STRICT_PRODUCTION_MODE=true`, do **not** use any of the following:
+
+- `DEMO_MODE=true`
+- `FOURDSKY_TRANSPORT=simulation`
+- `FOURDSKY_TRANSPORT=auto`
+- `SIMULATE_IF_UNAVAILABLE=true`
+
+A production-intended deployment should also provide actual live dependencies, including:
+
+- a real `RECEIVER_REGISTRY_TYPE_HASH`
+- reachable CKB RPC/indexer endpoints
+- an explicit live transport such as `command-jsonl` or `websocket-json`
+- any live bridge command, endpoint, and credentials required by that transport
+
+Recommended verification:
+
+```bash
+python scripts/check_live_ingest_readiness.py
+curl http://localhost:5000/api/system/mode
+curl http://localhost:5000/api/health
+curl http://localhost:5000/api/readiness
+```
 
 ## What to verify after deploy
 
@@ -139,6 +169,7 @@ Use this mode when you want a stable, read-only product walkthrough.
 Recommended environment values:
 
 ```bash
+STRICT_PRODUCTION_MODE=false
 FOURDSKY_TRANSPORT=simulation
 SIMULATE_IF_UNAVAILABLE=true
 ENABLE_ADMIN_API=false

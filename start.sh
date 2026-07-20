@@ -5,6 +5,8 @@
 
 set -e  # Exit on error
 
+# RUN_DEMO_MODE is for explicit demo/replay startup only. Do not use it for
+# production-intended live deployments.
 RUN_DEMO_MODE=${RUN_DEMO_MODE:-false}
 
 echo ""

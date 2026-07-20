@@ -1,0 +1,55 @@
+{
+  "evidence_status": "operational_baseline",
+  "generated_at": "2026-07-20T17:02:00.228224Z",
+  "metrics": {
+    "api_latency_ms": {
+      "max": 153.410996,
+      "median": 42.603069000000005,
+      "p95": 149.310041,
+      "samples": 50,
+      "success_percent": 100.0
+    },
+    "api_throughput": {
+      "concurrency": 10,
+      "endpoint": "/api/health",
+      "requests": 50,
+      "requests_per_second": 139.36798337033375,
+      "success_percent": 100.0,
+      "successful_requests": 50
+    },
+    "database_position_insert_ms": {
+      "max": 2.58352,
+      "median": 0.13283499999999998,
+      "p95": 0.273059,
+      "samples": 250
+    },
+    "process_peak_rss_mb": {
+      "value": 25.61328125
+    },
+    "receiver_cache_lookup_ms": {
+      "max": 0.603883,
+      "median": 0.0912935,
+      "p95": 0.165486,
+      "samples": 100
+    }
+  },
+  "parameters": {
+    "database": "temporary SQLite WAL database",
+    "position_inserts": 250,
+    "receiver_records": 25
+  },
+  "provenance": {
+    "configured_transport": "simulation",
+    "data_provenance": "local_non_live_baseline",
+    "environment": "local",
+    "git_commit": "34b7567e276ce9f64f4873c20438ee3413682c8f",
+    "git_worktree_dirty": true,
+    "hostname": "Jeremics-MacBook-Pro.local",
+    "live_data": false,
+    "platform": "macOS-15.7.4-x86_64-i386-64bit-Mach-O",
+    "python": "3.13.7",
+    "registry_discovery_live": false,
+    "runtime_mode": "demo"
+  },
+  "schema_version": 1
+}

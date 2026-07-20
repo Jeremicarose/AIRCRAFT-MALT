@@ -62,8 +62,12 @@ def main() -> int:
                 "uncertainty": position["uncertainty"],
                 "quality_score": row_value(position, "quality_score", 0.0),
                 "quality_bucket": row_value(position, "quality_bucket", "unknown"),
+                "solver_method": row_value(position, "solver_method", "unknown"),
                 "solver_residual_m": row_value(position, "solver_residual_m", row_value(position, "residual", 0.0)),
                 "receiver_count": row_value(position, "receiver_count", row_value(position, "num_receivers", 0)),
+                "receiver_ids": json.loads(row_value(position, "receiver_ids", "[]")),
+                "correlation_time_span_s": row_value(position, "correlation_time_span_s", 0.0),
+                "created_at": row_value(position, "created_at", None),
             }
             handle.write(json.dumps(record, sort_keys=True) + "\n")
 

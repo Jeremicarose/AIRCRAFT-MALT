@@ -15,6 +15,8 @@ from collections import deque
 import logging
 import signal
 import os
+import resource
+import sys
 import time
 
 try:
@@ -32,7 +34,7 @@ from mlat.robust_solver import RobustMLATSolver, ReceiverPosition, SignalObserva
 from database.mlat_db import MLATDatabase
 from demo_scenarios import get_demo_scenario, scenario_aircraft_states
 from mlat_runtime import BaseMLATRuntime
-from runtime_config import DemoSettings, load_runtime_settings
+from runtime_config import DemoSettings, RuntimeSettings, load_runtime_settings
 
 # Setup logging
 logging.basicConfig(
@@ -42,6 +44,25 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 CURRENT_RUNTIME = None
+
+
+def get_process_rss_mb() -> float:
+    """Return peak resident memory using platform-correct ru_maxrss units."""
+    resident = float(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss)
+    divisor = 1024.0 * 1024.0 if sys.platform == "darwin" else 1024.0
+    return resident / divisor
+
+
+def validate_startup_constraints(settings: RuntimeSettings) -> None:
+    """Fail closed when a production-intended deployment is not truly live-configured."""
+    if not settings.strict_production_mode:
+        return
+
+    config = settings.network_config
+    if settings.require_live_benchmarkable_output and config.fourdsky_transport == "simulation":
+        raise RuntimeError(
+            "STRICT_PRODUCTION_MODE requires benchmarkable live output and forbids FOURDSKY_TRANSPORT=simulation"
+        )
 
 
 class ProductionMLATSystem(BaseMLATRuntime[ReceiverPosition, SignalObservation]):
@@ -70,12 +91,14 @@ class ProductionMLATSystem(BaseMLATRuntime[ReceiverPosition, SignalObservation])
         self.health_stale_signal_seconds = max(1, health_stale_signal_seconds)
         self.stats_interval_seconds = max(5, stats_interval_seconds)
         self.require_live_benchmarkable_output = require_live_benchmarkable_output
+        self.strict_production_mode = config.strict_production_mode
         self.solve_latencies_ms = deque(maxlen=1000)
         self.store_latencies_ms = deque(maxlen=1000)
         self.api_latencies_ms = deque(maxlen=1000)
         self.rejected_groups = 0
         self.last_successful_solve_at = 0.0
         self.last_store_at = 0.0
+        self.receiver_heartbeat_persisted_at = {}
 
         # Statistics
         self.stats = {
@@ -104,12 +127,24 @@ class ProductionMLATSystem(BaseMLATRuntime[ReceiverPosition, SignalObservation])
         """Expose current runtime health and performance state."""
         now = time.time()
         instrumentation = self.get_runtime_instrumentation()
+        uptime_s = max(0.0, now - self.stats['start_time'])
+        total_positions = self.stats['total_positions']
         return {
             "is_running": self.is_running,
             "synthetic_feed_mode": self.synthetic_feed_mode,
+            "strict_production_mode": self.strict_production_mode,
             "require_live_benchmarkable_output": self.require_live_benchmarkable_output,
             "start_time": self.stats['start_time'],
-            "uptime_s": max(0.0, now - self.stats['start_time']),
+            "uptime_s": uptime_s,
+            "total_signals": self.stats['total_signals'],
+            "total_positions": total_positions,
+            "successful_solves": self.stats['successful_solves'],
+            "signals_per_second": self.stats['total_signals'] / uptime_s if uptime_s else 0.0,
+            "positions_per_second": total_positions / uptime_s if uptime_s else 0.0,
+            "solve_success_percent": (
+                100.0 * self.stats['successful_solves'] / total_positions
+                if total_positions else 0.0
+            ),
             "last_signal_at": instrumentation.get("last_signal_at", 0.0),
             "last_signal_age_s": instrumentation.get("last_signal_age_s"),
             "last_successful_solve_at": self.last_successful_solve_at,
@@ -124,6 +159,9 @@ class ProductionMLATSystem(BaseMLATRuntime[ReceiverPosition, SignalObservation])
             "max_store_latency_ms": (max(self.store_latencies_ms) if self.store_latencies_ms else 0.0),
             "avg_api_latency_ms": (sum(self.api_latencies_ms) / len(self.api_latencies_ms) if self.api_latencies_ms else 0.0),
             "max_api_latency_ms": (max(self.api_latencies_ms) if self.api_latencies_ms else 0.0),
+            "discovery_latency_ms": self.network_client.discovery_latency_ms,
+            "registry_discovery_live": not self.network_client.peer_discovery.simulation_mode,
+            "process_rss_mb": get_process_rss_mb(),
             "failed_solves": self.stats['failed_solves'],
             "rejected_groups": self.rejected_groups,
             "active_receivers": len(self.receiver_positions),
@@ -154,6 +192,10 @@ class ProductionMLATSystem(BaseMLATRuntime[ReceiverPosition, SignalObservation])
                 self.statistics_retention_days,
             )
             if self.require_live_benchmarkable_output:
+                if self.strict_production_mode:
+                    raise RuntimeError(
+                        "STRICT_PRODUCTION_MODE requires benchmarkable live output and forbids FOURDSKY_TRANSPORT=simulation"
+                    )
                 logger.warning(
                     "⚠️ REQUIRE_LIVE_BENCHMARKABLE_OUTPUT=true but FOURDSKY_TRANSPORT=simulation. "
                     "Current output is not suitable for real external benchmarking."
@@ -196,6 +238,15 @@ class ProductionMLATSystem(BaseMLATRuntime[ReceiverPosition, SignalObservation])
 
     def on_signal_received(self, signal: RawSignal):
         self.stats['total_signals'] += 1
+        now = time.time()
+        receiver = self.network_client.active_receivers.get(signal.receiver_id)
+        if receiver is not None:
+            receiver.last_seen = now
+
+        last_persisted = self.receiver_heartbeat_persisted_at.get(signal.receiver_id, 0.0)
+        if now - last_persisted >= 5.0:
+            self.database.touch_receiver(signal.receiver_id, last_seen=now)
+            self.receiver_heartbeat_persisted_at[signal.receiver_id] = now
 
     def build_observation(
         self,
@@ -223,8 +274,13 @@ class ProductionMLATSystem(BaseMLATRuntime[ReceiverPosition, SignalObservation])
         stats_task = asyncio.create_task(self._statistics_loop())
         logger.info("✅ System running")
         
-        # Wait for tasks
-        await asyncio.gather(processing_task, stats_task)
+        # Feed tasks must be monitored too. Otherwise a transport crash leaves
+        # the runtime looking active while no observations are arriving.
+        await asyncio.gather(
+            processing_task,
+            stats_task,
+            *self.network_client.stream_tasks,
+        )
     
     async def _processing_loop(self):
         """Main processing loop - correlate and solve"""
@@ -405,17 +461,30 @@ class ProductionMLATSystem(BaseMLATRuntime[ReceiverPosition, SignalObservation])
                 if self.solve_latencies_ms else 0
             )
             max_latency_ms = max(self.solve_latencies_ms) if self.solve_latencies_ms else 0
+            runtime_state = self.get_runtime_state()
 
             # Store statistics
             self.database.store_statistics(
                 total_signals=self.stats['total_signals'],
                 total_positions=self.stats['total_positions'],
+                successful_solves=self.stats['successful_solves'],
                 active_aircraft=len(active_aircraft),
                 active_receivers=len(self.receiver_positions),
                 avg_uncertainty=avg_uncertainty,
                 avg_quality_score=avg_quality_score,
                 avg_latency_ms=avg_latency_ms,
                 max_latency_ms=max_latency_ms,
+                avg_ingest_latency_ms=runtime_state["avg_ingest_latency_ms"],
+                max_ingest_latency_ms=runtime_state["max_ingest_latency_ms"],
+                avg_store_latency_ms=runtime_state["avg_store_latency_ms"],
+                max_store_latency_ms=runtime_state["max_store_latency_ms"],
+                discovery_latency_ms=self.network_client.discovery_latency_ms,
+                registry_discovery_live=runtime_state["registry_discovery_live"],
+                process_rss_mb=get_process_rss_mb(),
+                uptime_s=runtime,
+                last_signal_age_s=runtime_state["last_signal_age_s"],
+                last_store_age_s=runtime_state["last_store_age_s"],
+                synthetic_feed_mode=self.synthetic_feed_mode,
                 failed_solves=self.stats['failed_solves'],
                 rejected_groups=self.rejected_groups,
             )
@@ -480,6 +549,7 @@ class ProductionMLATSystem(BaseMLATRuntime[ReceiverPosition, SignalObservation])
 async def main():
     """Main entry point"""
     settings = load_runtime_settings(max_receivers_default=10)
+    validate_startup_constraints(settings)
 
     # Create system
     system = ProductionMLATSystem(

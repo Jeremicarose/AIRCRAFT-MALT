@@ -114,8 +114,14 @@ class BaseMLATRuntime(Generic[ReceiverPositionT, ObservationT]):
         latencies = list(self.ingest_latencies_ms)
         avg_ingest_latency_ms = sum(latencies) / len(latencies) if latencies else 0.0
         max_ingest_latency_ms = max(latencies) if latencies else 0.0
+        last_signal_at = float(self.instrumentation.get("last_signal_at") or 0.0)
         return {
             **self.instrumentation,
+            "last_signal_age_s": (
+                max(0.0, time.time() - last_signal_at)
+                if last_signal_at
+                else None
+            ),
             "avg_ingest_latency_ms": avg_ingest_latency_ms,
             "max_ingest_latency_ms": max_ingest_latency_ms,
         }

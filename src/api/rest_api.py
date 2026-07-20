@@ -6,6 +6,7 @@ This module uses an app-factory pattern and request-scoped database access.
 
 from __future__ import annotations
 
+from collections import deque
 from flask import Blueprint, Flask, current_app, g, jsonify, make_response, request, send_from_directory
 import json
 import logging
@@ -19,6 +20,7 @@ from functools import wraps
 from typing import Any, Dict, List, Optional
 
 from demo_scenarios import get_demo_scenario, get_scenario_metadata
+from runtime_config import load_runtime_settings
 
 try:
     from dotenv import load_dotenv
@@ -36,7 +38,7 @@ except ImportError:
     SocketIO = None
 
 from database.mlat_db import MLATDatabase, StoredPosition
-from production_main import CURRENT_RUNTIME
+import production_main
 
 
 if load_dotenv is not None:
@@ -62,6 +64,7 @@ def _split_csv(name: str, default: str = "") -> List[str]:
 
 DEFAULT_ALLOWED_ORIGINS = "http://localhost:8080,http://127.0.0.1:8080"
 _broadcast_lock = threading.Lock()
+_api_latencies_ms = deque(maxlen=1000)
 
 
 if SocketIO is None:
@@ -113,14 +116,13 @@ def _render_minified_html(filename: str):
 
 def load_app_config() -> Dict[str, object]:
     """Load API configuration from environment."""
-    demo_enabled = _env_bool("DEMO_MODE", False)
-    demo_scenario_name = os.getenv("DEMO_SCENARIO", "default")
+    settings = load_runtime_settings(max_receivers_default=10)
+    demo_enabled = settings.demo.enabled
+    demo_scenario_name = settings.demo.scenario
     demo_scenario = get_demo_scenario(demo_scenario_name)
-    demo_label = os.getenv("DEMO_LABEL", demo_scenario.label)
-    simulation_mode = os.getenv("FOURDSKY_TRANSPORT", "auto") == "simulation" or _env_bool(
-        "SIMULATE_IF_UNAVAILABLE",
-        True,
-    )
+    demo_label = settings.demo.label
+    configured_transport = (settings.network_config.fourdsky_transport or "auto").strip().lower()
+    simulation_mode = configured_transport == "simulation"
     cwd_visualization_dir = Path(os.getcwd()) / "src" / "visualization"
     package_visualization_dir = Path(__file__).resolve().parents[1] / "visualization"
     visualization_dir = (
@@ -130,6 +132,14 @@ def load_app_config() -> Dict[str, object]:
     )
     return {
         "DATABASE_PATH": os.getenv("DATABASE_PATH", "mlat_data.db"),
+        "BENCHMARK_REPORT_PATH": os.getenv("BENCHMARK_REPORT_PATH", "benchmark/latest.json"),
+        "PERFORMANCE_REPORT_PATH": os.getenv(
+            "PERFORMANCE_REPORT_PATH", "benchmark/performance-latest.json"
+        ),
+        "RELIABILITY_REPORT_PATH": os.getenv(
+            "RELIABILITY_REPORT_PATH", "benchmark/reliability-latest.json"
+        ),
+        "BENCHMARK_MAX_REPORT_BYTES": int(os.getenv("BENCHMARK_MAX_REPORT_BYTES", "5242880")),
         "CORS_ALLOWED_ORIGINS": _split_csv("CORS_ALLOWED_ORIGINS", DEFAULT_ALLOWED_ORIGINS),
         "ENABLE_ADMIN_API": _env_bool("ENABLE_ADMIN_API", False),
         "ENABLE_BACKGROUND_BROADCASTER": _env_bool("ENABLE_BACKGROUND_BROADCASTER", True),
@@ -142,11 +152,15 @@ def load_app_config() -> Dict[str, object]:
         "API_DEBUG": _env_bool("API_DEBUG", False),
         "HEALTH_STALE_SIGNAL_SECONDS": int(os.getenv("HEALTH_STALE_SIGNAL_SECONDS", "120")),
         "SIMULATION_MODE": simulation_mode,
+        "STRICT_PRODUCTION_MODE": settings.strict_production_mode,
+        "CONFIGURED_TRANSPORT": configured_transport,
+        "SIMULATE_IF_UNAVAILABLE": settings.network_config.simulate_if_unavailable,
+        "RECEIVER_REGISTRY_TYPE_HASH": settings.network_config.receiver_registry_type_hash,
         "DEMO_MODE": demo_enabled,
         "DEMO_SCENARIO": demo_scenario.slug,
-        "DEMO_READ_ONLY": _env_bool("DEMO_READ_ONLY", demo_enabled),
+        "DEMO_READ_ONLY": settings.demo.read_only,
         "DEMO_LABEL": demo_label,
-        "DEMO_AUTO_CONNECT": _env_bool("DEMO_AUTO_CONNECT", demo_enabled),
+        "DEMO_AUTO_CONNECT": settings.demo.auto_connect,
         "DEMO_SCENARIO_METADATA": {
             **get_scenario_metadata(demo_scenario.slug),
             "label": demo_label,
@@ -299,19 +313,232 @@ def _parse_cleanup_days() -> int:
     return days
 
 
-def get_runtime_state() -> Optional[Dict[str, object]]:
-    if CURRENT_RUNTIME is None:
+def get_runtime_state(db: Optional[MLATDatabase] = None) -> Optional[Dict[str, object]]:
+    """Read runtime telemetry in-process or from processor snapshots in SQLite."""
+    runtime = production_main.CURRENT_RUNTIME
+    if runtime is not None:
+        state = runtime.get_runtime_state()
+        state["telemetry_source"] = "in_process"
+        state["telemetry_fresh"] = True
+    elif db is not None:
+        latest_stats = db.get_latest_statistics()
+        if latest_stats is None:
+            return None
+
+        now = time.time()
+        telemetry_age_s = max(0.0, now - float(latest_stats["timestamp"]))
+        stale_threshold_s = int(current_app.config["HEALTH_STALE_SIGNAL_SECONDS"])
+        telemetry_fresh_s = max(
+            stale_threshold_s,
+            int(os.getenv("STATS_INTERVAL_SECONDS", "60")) * 2,
+        )
+        latest_position = db.get_latest_position()
+        last_store_age_s = (
+            max(0.0, now - latest_position.timestamp)
+            if latest_position is not None
+            else None
+        )
+        signal_fresh = bool(
+            telemetry_age_s <= telemetry_fresh_s
+            and last_store_age_s is not None
+            and last_store_age_s <= stale_threshold_s
+        )
+        state = {
+            "is_running": telemetry_age_s <= telemetry_fresh_s,
+            "telemetry_source": "database",
+            "telemetry_age_s": telemetry_age_s,
+            "telemetry_fresh": telemetry_age_s <= telemetry_fresh_s,
+            "last_signal_age_s": (
+                float(latest_stats["last_signal_age_s"]) + telemetry_age_s
+                if latest_stats.get("last_signal_age_s") is not None
+                else last_store_age_s
+            ),
+            "last_successful_solve_age_s": last_store_age_s,
+            "last_store_age_s": last_store_age_s,
+            "avg_ingest_latency_ms": float(latest_stats.get("avg_ingest_latency_ms", 0.0)),
+            "max_ingest_latency_ms": float(latest_stats.get("max_ingest_latency_ms", 0.0)),
+            "avg_solve_latency_ms": float(latest_stats.get("avg_latency_ms", 0.0)),
+            "max_solve_latency_ms": float(latest_stats.get("max_latency_ms", 0.0)),
+            "avg_store_latency_ms": float(latest_stats.get("avg_store_latency_ms", 0.0)),
+            "max_store_latency_ms": float(latest_stats.get("max_store_latency_ms", 0.0)),
+            "discovery_latency_ms": float(latest_stats.get("discovery_latency_ms", 0.0)),
+            "registry_discovery_live": bool(latest_stats.get("registry_discovery_live", 0)),
+            "process_rss_mb": float(latest_stats.get("process_rss_mb", 0.0)),
+            "uptime_s": float(latest_stats.get("uptime_s", 0.0)),
+            "total_signals": int(latest_stats.get("total_signals", 0)),
+            "total_positions": int(latest_stats.get("total_positions", 0)),
+            "successful_solves": int(latest_stats.get("successful_solves", 0)),
+            "failed_solves": int(latest_stats.get("failed_solves", 0)),
+            "rejected_groups": int(latest_stats.get("rejected_groups", 0)),
+            "active_receivers": int(latest_stats.get("active_receivers", 0)),
+            "signal_fresh": signal_fresh,
+            "strict_production_mode": bool(current_app.config.get("STRICT_PRODUCTION_MODE")),
+            "synthetic_feed_mode": bool(
+                latest_stats.get("synthetic_feed_mode", 0)
+                or (latest_position and _is_synthetic_solver_method(latest_position.solver_method))
+            ),
+        }
+        uptime_s = float(state["uptime_s"])
+        total_positions = int(state["total_positions"])
+        state["signals_per_second"] = (
+            int(state["total_signals"]) / uptime_s if uptime_s else 0.0
+        )
+        state["positions_per_second"] = total_positions / uptime_s if uptime_s else 0.0
+        state["solve_success_percent"] = (
+            100.0 * int(state["successful_solves"]) / total_positions
+            if total_positions else 0.0
+        )
+    else:
         return None
-    return CURRENT_RUNTIME.get_runtime_state()
+
+    latencies = list(_api_latencies_ms)
+    state["avg_api_latency_ms"] = sum(latencies) / len(latencies) if latencies else 0.0
+    state["max_api_latency_ms"] = max(latencies) if latencies else 0.0
+    return state
 
 
 def record_api_latency(started_at: float):
-    runtime = CURRENT_RUNTIME
+    elapsed_ms = (time.time() - started_at) * 1000
+    _api_latencies_ms.append(elapsed_ms)
+    runtime = production_main.CURRENT_RUNTIME
     if runtime is not None:
-        runtime.api_latencies_ms.append((time.time() - started_at) * 1000)
+        runtime.api_latencies_ms.append(elapsed_ms)
+
+
+def _is_synthetic_solver_method(method: Optional[str]) -> bool:
+    return method in {"simulated_replay", "simulation", "unknown"}
+
+
+
+def _load_benchmark_report() -> tuple[Optional[Dict[str, Any]], str]:
+    """Load and minimally validate the configured public evidence artifact."""
+    report_path = Path(str(current_app.config["BENCHMARK_REPORT_PATH"]))
+    if not report_path.exists():
+        return None, "not_found"
+    if not report_path.is_file():
+        return None, "invalid"
+    if report_path.stat().st_size > int(current_app.config["BENCHMARK_MAX_REPORT_BYTES"]):
+        return None, "too_large"
+
+    try:
+        report = json.loads(report_path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+        logger.exception("Failed to load benchmark report from %s", report_path)
+        return None, "invalid"
+
+    required_objects = ("provenance", "sample", "accuracy", "freshness")
+    if (
+        not isinstance(report, dict)
+        or report.get("schema_version") != 1
+        or report.get("evidence_status") not in {"publishable", "pipeline_only"}
+        or not isinstance(report.get("generated_at"), str)
+        or any(not isinstance(report.get(field), dict) for field in required_objects)
+    ):
+        return None, "invalid"
+    return report, "available"
+
+
+def _load_operational_report(config_key: str) -> tuple[Optional[Dict[str, Any]], str]:
+    """Load a bounded, versioned operational evidence artifact."""
+    report_path = Path(str(current_app.config[config_key]))
+    if not report_path.exists():
+        return None, "not_found"
+    if not report_path.is_file() or report_path.stat().st_size > int(
+        current_app.config["BENCHMARK_MAX_REPORT_BYTES"]
+    ):
+        return None, "invalid"
+    try:
+        report = json.loads(report_path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+        return None, "invalid"
+    if (
+        not isinstance(report, dict)
+        or report.get("schema_version") != 1
+        or not isinstance(report.get("generated_at"), str)
+        or not isinstance(report.get("provenance"), dict)
+        or not isinstance(report.get("metrics"), dict)
+    ):
+        return None, "invalid"
+    return report, "available"
+
+
+def _evidence_history(rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """Normalize cumulative statistics into chart-ready interval samples."""
+    samples: List[Dict[str, Any]] = []
+    previous: Optional[Dict[str, Any]] = None
+    for row in rows:
+        timestamp = float(row["timestamp"])
+        uptime_s = float(row.get("uptime_s", 0.0))
+        counters_are_monotonic = bool(
+            previous is not None
+            and int(row["total_signals"]) >= int(previous["total_signals"])
+            and int(row["total_positions"]) >= int(previous["total_positions"])
+            and uptime_s >= float(previous.get("uptime_s", 0.0))
+        )
+        if counters_are_monotonic and previous is not None:
+            interval_s = max(0.001, timestamp - float(previous["timestamp"]))
+            signal_delta = max(0, int(row["total_signals"]) - int(previous["total_signals"]))
+            position_delta = max(0, int(row["total_positions"]) - int(previous["total_positions"]))
+        elif uptime_s > 0:
+            # A process restart resets cumulative counters. Use its own uptime
+            # instead of comparing it with the previous process snapshot.
+            interval_s = max(1.0, uptime_s)
+            signal_delta = int(row["total_signals"])
+            position_delta = int(row["total_positions"])
+        else:
+            # Pre-telemetry schema rows have no trustworthy rate denominator.
+            interval_s = 1.0
+            signal_delta = 0
+            position_delta = 0
+
+        total_positions = int(row["total_positions"])
+        successful_solves = int(row.get("successful_solves", 0))
+        samples.append({
+            "timestamp": timestamp,
+            "signals_per_minute": round(signal_delta * 60.0 / interval_s, 2),
+            "positions_per_minute": round(position_delta * 60.0 / interval_s, 2),
+            "total_signals": int(row["total_signals"]),
+            "total_positions": total_positions,
+            "solve_success_percent": round(
+                100.0 * successful_solves / total_positions, 2
+            ) if total_positions else 0.0,
+            "active_aircraft": int(row["active_aircraft"]),
+            "active_receivers": int(row["active_receivers"]),
+            "avg_quality_score": float(row.get("avg_quality_score", 0.0)),
+            "avg_uncertainty_m": float(row.get("avg_uncertainty", 0.0)),
+            "avg_ingest_latency_ms": float(row.get("avg_ingest_latency_ms", 0.0)),
+            "avg_solve_latency_ms": float(row.get("avg_latency_ms", 0.0)),
+            "avg_store_latency_ms": float(row.get("avg_store_latency_ms", 0.0)),
+            "discovery_latency_ms": float(row.get("discovery_latency_ms", 0.0)),
+            "registry_discovery_live": bool(row.get("registry_discovery_live", 0)),
+            "process_rss_mb": float(row.get("process_rss_mb", 0.0)),
+            "uptime_s": uptime_s,
+            "last_signal_age_s": row.get("last_signal_age_s"),
+            "last_store_age_s": row.get("last_store_age_s"),
+            "failed_solves": int(row.get("failed_solves", 0)),
+            "rejected_groups": int(row.get("rejected_groups", 0)),
+            "synthetic_feed_mode": bool(row.get("synthetic_feed_mode", 0)),
+        })
+        previous = row
+    return samples
+
+
+def _parse_receiver_ids(raw_receiver_ids: Any) -> List[str]:
+    if isinstance(raw_receiver_ids, list):
+        return [str(receiver_id) for receiver_id in raw_receiver_ids if receiver_id]
+    if isinstance(raw_receiver_ids, str):
+        try:
+            parsed = json.loads(raw_receiver_ids)
+        except json.JSONDecodeError:
+            return [raw_receiver_ids] if raw_receiver_ids else []
+        if isinstance(parsed, list):
+            return [str(receiver_id) for receiver_id in parsed if receiver_id]
+    return []
+
 
 
 def _build_position_payload(position: StoredPosition) -> Dict:
+    receiver_ids = _parse_receiver_ids(position.receiver_ids)
     return {
         "id": position.id,
         "aircraft_id": position.aircraft_id,
@@ -336,6 +563,7 @@ def _build_position_payload(position: StoredPosition) -> Dict:
         "correlation": {
             "time_span_s": position.correlation_time_span_s,
             "receiver_count": position.receiver_count,
+            "receiver_ids": receiver_ids,
         },
         "created_at": position.created_at,
     }
@@ -379,19 +607,7 @@ def _start_background_broadcaster(app: Flask):
                     payload = _build_position_payload(position)
                     broadcast_position_update(
                         aircraft_id=position.aircraft_id,
-                        position_data={
-                            "id": payload["id"],
-                            "timestamp": payload["timestamp"],
-                            "latitude": payload["position"]["latitude"],
-                            "longitude": payload["position"]["longitude"],
-                            "altitude": payload["position"]["altitude"],
-                            "uncertainty": payload["uncertainty"],
-                            "num_receivers": payload["num_receivers"],
-                            "quality": payload["quality"],
-                            "solver": payload["solver"],
-                            "correlation": payload["correlation"],
-                            "created_at": payload["created_at"],
-                        },
+                        position_data=payload,
                     )
                 except queue.Empty:
                     new_positions = poll_db.get_positions_after_id(last_position_id, limit=200)
@@ -400,19 +616,7 @@ def _start_background_broadcaster(app: Flask):
                         payload = _build_position_payload(position)
                         broadcast_position_update(
                             aircraft_id=position.aircraft_id,
-                            position_data={
-                                "id": payload["id"],
-                                "timestamp": payload["timestamp"],
-                                "latitude": payload["position"]["latitude"],
-                                "longitude": payload["position"]["longitude"],
-                                "altitude": payload["position"]["altitude"],
-                                "uncertainty": payload["uncertainty"],
-                                "num_receivers": payload["num_receivers"],
-                                "quality": payload["quality"],
-                                "solver": payload["solver"],
-                                "correlation": payload["correlation"],
-                                "created_at": payload["created_at"],
-                            },
+                            position_data=payload,
                         )
         finally:
             poll_db.close()
@@ -437,7 +641,7 @@ def _record_request_latency(response):
 def health_check():
     db = get_db()
     db_stats = db.get_database_stats()
-    runtime_state = get_runtime_state() or {}
+    runtime_state = get_runtime_state(db) or {}
     recent_receivers = db.get_receivers()
     now = time.time()
     receiver_freshness = [max(0.0, now - receiver.last_seen) for receiver in recent_receivers]
@@ -479,7 +683,7 @@ def readiness_check():
     quality, freshness, reliability, and packaging dimensions.
     """
     db = get_db()
-    runtime_state = get_runtime_state() or {}
+    runtime_state = get_runtime_state(db) or {}
     recent_positions = db.get_recent_positions(seconds=300, limit=500)
     receiver_rows = db.get_receivers()
 
@@ -502,21 +706,28 @@ def readiness_check():
     )
     simulated_positions = sum(
         1 for position in recent_positions
-        if position.solver_method in {"simulated_replay", "simulation", "unknown"}
+        if _is_synthetic_solver_method(position.solver_method)
     )
     benchmarkable_output = position_count > 0 and simulated_positions == 0
     max_last_store_age = runtime_state.get("last_store_age_s")
+    if max_last_store_age is None and recent_positions:
+        max_last_store_age = max(0.0, time.time() - recent_positions[0].timestamp)
     signal_fresh = bool(runtime_state.get("signal_fresh"))
     failed_solves = int(runtime_state.get("failed_solves", 0))
     rejected_groups = int(runtime_state.get("rejected_groups", 0))
-    active_receivers = len([row for row in receiver_rows if row.status == "online"])
+    active_receivers = int(runtime_state.get(
+        "active_receivers",
+        len([row for row in receiver_rows if row.status == "online"]),
+    ))
 
     quality_ready = position_count > 0 and avg_quality_score >= 0.65 and avg_receiver_count >= 4
     freshness_ready = max_last_store_age is not None and max_last_store_age <= 30
     reliability_ready = signal_fresh and active_receivers >= 4 and failed_solves == 0
     packaging_ready = True
+    benchmark_report, benchmark_status = _load_benchmark_report()
 
     return jsonify({
+        "generated_at": datetime.now().isoformat(),
         "ready": quality_ready and freshness_ready and reliability_ready and packaging_ready,
         "dimensions": {
             "quality": {
@@ -568,6 +779,291 @@ def readiness_check():
                 "dataset is not benchmarkable for real-world quality claims."
             ),
         },
+        "external_benchmark": {
+            "available": benchmark_report is not None,
+            "publishable": bool(
+                benchmark_report
+                and benchmark_report.get("provenance", {}).get("benchmarkable") is True
+                and benchmark_report.get("evidence_status") == "publishable"
+            ),
+            "status": benchmark_status,
+            "generated_at": benchmark_report.get("generated_at") if benchmark_report else None,
+        },
+    })
+
+
+@api_bp.route("/api/benchmark/latest", methods=["GET"])
+def get_latest_benchmark():
+    """Publish the latest versioned benchmark evidence artifact."""
+    report, status = _load_benchmark_report()
+    if report is None:
+        status_code = 404 if status == "not_found" else 503
+        return jsonify({
+            "available": False,
+            "status": status,
+            "message": "No valid benchmark evidence report is currently published.",
+        }), status_code
+    return jsonify(report)
+
+
+@api_bp.route("/api/evidence/performance/latest", methods=["GET"])
+def get_latest_performance_evidence():
+    """Publish the latest reproducible local performance baseline."""
+    report, status = _load_operational_report("PERFORMANCE_REPORT_PATH")
+    if report is None:
+        return jsonify({
+            "available": False,
+            "status": status,
+            "message": "No valid performance evidence report is currently published.",
+        }), 404 if status == "not_found" else 503
+    return jsonify(report)
+
+
+@api_bp.route("/api/evidence/reliability/latest", methods=["GET"])
+def get_latest_reliability_evidence():
+    """Publish the latest sampled API/runtime reliability window."""
+    report, status = _load_operational_report("RELIABILITY_REPORT_PATH")
+    if report is None:
+        return jsonify({
+            "available": False,
+            "status": status,
+            "message": "No valid reliability evidence report is currently published.",
+        }), 404 if status == "not_found" else 503
+    return jsonify(report)
+
+
+@api_bp.route("/api/evidence/metrics", methods=["GET"])
+def get_public_evidence_metrics():
+    """Expose bounded operational history without premium aircraft tracks."""
+    hours = min(168, max(1, request.args.get("hours", default=24, type=int)))
+    limit = min(1000, max(1, request.args.get("limit", default=500, type=int)))
+    db = get_db()
+    rows = db.get_statistics_history(hours=hours)[-limit:]
+    history = _evidence_history(rows)
+    runtime_state = get_runtime_state(db) or {}
+    current = dict(history[-1]) if history else {
+        "total_signals": 0,
+        "total_positions": 0,
+        "solve_success_percent": 0.0,
+        "active_aircraft": 0,
+        "active_receivers": 0,
+        "failed_solves": 0,
+        "rejected_groups": 0,
+        "synthetic_feed_mode": bool(runtime_state.get("synthetic_feed_mode")),
+    }
+    current["avg_api_latency_ms"] = round(
+        float(runtime_state.get("avg_api_latency_ms", 0.0)), 3
+    )
+    current["last_signal_age_s"] = runtime_state.get("last_signal_age_s")
+    current["last_store_age_s"] = runtime_state.get("last_store_age_s")
+
+    receiver_ready_samples = sum(1 for item in history if item["active_receivers"] >= 4)
+    fresh_samples = [
+        item for item in history if item.get("last_signal_age_s") is not None
+    ]
+    fresh_signal_samples = sum(
+        1 for item in fresh_samples
+        if float(item["last_signal_age_s"]) <= int(current_app.config["HEALTH_STALE_SIGNAL_SECONDS"])
+    )
+    sample_count = len(history)
+    return jsonify({
+        "generated_at": datetime.now().isoformat(),
+        "window_hours": hours,
+        "sample_count": sample_count,
+        "provenance": {
+            "mode": "replay" if current.get("synthetic_feed_mode") else "live",
+            "live_data": not bool(current.get("synthetic_feed_mode")),
+            "source": "processor_statistics",
+        },
+        "current": current,
+        "reliability": {
+            "receiver_availability_percent": round(
+                100.0 * receiver_ready_samples / sample_count, 2
+            ) if sample_count else None,
+            "signal_freshness_percent": round(
+                100.0 * fresh_signal_samples / len(fresh_samples), 2
+            ) if fresh_samples else None,
+            "solve_success_percent": current.get("solve_success_percent", 0.0),
+            "api_availability_percent": None,
+            "api_availability_note": (
+                "Run capture_reliability_window.py to measure API availability over time."
+            ),
+        },
+        "history": history,
+    })
+
+
+@api_bp.route("/api/pipeline", methods=["GET"])
+def get_pipeline_evidence():
+    """Describe the full receiver-to-dashboard path with explicit provenance."""
+    db = get_db()
+    runtime_state = get_runtime_state(db) or {}
+    latest_stats = db.get_latest_statistics() or {}
+    receivers = db.get_receivers()
+    positions = db.get_recent_positions(seconds=300, limit=500)
+    registry_hash = str(current_app.config.get("RECEIVER_REGISTRY_TYPE_HASH") or "")
+    registry_configured = bool(registry_hash)
+    registry_discovery_live = bool(runtime_state.get("registry_discovery_live"))
+    synthetic = bool(runtime_state.get("synthetic_feed_mode"))
+    demo = bool(current_app.config.get("DEMO_MODE"))
+    signal_fresh = bool(runtime_state.get("signal_fresh"))
+    total_signals = int(runtime_state.get("total_signals", latest_stats.get("total_signals", 0)))
+    total_positions = int(runtime_state.get("total_positions", latest_stats.get("total_positions", 0)))
+    latest_position = positions[0] if positions else None
+    benchmarkable = bool(
+        positions
+        and not synthetic
+        and all(not _is_synthetic_solver_method(item.solver_method) for item in positions)
+    )
+    benchmark_report, benchmark_status = _load_benchmark_report()
+    benchmark_publishable = bool(
+        benchmark_report
+        and benchmark_report.get("evidence_status") == "publishable"
+        and benchmark_report.get("provenance", {}).get("benchmarkable") is True
+    )
+    provenance_mode = "replay" if synthetic or demo else "live"
+
+    def stage(
+        stage_id: str,
+        label: str,
+        status: str,
+        detail: str,
+        **metrics: Any,
+    ) -> Dict[str, Any]:
+        return {
+            "id": stage_id,
+            "label": label,
+            "status": status,
+            "detail": detail,
+            "metrics": metrics,
+        }
+
+    registry_status = (
+        "pass" if registry_configured and registry_discovery_live
+        else "demo" if demo
+        else "blocked"
+    )
+    discovery_status = (
+        "pass" if registry_configured and registry_discovery_live and receivers
+        else "demo" if demo and receivers
+        else "waiting"
+    )
+    ingest_status = (
+        "demo" if synthetic and signal_fresh
+        else "pass" if signal_fresh and total_signals > 0
+        else "waiting"
+    )
+    processing_status = (
+        "demo" if synthetic and total_positions > 0
+        else "pass" if total_positions > 0
+        else "waiting"
+    )
+    solve_status = (
+        "demo" if synthetic and latest_position
+        else "pass" if latest_position and benchmarkable
+        else "waiting"
+    )
+
+    stages = [
+        stage(
+            "registry", "CKB registration", registry_status,
+            "Receiver cells were discovered through the configured CKB type hash." if registry_discovery_live
+            else "Demo receivers are local; configure the CKB registry type hash for live proof." if demo
+            else "A type hash is configured, but live CKB discovery is not verified." if registry_configured
+            else "Receiver registry type hash is not configured.",
+            configured=registry_configured,
+            live_discovery=registry_discovery_live,
+            type_hash_prefix=f"{registry_hash[:18]}..." if registry_hash else None,
+        ),
+        stage(
+            "discovery", "Receiver discovery", discovery_status,
+            f"{len(receivers)} receiver records available to the runtime.",
+            receiver_count=len(receivers),
+            discovery_latency_ms=runtime_state.get("discovery_latency_ms", 0.0),
+        ),
+        stage(
+            "ingest", "Observation ingest", ingest_status,
+            "Receiver observations are arriving." if signal_fresh
+            else "Waiting for a receiver observation source.",
+            total_signals=total_signals,
+            signals_per_second=runtime_state.get("signals_per_second", 0.0),
+            last_signal_age_s=runtime_state.get("last_signal_age_s"),
+        ),
+        stage(
+            "correlation", "Signal correlation", processing_status,
+            "Correlated groups are reaching the solve path." if total_positions
+            else "Waiting for at least four synchronized observations per transmission.",
+            position_attempts=total_positions,
+            rejected_groups=runtime_state.get("rejected_groups", 0),
+        ),
+        stage(
+            "solve", "MLAT solve", solve_status,
+            "Replay positions are generated for pipeline validation." if synthetic and latest_position
+            else "Robust MLAT positions are available." if latest_position
+            else "No solved aircraft position is available yet.",
+            solver_method=latest_position.solver_method if latest_position else None,
+            successful_solves=runtime_state.get("successful_solves", 0),
+            solve_success_percent=runtime_state.get("solve_success_percent", 0.0),
+        ),
+        stage(
+            "storage", "Position storage", "pass" if latest_position else "waiting",
+            "Latest position is persisted in SQLite." if latest_position
+            else "No position has been stored.",
+            recent_positions=len(positions),
+            last_store_age_s=runtime_state.get("last_store_age_s"),
+            avg_store_latency_ms=runtime_state.get("avg_store_latency_ms", 0.0),
+        ),
+        stage(
+            "api", "Public API", "pass",
+            "Health, positions, pipeline, metrics, and evidence routes are responding.",
+            avg_api_latency_ms=runtime_state.get("avg_api_latency_ms", 0.0),
+        ),
+        stage(
+            "dashboard", "Dashboard", "pass",
+            "Operational pages consume the same public evidence APIs.",
+            pipeline_route="/app/pipeline.html",
+            metrics_route="/app/analytics.html",
+        ),
+    ]
+
+    blockers = []
+    if not registry_configured:
+        blockers.append("CKB registry type hash is not active in this runtime.")
+    elif not registry_discovery_live:
+        blockers.append("Receiver discovery has not been verified against live CKB cells.")
+    if synthetic:
+        blockers.append("Observation and solve output is replay/synthetic, not live.")
+    if not signal_fresh:
+        blockers.append("No fresh receiver observations are arriving.")
+    if not benchmarkable:
+        blockers.append("Recent positions are not eligible for live external benchmarking.")
+    if not benchmark_publishable:
+        blockers.append("No publishable external benchmark report is available.")
+
+    return jsonify({
+        "generated_at": datetime.now().isoformat(),
+        "provenance": {
+            "mode": provenance_mode,
+            "live_data": provenance_mode == "live",
+            "synthetic_feed_mode": synthetic,
+            "registry_discovery_live": registry_discovery_live,
+            "benchmarkable_output": benchmarkable,
+        },
+        "pipeline_operational": all(item["status"] in {"pass", "demo"} for item in stages),
+        "live_evidence_ready": bool(
+            provenance_mode == "live"
+            and registry_configured
+            and registry_discovery_live
+            and signal_fresh
+            and benchmarkable
+            and benchmark_publishable
+        ),
+        "benchmark": {
+            "status": benchmark_status,
+            "publishable": benchmark_publishable,
+        },
+        "blockers": blockers,
+        "stages": stages,
     })
 
 
@@ -614,12 +1110,51 @@ def visualization_assets(asset_path: str):
 def get_system_mode():
     """Expose runtime mode and hosted demo metadata for the frontend."""
     demo_mode = bool(current_app.config["DEMO_MODE"])
-    runtime_state = get_runtime_state() or {}
+    db = get_db()
+    runtime_state = get_runtime_state(db) or {}
+    runtime_status = (
+        "active"
+        if runtime_state.get("telemetry_fresh") and runtime_state.get("is_running")
+        else "stale"
+        if runtime_state
+        else "unavailable"
+    )
+    recent_positions = db.get_recent_positions(seconds=300, limit=100)
+    benchmarkable_output = bool(
+        recent_positions
+        and all(not _is_synthetic_solver_method(position.solver_method) for position in recent_positions)
+    )
+    configured_simulation = bool(current_app.config["SIMULATION_MODE"])
+    strict_production_mode = bool(current_app.config["STRICT_PRODUCTION_MODE"])
+    synthetic_feed_mode = bool(runtime_state.get("synthetic_feed_mode", configured_simulation))
+    startup_guardrail_status = (
+        "strict_live"
+        if strict_production_mode and runtime_status == "active"
+        else "strict_waiting"
+        if strict_production_mode
+        else "demo"
+        if demo_mode
+        else "simulation"
+        if configured_simulation
+        else "standard"
+    )
     return jsonify(
         {
-            "mode": "demo" if demo_mode else "simulation" if current_app.config["SIMULATION_MODE"] else "live",
-            "simulation_mode": bool(current_app.config["SIMULATION_MODE"]),
+            "mode": (
+                "demo"
+                if demo_mode
+                else "simulation"
+                if configured_simulation or synthetic_feed_mode
+                else "live"
+                if runtime_status == "active"
+                else "configured_live"
+            ),
+            "simulation_mode": configured_simulation,
             "demo_mode": demo_mode,
+            "strict_production_mode": strict_production_mode,
+            "startup_guardrail_status": startup_guardrail_status,
+            "configured_transport": current_app.config["CONFIGURED_TRANSPORT"],
+            "simulate_if_unavailable": bool(current_app.config["SIMULATE_IF_UNAVAILABLE"]),
             "demo_read_only": bool(current_app.config["DEMO_READ_ONLY"]),
             "demo_label": current_app.config["DEMO_LABEL"],
             "demo_auto_connect": bool(current_app.config["DEMO_AUTO_CONNECT"]),
@@ -630,8 +1165,12 @@ def get_system_mode():
                 "auto_connect": bool(current_app.config["DEMO_AUTO_CONNECT"]),
             },
             "receiver_registry_type_hash": os.getenv("RECEIVER_REGISTRY_TYPE_HASH", ""),
+            "registry_discovery_live": bool(runtime_state.get("registry_discovery_live")),
             "websocket_available": SocketIO is not None,
-            "synthetic_feed_mode": bool(runtime_state.get("synthetic_feed_mode", current_app.config["SIMULATION_MODE"])),
+            "synthetic_feed_mode": synthetic_feed_mode,
+            "runtime_status": runtime_status,
+            "runtime_telemetry_source": runtime_state.get("telemetry_source"),
+            "benchmarkable_output": benchmarkable_output,
         }
     )
 
@@ -758,7 +1297,7 @@ def get_statistics():
     hours = request.args.get("hours", default=24, type=int)
     db = get_db()
     active_aircraft = db.get_active_aircraft(seconds=300)
-    runtime_state = get_runtime_state() or {}
+    runtime_state = get_runtime_state(db) or {}
     recent_positions = db.get_recent_positions(seconds=300)
     avg_quality_score = (
         sum(position.quality_score for position in recent_positions) / len(recent_positions)
@@ -853,6 +1392,12 @@ def api_documentation():
             "GET /api/aircraft/<id>/track": "Historical track for aircraft",
             "GET /api/aircraft/<id>/latest": "Latest position for aircraft",
             "GET /api/statistics": "Premium operational statistics and latency metrics",
+            "GET /api/readiness": "Public internal quality, freshness, reliability, and evidence gates",
+            "GET /api/benchmark/latest": "Latest public versioned benchmark evidence artifact",
+            "GET /api/pipeline": "Receiver-to-dashboard evidence trace with provenance",
+            "GET /api/evidence/metrics": "Bounded public operational history and reliability",
+            "GET /api/evidence/performance/latest": "Latest reproducible operational performance report",
+            "GET /api/evidence/reliability/latest": "Latest sampled availability and freshness window",
             "GET /api/map/bounds": "Bounding box for map view",
             "POST /api/admin/cleanup": "Clean up old data (admin only)",
         },

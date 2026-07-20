@@ -15,8 +15,11 @@ services:
         value: 5000
       - key: DATABASE_PATH
         value: /var/data/mlat_data.db
+      # Hosted demo configuration only; not a production template.
       - key: FOURDSKY_TRANSPORT
         value: simulation
+      - key: STRICT_PRODUCTION_MODE
+        value: "false"
       - key: SIMULATE_IF_UNAVAILABLE
         value: "true"
       - key: ENABLE_ADMIN_API

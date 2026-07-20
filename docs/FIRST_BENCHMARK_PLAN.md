@@ -149,7 +149,12 @@ python3 scripts/fetch_opensky_reference.py \
 ```bash
 python3 scripts/benchmark_mlat_against_reference.py \
   --mlat benchmark/mlat.jsonl \
-  --reference benchmark/reference.jsonl
+  --reference benchmark/reference.jsonl \
+  --runtime-snapshot benchmark/readiness.json \
+  --reference-source OpenSky \
+  --region "Northeast corridor" \
+  --data-provenance live \
+  --output benchmark/latest.json
 ```
 
 ### Step 4. Write the result
@@ -165,6 +170,10 @@ Document:
 - p95 horizontal error
 - median altitude error
 - p95 altitude error
+
+The generated artifact is served at `/api/benchmark/latest` and displayed on
+`/app/analytics.html`. See [GRANT_EVIDENCE_RUNBOOK.md](GRANT_EVIDENCE_RUNBOOK.md)
+for the full receiver-registration-to-public-report sequence.
 
 ---
 

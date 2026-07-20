@@ -1,0 +1,60 @@
+{
+  "evidence_status": "sampled_window",
+  "generated_at": "2026-07-20T13:35:33.021864Z",
+  "metrics": {
+    "api_availability_percent": 100.0,
+    "healthy_response_percent": 100.0,
+    "max_signal_age_s": 5.708331108093262,
+    "max_store_age_s": 0.5270876884460449,
+    "minimum_receivers": 4,
+    "receiver_availability_percent": 100.0,
+    "samples": 3,
+    "signal_freshness_percent": 100.0,
+    "successful_requests": 3,
+    "window_seconds": 2.2760140895843506
+  },
+  "parameters": {
+    "freshness_threshold_seconds": 10.0,
+    "interval_seconds": 1.0
+  },
+  "provenance": {
+    "configured_transport": "simulation",
+    "data_provenance": "local_non_live_window",
+    "live_data": false,
+    "registry_discovery_live": false,
+    "runtime_mode": "demo"
+  },
+  "samples": [
+    {
+      "active_receivers": 5,
+      "fresh": true,
+      "health_status": "ok",
+      "last_signal_age_s": 3.467050075531006,
+      "last_store_age_s": 0.4650242328643799,
+      "ready": true,
+      "successful": true,
+      "timestamp": 1784554530.7458491
+    },
+    {
+      "active_receivers": 5,
+      "fresh": true,
+      "health_status": "ok",
+      "last_signal_age_s": 4.596992015838623,
+      "last_store_age_s": 0.5270876884460449,
+      "ready": true,
+      "successful": true,
+      "timestamp": 1784554531.870024
+    },
+    {
+      "active_receivers": 5,
+      "fresh": true,
+      "health_status": "ok",
+      "last_signal_age_s": 5.708331108093262,
+      "last_store_age_s": 0.14765453338623047,
+      "ready": true,
+      "successful": true,
+      "timestamp": 1784554532.923253
+    }
+  ],
+  "schema_version": 1
+}

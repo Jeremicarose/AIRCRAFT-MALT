@@ -15,7 +15,11 @@ Each line should contain:
   "longitude": -73.85,
   "altitude": 9000.0,
   "uncertainty": 120.5,
-  "quality_score": 0.82
+  "quality_score": 0.82,
+  "solver_method": "robust_mlat",
+  "receiver_count": 4,
+  "receiver_ids": ["RECV_NYC_001", "RECV_BOS_001", "RECV_PHL_001", "RECV_DC_001"],
+  "created_at": "2026-07-16T12:00:00.125000"
 }
 ```
 
@@ -53,7 +57,12 @@ python3 scripts/fetch_opensky_reference.py \
 
 python3 scripts/benchmark_mlat_against_reference.py \
   --mlat benchmark/mlat.jsonl \
-  --reference benchmark/reference.jsonl
+  --reference benchmark/reference.jsonl \
+  --runtime-snapshot benchmark/readiness.json \
+  --reference-source OpenSky \
+  --region "Northeast corridor" \
+  --data-provenance live \
+  --output benchmark/latest.json
 ```
 
 This will output:
@@ -64,6 +73,12 @@ This will output:
 - p95 horizontal error
 - median altitude error
 - p95 altitude error
+- median and p95 end-to-store freshness
+- timestamped runtime freshness/reliability snapshot
+- input SHA-256 hashes and explicit provenance limitations
+
+Matching is one-to-one: a reference point cannot be reused for several MLAT
+points. This prevents inflated coverage ratios.
 
 ## Export fields included from the MLAT DB
 
@@ -79,6 +94,10 @@ The benchmark exporter writes:
 - `quality_bucket`
 - `solver_residual_m`
 - `receiver_count`
+- `receiver_ids`
+- `solver_method`
+- `correlation_time_span_s`
+- `created_at`
 
 ## OpenSky authentication
 
