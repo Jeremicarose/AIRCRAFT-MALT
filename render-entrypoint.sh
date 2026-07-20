@@ -11,7 +11,9 @@ mkdir -p "$(dirname "$DATABASE_PATH")"
 
 export DATABASE_PATH
 export API_HOST="${API_HOST:-0.0.0.0}"
-export API_PORT="${API_PORT:-5000}"
+# Render injects PORT for the public listener. API_PORT remains available for
+# local and non-Render deployments.
+export API_PORT="${PORT:-${API_PORT:-5000}}"
 export PYTHONPATH="${ROOT_DIR}/src${PYTHONPATH:+:$PYTHONPATH}"
 
 cleanup() {

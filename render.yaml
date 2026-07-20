@@ -11,8 +11,6 @@ services:
         value: 3.11.9
       - key: API_HOST
         value: 0.0.0.0
-      - key: API_PORT
-        value: 5000
       - key: DATABASE_PATH
         value: /var/data/mlat_data.db
       # Hosted demo configuration only; not a production template.

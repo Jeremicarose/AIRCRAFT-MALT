@@ -2,6 +2,35 @@
 
 MLAT Airspace Console is a product-oriented multilateration platform for turning distributed Mode-S timing observations into explainable aircraft position outputs.
 
+## Public progress
+
+This repository is the public development record for the MLAT Airspace receiver
+control plane. The hosted configuration is intentionally a **read-only replay
+demo**: it demonstrates receiver discovery, observation processing, MLAT output,
+storage, public APIs, pipeline provenance, and system metrics without claiming
+that replay traffic is live receiver evidence.
+
+- **Current proof:** end-to-end replay pipeline, provenance-aware evidence gates,
+  operational metrics, performance baselines, and responsive operator views
+- **Current limitation:** no public synchronized live receiver window has been
+  captured and compared with a trusted external reference source
+- **Safest positioning:** decentralized receiver registry and aviation data
+  control plane, with CKB identity/discovery and off-chain MLAT processing
+
+[Deploy the read-only demo on Render](https://render.com/deploy?repo=https://github.com/Jeremicarose/AIRCRAFT-MALT)
+
+After deployment, reviewers should open these routes first:
+
+```text
+/app/pipeline.html
+/app/analytics.html
+/api/pipeline
+/api/evidence/metrics
+```
+
+The latest shareable project update is maintained in
+[docs/PUBLIC_PROGRESS_UPDATE.md](docs/PUBLIC_PROGRESS_UPDATE.md).
+
 The system is built around four things customers can evaluate directly:
 
 - **quality** — each position can include normalized quality, solver, and correlation metadata
