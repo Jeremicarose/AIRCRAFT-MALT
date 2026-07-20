@@ -1271,6 +1271,7 @@ def get_aircraft_track(aircraft_id: str):
                 "correlation": {
                     "time_span_s": position.correlation_time_span_s,
                     "receiver_count": position.receiver_count,
+                    "receiver_ids": _parse_receiver_ids(position.receiver_ids),
                 },
             }
             for position in track.positions

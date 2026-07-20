@@ -21,7 +21,7 @@ function metricPath(report, key) {
   return report?.metrics?.[key] || null;
 }
 
-function renderLineChart({ title, detail, rows, key, unit = '', tone = 'orange', digits = 1 }) {
+function renderLineChart({ title, detail, rows, key, unit = '', tone = 'orange', digits = 1, band = null }) {
   const points = rows
     .map((row) => ({ timestamp: Number(row.timestamp), value: Number(row[key]) }))
     .filter((point) => Number.isFinite(point.timestamp) && Number.isFinite(point.value));
@@ -37,14 +37,29 @@ function renderLineChart({ title, detail, rows, key, unit = '', tone = 'orange',
   const minValue = Math.min(...values);
   const maxValue = Math.max(...values);
   const range = Math.max(0.0001, maxValue - minValue);
+  const toX = (index) => padX + (points.length === 1 ? (width - padX * 2) / 2 : index * (width - padX * 2) / (points.length - 1));
+  const toY = (value) => height - padY - ((value - minValue) / range) * (height - padY * 2);
   const coordinates = points.map((point, index) => {
-    const x = padX + (points.length === 1 ? (width - padX * 2) / 2 : index * (width - padX * 2) / (points.length - 1));
-    const y = height - padY - ((point.value - minValue) / range) * (height - padY * 2);
+    const x = toX(index);
+    const y = toY(point.value);
     return `${x.toFixed(1)},${y.toFixed(1)}`;
   }).join(' ');
   const firstTime = new Date(points[0].timestamp * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   const lastTime = new Date(points.at(-1).timestamp * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   const current = points.at(-1).value;
+
+  let bandMarkup = '';
+  if (band?.type === 'central' && points.length > 1) {
+    const bandRatio = Number.isFinite(Number(band.ratio)) ? Math.min(Math.max(Number(band.ratio), 0.04), 0.45) : 0.18;
+    const inset = range * bandRatio;
+    const lowerValue = minValue + inset;
+    const upperValue = maxValue - inset;
+    if (upperValue > lowerValue) {
+      const bandTop = toY(upperValue).toFixed(1);
+      const bandHeight = Math.max(0, toY(lowerValue) - toY(upperValue)).toFixed(1);
+      bandMarkup = `<rect x="${padX}" y="${bandTop}" width="${width - padX * 2}" height="${bandHeight}" class="chart-range-band"></rect>`;
+    }
+  }
 
   return `
     <section class="metric-chart-block">
@@ -56,6 +71,7 @@ function renderLineChart({ title, detail, rows, key, unit = '', tone = 'orange',
         <line x1="${padX}" y1="${padY}" x2="${width - padX}" y2="${padY}" class="chart-grid-line"></line>
         <line x1="${padX}" y1="${height / 2}" x2="${width - padX}" y2="${height / 2}" class="chart-grid-line"></line>
         <line x1="${padX}" y1="${height - padY}" x2="${width - padX}" y2="${height - padY}" class="chart-grid-line"></line>
+        ${bandMarkup}
         <polyline points="${coordinates}" class="chart-line"></polyline>
       </svg>
       <div class="metric-chart-axis"><span>${escapeAnalyticsValue(firstTime)}</span><span>${escapeAnalyticsValue(formatAnalyticsNumber(minValue, digits))}${escapeAnalyticsValue(unit)} to ${escapeAnalyticsValue(formatAnalyticsNumber(maxValue, digits))}${escapeAnalyticsValue(unit)}</span><span>${escapeAnalyticsValue(lastTime)}</span></div>
@@ -190,10 +206,10 @@ window.pageHydrators.analytics = async function ({ fetchJson, healthData }) {
         <div class="metric-chart-grid">
           ${renderLineChart({ title: 'Observation throughput', detail: 'Receiver observations accepted per minute', rows: history, key: 'signals_per_minute', unit: '/min', tone: 'cyan', digits: 0 })}
           ${renderLineChart({ title: 'Position throughput', detail: 'Correlated position attempts per minute', rows: history, key: 'positions_per_minute', unit: '/min', tone: 'orange', digits: 1 })}
-          ${renderLineChart({ title: 'Position freshness', detail: 'Age of the latest stored aircraft position', rows: history, key: 'last_store_age_s', unit: ' s', tone: 'green', digits: 1 })}
+          ${renderLineChart({ title: 'Position freshness', detail: 'Age of the latest stored aircraft position', rows: history, key: 'last_store_age_s', unit: ' s', tone: 'green', digits: 1, band: { type: 'central', ratio: 0.22 } })}
           ${renderLineChart({ title: 'Solve latency', detail: 'Average processor solve duration', rows: history, key: 'avg_solve_latency_ms', unit: ' ms', tone: 'orange', digits: 2 })}
-          ${renderLineChart({ title: 'Receiver availability', detail: 'Receivers available to the correlation runtime', rows: history, key: 'active_receivers', unit: '', tone: 'cyan', digits: 0 })}
-          ${renderLineChart({ title: 'Process memory', detail: 'Peak resident memory reported by the processor', rows: history, key: 'process_rss_mb', unit: ' MB', tone: 'green', digits: 1 })}
+          ${renderLineChart({ title: 'Receiver availability', detail: 'Receivers available to the correlation runtime', rows: history, key: 'active_receivers', unit: '', tone: 'cyan', digits: 0, band: { type: 'central', ratio: 0.2 } })}
+          ${renderLineChart({ title: 'Process memory', detail: 'Peak resident memory reported by the processor', rows: history, key: 'process_rss_mb', unit: ' MB', tone: 'green', digits: 1, band: { type: 'central', ratio: 0.18 } })}
         </div>
       </section>
 
