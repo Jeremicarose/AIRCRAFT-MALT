@@ -28,6 +28,9 @@ source and publication of the hashed evidence bundle.
 
 ## Reviewer links
 
+The hosted walkthrough uses Render Free. After an idle period, the first visit
+can show Render's loading screen for about one minute while the service wakes.
+
 - Overview: https://mlat-hosted-demo.onrender.com/app/overview.html
 - Evidence pipeline: https://mlat-hosted-demo.onrender.com/app/pipeline.html
 - System metrics: https://mlat-hosted-demo.onrender.com/app/analytics.html

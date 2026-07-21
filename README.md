@@ -19,6 +19,10 @@ that replay traffic is live receiver evidence.
 
 [Open the public read-only replay demo](https://mlat-hosted-demo.onrender.com/app/overview.html)
 
+> Render Free sleeps after 15 minutes without traffic. The first visit can show
+> Render's loading screen for about one minute while the service wakes; the demo
+> then opens automatically. Refresh once if the loading tab was already open.
+
 [Deploy the read-only demo on Render](https://render.com/deploy?repo=https://github.com/Jeremicarose/AIRCRAFT-MALT)
 
 The public Blueprint uses Render Free and regenerates replay data after service
