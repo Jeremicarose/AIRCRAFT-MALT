@@ -7,7 +7,9 @@ services:
     plan: free
     buildCommand: pip install -r requirements.txt
     startCommand: ./render-entrypoint.sh
-    healthCheckPath: /api/health
+    # Keep platform liveness independent from the evidence database. The rich
+    # /api/health endpoint remains available to product and benchmark clients.
+    healthCheckPath: /healthz
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.9
@@ -25,7 +27,9 @@ services:
       - key: ENABLE_ADMIN_API
         value: "false"
       - key: ENABLE_BACKGROUND_BROADCASTER
-        value: "true"
+        # The hosted walkthrough uses bounded REST polling. Avoid a second
+        # SQLite polling loop on the memory-constrained free instance.
+        value: "false"
       - key: DEMO_MODE
         value: "true"
       - key: DEMO_SCENARIO

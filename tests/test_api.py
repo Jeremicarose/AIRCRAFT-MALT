@@ -132,6 +132,20 @@ def test_api_health_and_data_endpoints(monkeypatch, tmp_path):
     ]
 
 
+def test_liveness_does_not_depend_on_database(monkeypatch, tmp_path):
+    module = _load_api_module(monkeypatch, tmp_path)
+    app = module.create_app()
+
+    def fail_if_database_is_opened():
+        raise AssertionError("liveness must not open SQLite")
+
+    monkeypatch.setattr(module, "get_db", fail_if_database_is_opened)
+    response = app.test_client().get("/healthz")
+
+    assert response.status_code == 200
+    assert response.get_json()["status"] == "ok"
+
+
 def test_api_reads_processor_telemetry_from_shared_database(monkeypatch, tmp_path):
     module = _load_api_module(
         monkeypatch,

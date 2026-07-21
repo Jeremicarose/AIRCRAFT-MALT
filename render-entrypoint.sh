@@ -32,10 +32,6 @@ cleanup() {
 
 trap cleanup EXIT INT TERM
 
-echo "Starting MLAT processor with DATABASE_PATH=$DATABASE_PATH"
-python3 "$ROOT_DIR/src/production_main.py" &
-PROCESSOR_PID=$!
-
 echo "Starting MLAT API on ${API_HOST}:${API_PORT}"
 if command -v gunicorn >/dev/null 2>&1; then
     gunicorn \
@@ -44,11 +40,40 @@ if command -v gunicorn >/dev/null 2>&1; then
         --worker-class gthread \
         --threads 4 \
         --timeout 120 \
+        --access-logfile - \
+        --error-logfile - \
+        --capture-output \
         api.rest_api:app &
 else
     python3 "$ROOT_DIR/src/api/rest_api.py" &
 fi
 API_PID=$!
+
+echo "Waiting for the MLAT API liveness endpoint..."
+API_READY=false
+for _ in $(seq 1 "${API_STARTUP_TIMEOUT_SECONDS:-45}"); do
+    if ! kill -0 "$API_PID" 2>/dev/null; then
+        echo "MLAT API exited before becoming ready."
+        wait "$API_PID"
+        exit $?
+    fi
+    if python3 -c \
+        'import sys, urllib.request; urllib.request.urlopen(sys.argv[1], timeout=1).read()' \
+        "http://127.0.0.1:${API_PORT}/healthz" >/dev/null 2>&1; then
+        API_READY=true
+        break
+    fi
+    sleep 1
+done
+
+if [ "$API_READY" != "true" ]; then
+    echo "MLAT API did not become ready within the startup timeout."
+    exit 1
+fi
+
+echo "MLAT API is ready; starting processor with DATABASE_PATH=$DATABASE_PATH"
+python3 "$ROOT_DIR/src/production_main.py" &
+PROCESSOR_PID=$!
 
 # Keep the service healthy as a unit. If either half exits, the trap stops the
 # other half and the supervisor returns the failed process status.

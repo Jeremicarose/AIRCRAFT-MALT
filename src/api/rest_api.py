@@ -637,6 +637,16 @@ def _record_request_latency(response):
     return response
 
 
+@api_bp.route("/healthz", methods=["GET"])
+def liveness_check():
+    """Return process liveness without depending on SQLite or the processor."""
+    return jsonify({
+        "status": "ok",
+        "service": "MLAT API",
+        "timestamp": datetime.now().isoformat(),
+    })
+
+
 @api_bp.route("/api/health", methods=["GET"])
 def health_check():
     db = get_db()
