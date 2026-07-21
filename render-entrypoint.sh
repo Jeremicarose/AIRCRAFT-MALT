@@ -37,7 +37,17 @@ python3 "$ROOT_DIR/src/production_main.py" &
 PROCESSOR_PID=$!
 
 echo "Starting MLAT API on ${API_HOST}:${API_PORT}"
-python3 "$ROOT_DIR/src/api/rest_api.py" &
+if command -v gunicorn >/dev/null 2>&1; then
+    gunicorn \
+        --bind "${API_HOST}:${API_PORT}" \
+        --workers 1 \
+        --worker-class gthread \
+        --threads 4 \
+        --timeout 120 \
+        api.rest_api:app &
+else
+    python3 "$ROOT_DIR/src/api/rest_api.py" &
+fi
 API_PID=$!
 
 # Keep the service healthy as a unit. If either half exits, the trap stops the
