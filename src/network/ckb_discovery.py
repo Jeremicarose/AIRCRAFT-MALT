@@ -521,9 +521,6 @@ class CKBPeerDiscovery:
         logger.info(f"Registering receiver {receiver_id} on CKB...")
         
         try:
-            from ckb import wallet
-            import time
-            
             record = ReceiverRegistryRecord(
                 receiver_id=receiver_id,
                 latitude=latitude,
