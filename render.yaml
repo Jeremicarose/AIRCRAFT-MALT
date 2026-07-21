@@ -2,7 +2,9 @@ services:
   - type: web
     name: mlat-hosted-demo
     runtime: python
-    plan: starter
+    # Public progress demo: free and ephemeral by design. Replay data is
+    # regenerated after restarts, so no paid persistent disk is required.
+    plan: free
     buildCommand: pip install -r requirements.txt
     startCommand: ./render-entrypoint.sh
     healthCheckPath: /api/health
@@ -12,7 +14,7 @@ services:
       - key: API_HOST
         value: 0.0.0.0
       - key: DATABASE_PATH
-        value: /var/data/mlat_data.db
+        value: /tmp/mlat_demo.db
       # Hosted demo configuration only; not a production template.
       - key: FOURDSKY_TRANSPORT
         value: simulation
@@ -40,7 +42,3 @@ services:
         value: "120"
       - key: STATS_INTERVAL_SECONDS
         value: "60"
-    disk:
-      name: mlat-demo-data
-      mountPath: /var/data
-      sizeGB: 1

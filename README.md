@@ -19,6 +19,9 @@ that replay traffic is live receiver evidence.
 
 [Deploy the read-only demo on Render](https://render.com/deploy?repo=https://github.com/Jeremicarose/AIRCRAFT-MALT)
 
+The public Blueprint uses Render Free and regenerates replay data after service
+restarts. No persistent production data is stored by this walkthrough.
+
 After deployment, reviewers should open these routes first:
 
 ```text
@@ -252,6 +255,7 @@ python3 scripts/capture_grant_evidence.py \
 - [CKB Integration Guide](docs/CKB_INTEGRATION_GUIDE.md)
 - [Grant Evidence Runbook](docs/GRANT_EVIDENCE_RUNBOOK.md)
 - [Five-Minute Evidence Demo](docs/GRANT_DEMO_SCRIPT.md)
+- [Archived project history and planning notes](docs/archive/)
 
 ## Positioning note
 

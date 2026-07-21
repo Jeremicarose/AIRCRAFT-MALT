@@ -161,6 +161,7 @@ def main() -> int:
 
     performance_path = bundle / "performance.json"
     markdown_path = bundle / "BENCHMARKS.md"
+    benchmark_markdown_publish_path = ROOT / "benchmark" / "BENCHMARKS.md"
     run_command(
         [
             sys.executable,
@@ -218,7 +219,7 @@ def main() -> int:
     shutil.copy2(accuracy_path, publish_dir / "latest.json")
     shutil.copy2(performance_path, publish_dir / "performance-latest.json")
     shutil.copy2(reliability_path, publish_dir / "reliability-latest.json")
-    shutil.copy2(markdown_path, ROOT / "BENCHMARKS.md")
+    shutil.copy2(markdown_path, benchmark_markdown_publish_path)
 
     print(json.dumps({"bundle": str(bundle), **manifest}, indent=2, sort_keys=True))
     return 0 if publishable else 2

@@ -131,7 +131,7 @@ def load_app_config() -> Dict[str, object]:
         else package_visualization_dir
     )
     return {
-        "DATABASE_PATH": os.getenv("DATABASE_PATH", "mlat_data.db"),
+        "DATABASE_PATH": os.getenv("DATABASE_PATH", "data/mlat_data.db"),
         "BENCHMARK_REPORT_PATH": os.getenv("BENCHMARK_REPORT_PATH", "benchmark/latest.json"),
         "PERFORMANCE_REPORT_PATH": os.getenv(
             "PERFORMANCE_REPORT_PATH", "benchmark/performance-latest.json"

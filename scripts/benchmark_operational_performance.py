@@ -268,7 +268,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--receiver-count", type=int, default=25)
     parser.add_argument("--insert-count", type=int, default=500)
     parser.add_argument("--output", default="benchmark/performance-latest.json")
-    parser.add_argument("--markdown", default="BENCHMARKS.md")
+    parser.add_argument("--markdown", default="benchmark/BENCHMARKS.md")
     return parser.parse_args()
 
 

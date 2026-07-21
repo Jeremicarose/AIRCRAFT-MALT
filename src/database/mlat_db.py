@@ -128,7 +128,7 @@ class MLATDatabase:
     Stores aircraft positions, tracks, and system metadata.
     """
     
-    def __init__(self, db_path: str = "mlat_data.db"):
+    def __init__(self, db_path: str = "data/mlat_data.db"):
         self.db_path = db_path
         self.conn = None
         

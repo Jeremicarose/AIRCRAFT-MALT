@@ -305,8 +305,8 @@ window.pageHydrators.aircraft = async function ({ fetchJson, modeData }) {
           </div>
         </section>
 
-        <details class="inspector-disclosure inspector-section" open>
-          <summary class="disclosure-summary"><span>Recent solve shape</span><small>Track motion and confidence over the last ${trackPoints.length} points.</small></summary>
+        <details class="inspector-disclosure inspector-section">
+          <summary class="disclosure-summary"><span>Recent solve shape</span><small>${trackPoints.length} points · ${Math.round(flightDistance).toLocaleString()}m sampled path</small></summary>
           <div class="disclosure-body">
             <div class="mini-chart-grid">
               <article class="mini-chart-card">
@@ -322,7 +322,7 @@ window.pageHydrators.aircraft = async function ({ fetchJson, modeData }) {
         </details>
 
         <details class="inspector-disclosure inspector-section">
-          <summary class="disclosure-summary"><span>Contribution and uncertainty</span><small>Frontend approximations from recent track evidence.</small></summary>
+          <summary class="disclosure-summary"><span>Contribution and uncertainty</span><small>${contributionRows.length} receivers · ${Number.isFinite(Number(latest.uncertainty)) ? `±${Math.round(Number(latest.uncertainty))}m latest` : 'uncertainty unavailable'}</small></summary>
           <div class="disclosure-body">
             <div class="split-mini-grid">
               <article class="mini-evidence-card">
@@ -355,7 +355,7 @@ window.pageHydrators.aircraft = async function ({ fetchJson, modeData }) {
         </details>
 
         <details class="inspector-disclosure inspector-section">
-          <summary class="disclosure-summary"><span>Evidence panel</span><small>Solver, provenance, and benchmark readiness statements.</small></summary>
+          <summary class="disclosure-summary"><span>Evidence panel</span><small>${evidenceRows.length} checks · ${status.label}</small></summary>
           <div class="disclosure-body">
             <div class="checklist-card-grid">
               ${evidenceRows.map((row) => `
@@ -369,14 +369,14 @@ window.pageHydrators.aircraft = async function ({ fetchJson, modeData }) {
         </details>
 
         <details class="inspector-disclosure inspector-section">
-          <summary class="disclosure-summary"><span>Related receivers</span><small>Jump to the nodes most often seen in the recent track.</small></summary>
+          <summary class="disclosure-summary"><span>Related receivers</span><small>${contributionRows.length} linked nodes</small></summary>
           <div class="disclosure-body">
             ${buildReceiverLinks(contributionRows)}
           </div>
         </details>
 
         <details class="inspector-disclosure inspector-section">
-          <summary class="disclosure-summary"><span>Recent track drill-down</span><small>Per-point evidence for manual inspection.</small></summary>
+          <summary class="disclosure-summary"><span>Recent track drill-down</span><small>${trackPoints.length} solves · ${confidenceValues.length ? `${aircraftPercent(confidenceValues[confidenceValues.length - 1])} latest confidence` : 'no confidence samples'}</small></summary>
           <div class="disclosure-body">
             <div class="list-rows detailed-list-rows">
               ${trackPoints.slice().reverse().map((point) => `

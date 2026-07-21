@@ -139,26 +139,36 @@ input:focus-visible {
 
 .app-nav a {
   position: relative;
-  display: flex;
+  display: inline-flex;
   align-items: center;
   min-width: 0;
+  min-height: 38px;
+  margin: 10px 0;
   padding: 0 14px;
+  border: 1px solid transparent;
+  border-radius: 999px;
   color: var(--muted);
   font-family: var(--font-mono);
   font-size: 0.7rem;
   text-decoration: none;
   text-transform: uppercase;
-  transition: color 180ms ease, background-color 180ms ease;
+  cursor: pointer;
+  transition: color 180ms ease, background-color 180ms ease, border-color 180ms ease, transform 180ms ease, box-shadow 180ms ease;
 }
 
 .app-nav a:hover {
   color: var(--text);
+  border-color: rgba(255, 100, 34, 0.3);
   background: var(--surface);
+  transform: translateY(-1px);
+  box-shadow: 0 0 0 1px rgba(255, 100, 34, 0.08);
 }
 
 .app-nav a.active {
   color: var(--text);
-  background: var(--surface);
+  border-color: rgba(255, 100, 34, 0.34);
+  background: rgba(255, 100, 34, 0.08);
+  box-shadow: 0 0 0 1px rgba(255, 100, 34, 0.08);
 }
 
 .app-nav a.active::after {
@@ -411,22 +421,36 @@ body:not([data-app-page="overview"]) .app-metrics {
 .inline-action,
 .button,
 .map-dock-button {
-  min-height: 34px;
+  min-height: 36px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 0 12px;
-  border: 1px solid var(--line);
-  border-radius: 3px;
+  gap: 8px;
+  padding: 0 14px;
+  border: 1px solid rgba(255, 100, 34, 0.28);
+  border-radius: 999px;
   color: var(--text);
-  background: var(--surface-raised);
+  background: linear-gradient(180deg, rgba(255, 100, 34, 0.08), rgba(255, 100, 34, 0.02));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
   font-family: var(--font-mono);
   font-size: 0.68rem;
   font-weight: 600;
   text-decoration: none;
   text-transform: uppercase;
   cursor: pointer;
-  transition: color 180ms ease, border-color 180ms ease, background-color 180ms ease, transform 180ms ease;
+  transition: color 180ms ease, border-color 180ms ease, background-color 180ms ease, transform 180ms ease, box-shadow 180ms ease;
+}
+
+.action-chip::before,
+.inline-action::before,
+.button::before,
+.map-dock-button::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.9;
 }
 
 .action-chip:hover,
@@ -438,6 +462,7 @@ body:not([data-app-page="overview"]) .app-metrics {
   border-color: var(--accent);
   background: var(--accent);
   transform: translateY(-1px);
+  box-shadow: 0 10px 24px rgba(255, 100, 34, 0.18);
 }
 
 .button:disabled,
@@ -493,6 +518,23 @@ body:not([data-app-page="overview"]) .app-metrics {
   gap: 16px;
   padding: 15px 16px;
   border-bottom: 1px solid var(--line);
+}
+
+.panel-head h2,
+.traffic-section-head strong {
+  position: relative;
+}
+
+.panel-head h2::after,
+.traffic-section-head strong::after {
+  content: "";
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin-left: 8px;
+  border-radius: 50%;
+  background: rgba(255, 100, 34, 0.7);
+  vertical-align: middle;
 }
 
 .panel-head p,
@@ -2264,8 +2306,8 @@ body[data-app-page="localization"] .app-topbar {
   justify-content: space-between;
   gap: 14px;
   padding: 10px 12px;
-  border: 1px solid var(--line-soft);
-  border-radius: 3px;
+  border: 1px solid rgba(255, 100, 34, 0.12);
+  border-radius: 8px;
   background: rgba(255, 255, 255, 0.02);
 }
 
@@ -2327,31 +2369,69 @@ body[data-app-page="localization"] .app-topbar {
 
 .aircraft-item,
 .receiver-item {
-  width: 100%;
+  position: relative;
+  width: calc(100% - 16px);
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  padding: 12px 14px;
-  border: 0;
-  border-bottom: 1px solid var(--line-soft);
+  gap: 14px;
+  margin: 8px;
+  padding: 14px 16px;
+  border: 1px solid rgba(255, 100, 34, 0.2);
+  border-radius: 12px;
   color: var(--text);
-  background: transparent;
+  background: linear-gradient(180deg, rgba(255, 100, 34, 0.06), rgba(255, 255, 255, 0.02));
   text-align: left;
   cursor: pointer;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
   transition: background-color 180ms ease, border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
+}
+
+.aircraft-item::after,
+.receiver-item::after {
+  content: "View";
+  flex: 0 0 auto;
+  align-self: center;
+  min-width: 64px;
+  padding: 7px 10px;
+  border: 1px solid rgba(255, 100, 34, 0.3);
+  border-radius: 999px;
+  color: var(--accent);
+  background: rgba(255, 100, 34, 0.08);
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  font-weight: 600;
+  text-align: center;
+  text-transform: uppercase;
 }
 
 .aircraft-item:hover,
 .receiver-item:hover {
-  background: var(--surface-hover);
-  transform: translateX(1px);
+  background: linear-gradient(180deg, rgba(255, 100, 34, 0.12), rgba(255, 255, 255, 0.03));
+  border-color: rgba(255, 100, 34, 0.4);
+  transform: translateY(-2px);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.22);
+}
+
+.aircraft-item:hover::after,
+.receiver-item:hover::after {
+  color: #1a120e;
+  border-color: var(--accent);
+  background: var(--accent);
 }
 
 .aircraft-item.is-selected,
 .receiver-item.is-selected {
-  background: linear-gradient(90deg, rgba(255, 100, 34, 0.14), rgba(255, 100, 34, 0.04));
-  box-shadow: inset 2px 0 0 var(--accent);
+  border-color: rgba(255, 100, 34, 0.48);
+  background: linear-gradient(90deg, rgba(255, 100, 34, 0.18), rgba(255, 100, 34, 0.05));
+  box-shadow: inset 3px 0 0 var(--accent), 0 10px 24px rgba(255, 100, 34, 0.12);
+}
+
+.aircraft-item.is-selected::after,
+.receiver-item.is-selected::after {
+  color: #1a120e;
+  border-color: var(--accent);
+  background: var(--accent);
 }
 
 .aircraft-item strong,
@@ -2361,19 +2441,24 @@ body[data-app-page="localization"] .app-topbar {
   display: block;
 }
 
+.aircraft-item strong::after,
+.receiver-item strong::after {
+  content: "";
+}
+
 .aircraft-item strong,
 .receiver-item strong {
   font-family: var(--font-mono);
-  font-size: 0.72rem;
-  font-weight: 500;
+  font-size: 0.74rem;
+  font-weight: 600;
 }
 
 .aircraft-item span,
 .receiver-item span {
-  margin-top: 3px;
+  margin-top: 4px;
   color: var(--muted);
-  font-size: 0.66rem;
-  line-height: 1.35;
+  font-size: 0.67rem;
+  line-height: 1.4;
 }
 
 .receiver-status {

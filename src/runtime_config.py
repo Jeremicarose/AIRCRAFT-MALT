@@ -77,7 +77,7 @@ def _validate_runtime_settings(
 def load_runtime_settings(
     *,
     max_receivers_default: int,
-    db_path_default: str = "mlat_data.db",
+    db_path_default: str = "data/mlat_data.db",
 ) -> RuntimeSettings:
     """Load shared network and storage settings from environment."""
     fourdsky_endpoint = os.getenv("FOURDSKYENDPOINT") or os.getenv("FOURDSKY_ENDPOINT", "")

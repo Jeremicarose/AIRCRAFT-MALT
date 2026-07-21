@@ -73,7 +73,7 @@ class ProductionMLATSystem(BaseMLATRuntime[ReceiverPosition, SignalObservation])
     def __init__(
         self,
         config: NetworkConfig,
-        db_path: str = "mlat_data.db",
+        db_path: str = "data/mlat_data.db",
         simulation_retention_hours: int = 24,
         statistics_retention_days: int = 7,
         health_stale_signal_seconds: int = 120,

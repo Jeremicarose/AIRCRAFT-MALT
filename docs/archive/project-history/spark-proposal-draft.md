@@ -39,7 +39,7 @@ Current project work includes:
 Relevant project artifacts:
 
 - GitHub repository: **[add repo URL here]**
-- Public forum post draft: [docs/nervos-talk-post.md](./nervos-talk-post.md)
+- Public forum post draft: [docs/archive/project-history/nervos-talk-post.md](./nervos-talk-post.md)
 
 ### Contact Information
 
