@@ -1,5 +1,6 @@
 import importlib
 import json
+import sqlite3
 import sys
 import time
 
@@ -144,6 +145,42 @@ def test_liveness_does_not_depend_on_database(monkeypatch, tmp_path):
 
     assert response.status_code == 200
     assert response.get_json()["status"] == "ok"
+
+
+def test_health_reads_while_processor_holds_write_transaction(monkeypatch, tmp_path):
+    module = _load_api_module(monkeypatch, tmp_path)
+    app = module.create_app()
+    _seed_api_db(module, app)
+
+    writer = sqlite3.connect(app.config["DATABASE_PATH"])
+    writer.execute("PRAGMA journal_mode=WAL")
+    writer.execute("BEGIN IMMEDIATE")
+    try:
+        response = app.test_client().get("/api/health")
+    finally:
+        writer.rollback()
+        writer.close()
+
+    assert response.status_code == 200
+    assert response.get_json()["database"]["journal_mode"] == "wal"
+
+
+def test_request_connections_do_not_repeat_schema_initialization(monkeypatch, tmp_path):
+    module = _load_api_module(monkeypatch, tmp_path)
+    app = module.create_app()
+    _seed_api_db(module, app)
+    original_connect = module.MLATDatabase.connect
+    initialize_schema_values = []
+
+    def tracked_connect(database, *args, **kwargs):
+        initialize_schema_values.append(kwargs.get("initialize_schema", True))
+        return original_connect(database, *args, **kwargs)
+
+    monkeypatch.setattr(module.MLATDatabase, "connect", tracked_connect)
+    response = app.test_client().get("/api/health")
+
+    assert response.status_code == 200
+    assert initialize_schema_values == [False]
 
 
 def test_api_reads_processor_telemetry_from_shared_database(monkeypatch, tmp_path):

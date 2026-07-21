@@ -132,17 +132,20 @@ class MLATDatabase:
         self.db_path = db_path
         self.conn = None
         
-    def connect(self):
-        """Connect to database and create tables if needed."""
+    def connect(self, *, initialize_schema: bool = True):
+        """Connect to SQLite and optionally initialize the application schema."""
         db_dir = os.path.dirname(self.db_path)
         if db_dir:
             os.makedirs(db_dir, exist_ok=True)
-        self.conn = sqlite3.connect(self.db_path, check_same_thread=False)
+        self.conn = sqlite3.connect(self.db_path, timeout=30.0, check_same_thread=False)
         self.conn.row_factory = sqlite3.Row
-        self.conn.execute("PRAGMA journal_mode=WAL")
+        self.conn.execute("PRAGMA busy_timeout=30000")
+        journal_mode = self.conn.execute("PRAGMA journal_mode").fetchone()[0]
+        if str(journal_mode).lower() != "wal":
+            self.conn.execute("PRAGMA journal_mode=WAL")
         self.conn.execute("PRAGMA synchronous=NORMAL")
-        self.conn.execute("PRAGMA busy_timeout=5000")
-        self._ensure_schema()
+        if initialize_schema:
+            self._ensure_schema()
         logger.debug("Connected to database: %s", self.db_path)
 
     def _ensure_schema(self):

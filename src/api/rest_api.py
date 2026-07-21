@@ -209,6 +209,12 @@ def create_app(config_overrides: Optional[Dict[str, object]] = None) -> Flask:
     app.teardown_appcontext(close_db)
     app.register_blueprint(api_bp)
 
+    database = MLATDatabase(app.config["DATABASE_PATH"])
+    try:
+        database.connect()
+    finally:
+        database.close()
+
     if app.config["ENABLE_BACKGROUND_BROADCASTER"]:
         _start_background_broadcaster(app)
 
@@ -219,7 +225,7 @@ def get_db() -> MLATDatabase:
     """Get the request-scoped database connection."""
     if "db" not in g:
         db = MLATDatabase(current_app.config["DATABASE_PATH"])
-        db.connect()
+        db.connect(initialize_schema=False)
         g.db = db
     return g.db
 
@@ -588,7 +594,7 @@ def _start_background_broadcaster(app: Flask):
 
     def _poll_new_positions():
         poll_db = MLATDatabase(app.config["DATABASE_PATH"])
-        poll_db.connect()
+        poll_db.connect(initialize_schema=False)
         position_queue = poll_db.get_or_create_position_queue()
         last_position_id = 0
 
