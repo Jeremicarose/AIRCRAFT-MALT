@@ -17,19 +17,19 @@ that replay traffic is live receiver evidence.
 - **Safest positioning:** decentralized receiver registry and aviation data
   control plane, with CKB identity/discovery and off-chain MLAT processing
 
+[Open the public read-only replay demo](https://mlat-hosted-demo.onrender.com/app/overview.html)
+
 [Deploy the read-only demo on Render](https://render.com/deploy?repo=https://github.com/Jeremicarose/AIRCRAFT-MALT)
 
 The public Blueprint uses Render Free and regenerates replay data after service
 restarts. No persistent production data is stored by this walkthrough.
 
-After deployment, reviewers should open these routes first:
+Reviewers should open these surfaces first:
 
-```text
-/app/pipeline.html
-/app/analytics.html
-/api/pipeline
-/api/evidence/metrics
-```
+- [Evidence pipeline](https://mlat-hosted-demo.onrender.com/app/pipeline.html)
+- [System metrics](https://mlat-hosted-demo.onrender.com/app/analytics.html)
+- [Pipeline JSON](https://mlat-hosted-demo.onrender.com/api/pipeline)
+- [Public metrics JSON](https://mlat-hosted-demo.onrender.com/api/evidence/metrics)
 
 The latest shareable project update is maintained in
 [docs/PUBLIC_PROGRESS_UPDATE.md](docs/PUBLIC_PROGRESS_UPDATE.md).

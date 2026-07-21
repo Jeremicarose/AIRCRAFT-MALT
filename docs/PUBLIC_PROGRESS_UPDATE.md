@@ -23,17 +23,16 @@ source and publication of the hashed evidence bundle.
 > tooling are now available. CKB provides receiver identity and discovery while
 > observations and MLAT processing remain off-chain. The hosted walkthrough is
 > explicitly replay-based; synchronized live receiver evidence and an external
-> accuracy comparison are the next milestone.
+> accuracy comparison are the next milestone. Explore the public demo:
+> https://mlat-hosted-demo.onrender.com/app/pipeline.html
 
 ## Reviewer links
 
-Replace `YOUR-SERVICE.onrender.com` after the first deployment:
-
-- Overview: `https://YOUR-SERVICE.onrender.com/app/overview.html`
-- Evidence pipeline: `https://YOUR-SERVICE.onrender.com/app/pipeline.html`
-- System metrics: `https://YOUR-SERVICE.onrender.com/app/analytics.html`
-- Pipeline JSON: `https://YOUR-SERVICE.onrender.com/api/pipeline`
-- Public metrics JSON: `https://YOUR-SERVICE.onrender.com/api/evidence/metrics`
+- Overview: https://mlat-hosted-demo.onrender.com/app/overview.html
+- Evidence pipeline: https://mlat-hosted-demo.onrender.com/app/pipeline.html
+- System metrics: https://mlat-hosted-demo.onrender.com/app/analytics.html
+- Pipeline JSON: https://mlat-hosted-demo.onrender.com/api/pipeline
+- Public metrics JSON: https://mlat-hosted-demo.onrender.com/api/evidence/metrics
 
 ## What is proven today
 
