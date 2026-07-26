@@ -17,12 +17,6 @@ function overviewEscape(value) {
     .replaceAll("'", '&#039;');
 }
 
-function overviewNumber(value, digits = 0) {
-  if (!Number.isFinite(Number(value))) return null;
-  const number = Number(value);
-  return digits > 0 ? number.toFixed(digits) : String(Math.round(number));
-}
-
 function overviewPercent(value) {
   if (!Number.isFinite(Number(value))) return 'n/a';
   return `${Math.round(Number(value) * 100)}%`;
@@ -38,6 +32,7 @@ function overviewRelativeAge(timestamp) {
 
 function overviewStatusTone(status) {
   if (['good', 'pass', 'live', 'healthy', 'ready', 'publishable', 'fresh'].includes(status)) return 'good';
+  if (['info', 'selected', 'active'].includes(status)) return 'info';
   if (['bad', 'fail', 'down', 'degraded', 'blocked', 'missing', 'stale', 'unavailable'].includes(status)) return 'risk';
   return 'warn';
 }
@@ -62,38 +57,28 @@ function summarizeMode(modeData) {
   let sourceKind = 'unavailable';
   let sourceLabel = 'Unavailable';
   let sourceSummary = 'The overview cannot confirm a current output source.';
-  let feedStatus = 'Unavailable';
   let feedMeaning = 'No fresh runtime output is available to display.';
-  let feedTone = 'unavailable';
 
   if (isLive) {
     sourceKind = 'live';
     sourceLabel = 'Live feed';
     sourceSummary = 'Receiver input is actively producing live MLAT output.';
-    feedStatus = 'Fresh';
     feedMeaning = 'Current positions are expected to reflect live traffic.';
-    feedTone = 'live';
   } else if (isDemo) {
     sourceKind = 'replay';
     sourceLabel = 'Replay feed';
     sourceSummary = overviewValue(modeData?.scenario?.summary, 'Recorded traffic is being replayed through the current runtime.');
-    feedStatus = 'Expected';
     feedMeaning = 'Replay output is visible, but it should not be interpreted as live traffic.';
-    feedTone = 'warn';
   } else if (isSimulation) {
     sourceKind = 'synthetic';
     sourceLabel = 'Synthetic feed';
     sourceSummary = 'Synthetic or simulated traffic is driving the current runtime.';
-    feedStatus = 'Expected';
     feedMeaning = 'Synthetic output is useful for demonstration and validation, not live operations.';
-    feedTone = 'warn';
   } else if (isStale) {
     sourceKind = 'stale';
     sourceLabel = 'Stale runtime';
     sourceSummary = 'The runtime was configured, but fresh solved output is no longer arriving.';
-    feedStatus = 'Stale';
     feedMeaning = 'The operator should verify receiver input, solver freshness, and downstream storage.';
-    feedTone = 'risk';
   }
 
   return {
@@ -107,9 +92,7 @@ function summarizeMode(modeData) {
     sourceKind,
     sourceLabel,
     sourceSummary,
-    feedStatus,
     feedMeaning,
-    feedTone,
     benchmarkableOutput: Boolean(modeData?.benchmarkable_output),
     strictProductionMode: Boolean(modeData?.strict_production_mode),
     registryConfigured: Boolean(modeData?.receiver_registry_type_hash),
@@ -141,23 +124,17 @@ function buildOverviewState({ modeData, healthData, aircraftData, receiverData, 
   const avgQuality = Number.isFinite(Number(readinessQuality.avg_quality_score)) ? Number(readinessQuality.avg_quality_score) : null;
   const avgResidual = Number.isFinite(Number(readinessQuality.avg_solver_residual_m)) ? Number(readinessQuality.avg_solver_residual_m) : null;
   const avgUncertainty = Number.isFinite(Number(readinessQuality.avg_uncertainty_m)) ? Number(readinessQuality.avg_uncertainty_m) : null;
-  const avgReceiverCount = Number.isFinite(Number(readinessQuality.avg_receiver_count)) ? Number(readinessQuality.avg_receiver_count) : null;
   const recentPositionCount = Number.isFinite(Number(readinessQuality.recent_position_count)) ? Number(readinessQuality.recent_position_count) : recentAircraft.length;
   const failedSolves = Number.isFinite(Number(readinessReliability.failed_solves)) ? Number(readinessReliability.failed_solves) : null;
   const benchmarkStatus = benchmark?.evidence_status || readiness?.external_benchmark?.status || 'missing';
   const notYetProven = Array.isArray(readiness?.not_yet_proven) ? readiness.not_yet_proven : [];
   const benchmarkableOutput = Boolean(readinessQuality.benchmarkable_output ?? mode.benchmarkableOutput);
-  const scenarioLabel = overviewValue(modeData?.scenario?.label, 'Active region');
   const mapCenter = modeData?.scenario?.map?.center || { latitude: 40.82, longitude: -74.35 };
   const mapZoom = modeData?.scenario?.map?.zoom || 7;
 
   const aircraftStatus = aircraftCount > 0
     ? (lastStoreAge !== null && lastStoreAge <= 20 ? 'healthy' : lastStoreAge !== null && lastStoreAge <= 90 ? 'waiting' : 'stale')
     : (mode.isLive ? 'waiting' : mode.isDemo || mode.isSimulation ? 'waiting' : 'unavailable');
-
-  const receiverStatus = receiverCount > 0
-    ? (activeReceiverCount === receiverCount ? 'healthy' : activeReceiverCount > 0 ? 'waiting' : 'stale')
-    : (mode.registryConfigured ? 'waiting' : 'unavailable');
 
   const feedStatus = lastSignalAge !== null
     ? (lastSignalAge <= 15 ? (mode.isLive ? 'fresh' : 'expected') : lastSignalAge <= 60 ? 'waiting' : 'stale')
@@ -188,7 +165,7 @@ function buildOverviewState({ modeData, healthData, aircraftData, receiverData, 
     nextHref = '/app/localization.html';
     nextCopy = 'Inspect current aircraft tracks and contributing receivers on the live map.';
   } else if ((mode.isDemo || mode.isSimulation) && aircraftCount > 0) {
-    operatorVerdict = `${mode.sourceLabel} is visible, but the output should be treated as non-live proof.`;
+    operatorVerdict = 'Replay feed is visible, but the output should be treated as non-live proof.';
     operatorTone = 'warn';
     nextQuestion = 'Review evidence gates';
     nextHref = '/app/analytics.html';
@@ -210,7 +187,6 @@ function buildOverviewState({ modeData, healthData, aircraftData, receiverData, 
   return {
     mode,
     receivers,
-    positions,
     recentAircraft,
     aircraftCount,
     activeReceiverCount,
@@ -220,17 +196,14 @@ function buildOverviewState({ modeData, healthData, aircraftData, receiverData, 
     avgQuality,
     avgResidual,
     avgUncertainty,
-    avgReceiverCount,
     recentPositionCount,
     failedSolves,
     benchmarkStatus,
     notYetProven,
     benchmarkableOutput,
-    scenarioLabel,
     mapCenter,
     mapZoom,
     aircraftStatus,
-    receiverStatus,
     feedStatus,
     runtimeComponents,
     runtimeHealthyCount,
@@ -243,55 +216,50 @@ function buildOverviewState({ modeData, healthData, aircraftData, receiverData, 
 }
 
 function buildMetricCards(state) {
-  const receiverRatio = state.receiverCount
-    ? `${state.activeReceiverCount}/${state.receiverCount}`
-    : '0/0';
-  const activePercent = state.receiverCount
-    ? `${Math.round((state.activeReceiverCount / state.receiverCount) * 100)}% active`
-    : 'No receiver records';
-  const runtimeSummary = `${state.runtimeHealthyCount}/3 components nominal`;
-  const feedAge = state.lastSignalAge !== null ? overviewAge(state.lastSignalAge) : 'n/a';
-
   return [
     {
       id: 'aircraft',
-      title: 'Aircraft tracked',
-      statusLabel: state.aircraftStatus === 'healthy' ? 'Healthy' : state.aircraftStatus === 'waiting' ? 'Waiting' : state.aircraftCount > 0 ? 'Stale' : 'No recent solves',
+      label: 'Aircraft tracked',
+      statusText: state.aircraftStatus === 'healthy' ? 'Current' : state.aircraftStatus === 'waiting' ? 'Watching' : state.aircraftCount > 0 ? 'Stale' : 'No solves',
       status: state.aircraftStatus === 'healthy' ? 'good' : state.aircraftStatus === 'waiting' ? 'warn' : 'risk',
       value: String(state.aircraftCount),
-      supporting: state.recentPositionCount > 0 ? `${state.recentPositionCount} recent position updates in readiness window` : 'No recent positions recorded in readiness window',
-      why: state.aircraftCount > 0
-        ? `Latest stored position age is ${overviewAge(state.lastStoreAge)}.`
-        : 'This is the fastest signal that the MLAT solver is or is not producing output right now.',
+      supporting: state.recentPositionCount > 0 ? `${state.recentPositionCount} recent positions` : 'No recent solved positions',
+      detail: state.aircraftCount > 0 ? `Store age ${overviewAge(state.lastStoreAge)}` : 'Solver output window',
+      href: '/app/aircraft.html',
+      action: 'Inspect aircraft',
     },
     {
       id: 'receivers',
-      title: 'Receivers',
-      statusLabel: state.receiverCount === 0 ? 'Unavailable' : state.activeReceiverCount === state.receiverCount ? 'Healthy' : state.activeReceiverCount > 0 ? 'Partial' : 'Offline',
+      label: 'Receivers active',
+      statusText: state.receiverCount === 0 ? 'Missing' : state.activeReceiverCount === state.receiverCount ? 'Healthy' : state.activeReceiverCount > 0 ? 'Partial' : 'Offline',
       status: state.receiverCount === 0 ? 'risk' : state.activeReceiverCount === state.receiverCount ? 'good' : state.activeReceiverCount > 0 ? 'warn' : 'risk',
-      value: String(state.activeReceiverCount),
-      supporting: `${receiverRatio} reporting · ${activePercent}`,
-      why: state.receiverCount > 0
-        ? 'Receiver participation determines whether the solver has enough live geometry to trust a position.'
-        : 'No receiver registry or runtime receiver data is currently visible.',
+      value: state.receiverCount ? `${state.activeReceiverCount}/${state.receiverCount}` : '0/0',
+      supporting: state.receiverCount ? `${Math.round((state.activeReceiverCount / state.receiverCount) * 100)}% active` : 'No receiver records',
+      detail: 'Receiver participation in current readiness window',
+      href: '/app/receivers.html',
+      action: 'Inspect receivers',
     },
     {
       id: 'feed',
-      title: 'Feed',
-      statusLabel: `${state.mode.sourceLabel} · ${state.mode.feedStatus}`,
+      label: 'Signal freshness',
+      statusText: state.feedStatus === 'fresh' ? 'Fresh' : state.feedStatus === 'expected' || state.feedStatus === 'waiting' ? 'Watching' : 'Stale',
       status: state.feedStatus === 'fresh' ? 'good' : state.feedStatus === 'expected' || state.feedStatus === 'waiting' ? 'warn' : 'risk',
-      value: feedAge,
-      supporting: state.lastSignalAge !== null ? `${state.mode.sourceSummary}` : state.mode.feedMeaning,
-      why: state.mode.feedMeaning,
+      value: state.lastSignalAge !== null ? overviewAge(state.lastSignalAge) : 'n/a',
+      supporting: state.lastSignalAge !== null ? 'Latest signal age' : state.mode.feedMeaning,
+      detail: state.lastSignalAge !== null ? 'Incoming signal clock' : 'No live freshness sample',
+      href: '/app/pipeline.html',
+      action: 'Review pipeline',
     },
     {
-      id: 'runtime',
-      title: 'Runtime',
-      statusLabel: runtimeSummary,
-      status: state.runtimeHealthyCount === 3 ? 'good' : state.runtimeHealthyCount >= 1 ? 'warn' : 'risk',
-      value: 'Processor · API · DB',
-      supporting: `${state.runtimeComponents.processor} / ${state.runtimeComponents.api} / ${state.runtimeComponents.database}`,
-      why: 'This shows whether the control plane can ingest, store, and serve output without hidden blind spots.',
+      id: 'trust',
+      label: 'Trust state',
+      statusText: state.benchmarkableOutput ? 'Benchmarkable' : 'Evidence pending',
+      status: state.benchmarkableOutput ? 'good' : state.mode.isLive ? 'warn' : 'warn',
+      value: state.benchmarkableOutput ? 'Ready' : 'Check',
+      supporting: state.benchmarkableOutput ? 'Output can support benchmark interpretation' : 'Evidence still needs review',
+      detail: `${state.runtimeHealthyCount}/3 runtime checks nominal`,
+      href: '/app/analytics.html',
+      action: 'Review evidence',
     },
   ];
 }
@@ -303,45 +271,77 @@ function renderMetricCards(state) {
   target.innerHTML = cards.map((card) => `
     <article class="metric-card ${overviewMetricStateClass(card.status)}" data-card-id="${overviewEscape(card.id)}">
       <div class="metric-card-head">
-        <strong>${overviewEscape(card.title)}</strong>
-        ${overviewBadge(card.statusLabel, card.status)}
+        <strong>${overviewEscape(card.label)}</strong>
+        <span class="metric-status tone-${overviewStatusTone(card.status)}">${overviewEscape(card.statusText)}</span>
       </div>
-      <span>${overviewEscape(card.value)}</span>
+      <span class="metric-value">${overviewEscape(card.value)}</span>
       <small class="metric-supporting">${overviewEscape(card.supporting)}</small>
-      <small>${overviewEscape(card.why)}</small>
+      <div class="metric-card-foot">
+        <small>${overviewEscape(card.detail)}</small>
+        <a class="metric-card-link" href="${overviewEscape(card.href)}">${overviewEscape(card.action)}</a>
+      </div>
     </article>
   `).join('');
+}
+
+function briefingFreshnessLine(state) {
+  if (state.lastSignalAge !== null) return `${state.mode.sourceLabel} · last signal ${overviewAge(state.lastSignalAge)} · store ${overviewAge(state.lastStoreAge)}`;
+  return `${state.mode.sourceLabel} · ${state.mode.feedMeaning}`;
+}
+
+function briefingWarnings(state) {
+  const warnings = [];
+  if (state.mode.isDemo) warnings.push('Replay mode is visible; do not treat the map as live traffic.');
+  if (state.mode.isSimulation) warnings.push('Synthetic traffic is visible; keep it separate from operational evidence.');
+  if (state.lastSignalAge !== null && state.lastSignalAge > 60) warnings.push('Signal freshness has drifted beyond the normal watch window.');
+  if (state.aircraftCount === 0 && state.activeReceiverCount > 0) warnings.push('Receivers are reporting, but recent aircraft solves are missing.');
+  if (!state.benchmarkableOutput && state.mode.isLive) warnings.push('Live output is visible, but benchmark readiness is still incomplete.');
+  return warnings.slice(0, 2);
 }
 
 function renderBriefing(state) {
   const verdict = document.getElementById('overview-briefing');
   if (!verdict) return;
-  const benchmarkTone = state.benchmarkableOutput ? 'good' : 'warn';
+
   const blockers = state.notYetProven.length
-    ? state.notYetProven.slice(0, 3).map((item) => `<li>${overviewEscape(String(item).replaceAll('_', ' '))}</li>`).join('')
-    : '<li>No open readiness caveats are currently reported.</li>';
+    ? state.notYetProven.slice(0, 5).map((item) => `<li>${overviewEscape(String(item).replaceAll('_', ' '))}</li>`).join('')
+    : '<li>No open readiness caveats reported.</li>';
+  const warnings = briefingWarnings(state);
+  const warningMarkup = warnings.length
+    ? `<div class="overview-briefing-alerts">${warnings.map((warning) => `<p>${overviewEscape(warning)}</p>`).join('')}</div>`
+    : '';
+
   verdict.innerHTML = `
     <div class="overview-briefing-shell tone-${overviewStatusTone(state.operatorTone)}">
       <div class="overview-briefing-copy">
-        <span class="pipeline-verdict-label">Operational briefing</span>
+        <span class="pipeline-verdict-label">Operational summary</span>
         <h2>${overviewEscape(state.operatorVerdict)}</h2>
-        <p>${overviewEscape(state.mode.sourceSummary)}</p>
-      </div>
-      <div class="overview-briefing-side">
-        ${overviewBadge(state.mode.sourceLabel, state.mode.isLive ? 'live' : state.mode.isDemo || state.mode.isSimulation ? 'warn' : 'risk')}
-        ${overviewBadge(state.benchmarkableOutput ? 'Benchmarkable output' : 'Benchmark pending', benchmarkTone)}
+        <p>${overviewEscape(briefingFreshnessLine(state))}</p>
+        ${warningMarkup}
       </div>
     </div>
-    <div class="overview-briefing-grid">
-      <div class="briefing-note">
-        <strong>What the operator should know</strong>
-        <span>${overviewEscape(state.nextCopy)}</span>
+    <details class="inspector-disclosure overview-briefing-disclosure">
+      <summary class="disclosure-summary">
+        <span>Why this verdict</span>
+        <small>Definitions, trust blockers, and operator guidance.</small>
+      </summary>
+      <div class="disclosure-body overview-briefing-disclosure-body">
+        <div class="overview-briefing-grid overview-briefing-grid-compact">
+          <div class="briefing-note briefing-note-callout">
+            <strong>Source context</strong>
+            <span>${overviewEscape(state.mode.sourceSummary)}</span>
+          </div>
+          <div class="briefing-note briefing-note-callout">
+            <strong>Next check</strong>
+            <span>${overviewEscape(state.nextCopy)}</span>
+          </div>
+          <div class="briefing-note briefing-note-list">
+            <strong>Trust blockers</strong>
+            <ul>${blockers}</ul>
+          </div>
+        </div>
       </div>
-      <div class="briefing-note">
-        <strong>Recent trust blockers</strong>
-        <ul>${blockers}</ul>
-      </div>
-    </div>
+    </details>
   `;
 }
 
@@ -403,7 +403,7 @@ function clearOverviewRelationships(mapState) {
 
 function relationshipStyle(selected = false) {
   return {
-    color: selected ? 'rgba(255, 160, 120, 0.82)' : 'rgba(255, 132, 92, 0.42)',
+    color: selected ? 'rgba(110, 176, 255, 0.88)' : 'rgba(110, 176, 255, 0.4)',
     weight: selected ? 2.4 : 1.4,
     opacity: 1,
     dashArray: selected ? '9 6' : '6 8',
@@ -419,25 +419,25 @@ function renderOverviewMapHud(state) {
   const legend = document.getElementById('overview-map-legend');
   if (status) {
     const label = state.aircraftCount > 0
-      ? `${state.mode.sourceLabel} · ${state.aircraftCount} aircraft visible`
+      ? `${state.mode.sourceLabel} · ${state.aircraftCount} tracked`
       : state.receiverCount > 0
-        ? `${state.mode.sourceLabel} · receivers visible, no aircraft solves yet`
+        ? `${state.mode.sourceLabel} · solves pending`
         : `${state.mode.sourceLabel} · awaiting telemetry`;
     status.textContent = label;
-    status.className = `map-hud-status ${state.mode.isLive ? 'is-live' : ''}`.trim();
+    status.className = `map-hud-status tone-${overviewStatusTone(state.mode.isLive ? 'good' : state.mode.isDemo || state.mode.isSimulation ? 'warn' : 'risk')}`;
   }
   if (story) {
     const receiverLinkCount = state.recentAircraft.reduce((sum, position) => sum + receiverIdsForPosition(position).length, 0);
     story.textContent = receiverLinkCount > 0
-      ? `${receiverLinkCount} receiver-to-aircraft links are derived from current position payloads.`
-      : 'Receiver-to-aircraft links appear only when the current payload names contributing receivers.';
+      ? `${receiverLinkCount} receiver links support the visible solves.`
+      : 'Map shows current solves and selected evidence detail.';
   }
   if (legend) {
     legend.innerHTML = `
-      <span><i class="legend-dot aircraft"></i>Aircraft solve</span>
+      <span><i class="legend-dot aircraft"></i>Aircraft</span>
       <span><i class="legend-dot receiver"></i>Receiver</span>
-      <span><i class="legend-dot link"></i>Contributed to selected solve</span>
-      <span><i class="legend-dot confidence"></i>Estimated error band</span>
+      <span><i class="legend-dot link"></i>Selection</span>
+      <span><i class="legend-dot confidence"></i>Error band</span>
     `;
   }
 }
@@ -446,8 +446,8 @@ function selectedAircraftSummary(position) {
   if (!position) {
     return `
       <div class="overview-selection-empty">
-        <strong>No aircraft selected</strong>
-        <span>Select an aircraft marker to highlight contributing receivers, quality, and estimated error.</span>
+        <strong>Select an aircraft</strong>
+        <span>Choose a solve on the map to inspect quality, receiver participation, and estimated error.</span>
       </div>
     `;
   }
@@ -459,17 +459,18 @@ function selectedAircraftSummary(position) {
           <strong>${overviewEscape(position.aircraft_id)}</strong>
           <span>${overviewEscape(overviewRelativeAge(position.timestamp))}</span>
         </div>
-        ${overviewBadge(overviewValue(position?.quality?.bucket, 'tracked'), classifyQuality(position))}
+        <span class="overview-selection-state tone-info">Selected</span>
       </div>
       <div class="overview-selection-grid">
         <div><span>Quality</span><strong>${overviewEscape(qualityLabel(position))}</strong></div>
-        <div><span>Estimated error</span><strong>${overviewEscape(uncertaintyLabel(position))}</strong></div>
+        <div><span>Error</span><strong>${overviewEscape(uncertaintyLabel(position))}</strong></div>
         <div><span>Residual</span><strong>${overviewEscape(residualLabel(position))}</strong></div>
         <div><span>Receivers</span><strong>${overviewEscape(String(position.num_receivers || receiverIds.length || 0))}</strong></div>
       </div>
       <p>${overviewEscape(receiverIds.length
-        ? 'Highlighted links show receivers explicitly named in this aircraft position payload.'
-        : 'This aircraft position did not include explicit receiver IDs, so no relationship links are drawn.')}</p>
+        ? 'Highlighted links show the named receivers behind this solve.'
+        : 'No explicit receiver IDs were attached to this solve, so no links are drawn.')}</p>
+      <a class="metric-card-link" href="/app/aircraft.html">Inspect aircraft detail</a>
     </div>
   `;
 }
@@ -525,9 +526,9 @@ function updateMapSelection(mapState, state) {
         selectedPosition.position.longitude,
       ], {
         radius: Number(selectedPosition.uncertainty),
-        color: 'rgba(255, 174, 138, 0.82)',
+        color: 'rgba(110, 176, 255, 0.92)',
         weight: 1,
-        fillColor: 'rgba(255, 126, 74, 0.16)',
+        fillColor: 'rgba(110, 176, 255, 0.14)',
         fillOpacity: 1,
         className: 'overview-confidence-circle',
         interactive: false,
@@ -613,6 +614,28 @@ function railRow(label, value, tone = 'warn', detail = '') {
   `;
 }
 
+function railLinks(links = []) {
+  if (!links.length) return '';
+  return `
+    <details class="overview-links-disclosure">
+      <summary class="overview-links-summary">More routes</summary>
+      <div class="overview-section-links">
+        ${links.map((link) => `<a class="overview-text-link" href="${overviewEscape(link.href)}">${overviewEscape(link.label)}</a>`).join('')}
+      </div>
+    </details>
+  `;
+}
+
+function railAction(action) {
+  if (!action) return '';
+  return `
+    <div class="overview-section-action">
+      <a class="action-chip action-chip-primary" href="${overviewEscape(action.href)}">${overviewEscape(action.label)}</a>
+      <p>${overviewEscape(action.copy)}</p>
+    </div>
+  `;
+}
+
 function evidenceMeaning(state) {
   if (state.mode.isLive && state.benchmarkableOutput) return 'Live output is visible and currently marked benchmarkable.';
   if (state.mode.isDemo) return 'Replay output is visible but should remain separate from live proof.';
@@ -620,29 +643,96 @@ function evidenceMeaning(state) {
   return 'The current output cannot yet be treated as trustworthy benchmark evidence.';
 }
 
+function runtimeAction(state) {
+  if (state.runtimeHealthyCount === 3) {
+    return {
+      label: 'Open settings',
+      href: '/app/settings.html',
+      copy: 'Confirm the active runtime configuration and mode assumptions.',
+    };
+  }
+  return {
+    label: 'Review pipeline',
+    href: '/app/pipeline.html',
+    copy: 'Inspect processor, storage, and freshness checkpoints that are keeping the runtime from serving current output.',
+  };
+}
+
+function trackingAction(state) {
+  if (state.aircraftCount > 0) {
+    return {
+      label: 'Inspect aircraft',
+      href: '/app/aircraft.html',
+      copy: 'Move from this summary into the aircraft list to inspect individual tracks and freshness.',
+    };
+  }
+  if (state.activeReceiverCount > 0) {
+    return {
+      label: 'Open live map',
+      href: '/app/localization.html',
+      copy: 'Verify whether receivers are feeding the solver but positions are failing to materialize.',
+    };
+  }
+  return {
+    label: 'Inspect receivers',
+    href: '/app/receivers.html',
+    copy: 'Check receiver availability and whether any participants are online at all.',
+  };
+}
+
+function solverAction(state) {
+  if (state.avgQuality !== null && state.avgQuality >= 0.8 && (state.failedSolves === 0 || state.failedSolves === null)) {
+    return {
+      label: 'Open live map',
+      href: '/app/localization.html',
+      copy: 'Use the map to inspect current solves while quality and residuals remain in bounds.',
+    };
+  }
+  return {
+    label: 'Check metrics',
+    href: '/app/analytics.html',
+    copy: 'Review solve quality, residuals, and failed solve counts before trusting current tracks.',
+  };
+}
+
+function trustAction(state) {
+  if (state.benchmarkableOutput) {
+    return {
+      label: 'Review evidence gates',
+      href: '/app/analytics.html',
+      copy: 'Confirm the evidence trail behind the current benchmarkable state.',
+    };
+  }
+  return {
+    label: state.nextQuestion,
+    href: state.nextHref,
+    copy: state.nextCopy,
+  };
+}
+
 function renderRail(state) {
   const target = document.getElementById('overview-ops-rail');
   if (!target) return;
 
   const runtimeRows = [
-    railRow('Processor', state.runtimeComponents.processor, state.runtimeComponents.processor === 'Active' ? 'good' : state.runtimeComponents.processor === 'Stale' ? 'warn' : 'risk', 'Runtime and solver execution state'),
-    railRow('API', state.runtimeComponents.api, state.runtimeComponents.api === 'Healthy' ? 'good' : 'risk', 'REST surface used by this page'),
-    railRow('Database', state.runtimeComponents.database, state.runtimeComponents.database === 'Current' ? 'good' : state.runtimeComponents.database === 'Lagging' ? 'warn' : 'risk', 'Freshness of stored derived output'),
-    railRow('Source/runtime', `${state.mode.sourceLabel} · ${overviewValue(state.mode.runtimeStatus, 'unknown')}`, state.mode.isLive ? 'good' : state.mode.isDemo || state.mode.isSimulation ? 'warn' : 'risk', state.mode.feedMeaning),
+    railRow('Processor', state.runtimeComponents.processor, state.runtimeComponents.processor === 'Active' ? 'good' : state.runtimeComponents.processor === 'Stale' ? 'warn' : 'risk', 'Solver runtime state'),
+    railRow('API', state.runtimeComponents.api, state.runtimeComponents.api === 'Healthy' ? 'good' : 'risk', 'Overview data surface'),
+    railRow('Database', state.runtimeComponents.database, state.runtimeComponents.database === 'Current' ? 'good' : state.runtimeComponents.database === 'Lagging' ? 'warn' : 'risk', 'Stored output freshness'),
+    railRow('Source', overviewValue(state.mode.runtimeStatus, 'unknown'), state.mode.isLive ? 'good' : state.mode.isDemo || state.mode.isSimulation ? 'warn' : 'risk', state.mode.sourceLabel),
   ].join('');
 
   const trackingRows = [
-    railRow('Aircraft tracked', String(state.aircraftCount), state.aircraftCount > 0 ? 'good' : 'warn', state.aircraftCount > 0 ? 'Visible in the last five-minute shell window' : 'No active aircraft are currently visible'),
-    railRow('Receivers active', `${state.activeReceiverCount}/${state.receiverCount}`, state.activeReceiverCount > 0 ? (state.activeReceiverCount === state.receiverCount ? 'good' : 'warn') : 'risk', 'Receivers with active or online status'),
-    railRow('Last stored position', overviewAge(state.lastStoreAge), state.lastStoreAge !== null && state.lastStoreAge <= 20 ? 'good' : state.lastStoreAge !== null && state.lastStoreAge <= 90 ? 'warn' : 'risk', 'Freshness of recent solved output'),
-    railRow('Signal freshness', overviewAge(state.lastSignalAge), state.lastSignalAge !== null && state.lastSignalAge <= 15 ? 'good' : state.lastSignalAge !== null && state.lastSignalAge <= 60 ? 'warn' : 'risk', 'Age of the latest runtime signal in health data'),
+    railRow('Aircraft', String(state.aircraftCount), state.aircraftCount > 0 ? 'good' : 'warn', state.aircraftCount > 0 ? 'Visible in recent output window' : 'No recent aircraft solves visible'),
+    railRow('Receivers', `${state.activeReceiverCount}/${state.receiverCount}`, state.activeReceiverCount > 0 ? (state.activeReceiverCount === state.receiverCount ? 'good' : 'warn') : 'risk', 'Active or online receiver count'),
+    railRow('Store age', overviewAge(state.lastStoreAge), state.lastStoreAge !== null && state.lastStoreAge <= 20 ? 'good' : state.lastStoreAge !== null && state.lastStoreAge <= 90 ? 'warn' : 'risk', 'Latest stored solve'),
+    railRow('Signal age', overviewAge(state.lastSignalAge), state.lastSignalAge !== null && state.lastSignalAge <= 15 ? 'good' : state.lastSignalAge !== null && state.lastSignalAge <= 60 ? 'warn' : 'risk', 'Latest runtime signal'),
   ].join('');
 
   const solverRows = [
-    railRow('Average quality', overviewPercent(state.avgQuality), state.avgQuality !== null && state.avgQuality >= 0.8 ? 'good' : state.avgQuality !== null && state.avgQuality >= 0.55 ? 'warn' : 'risk', 'Average score across recent solved positions'),
-    railRow('Average residual', state.avgResidual !== null ? `${state.avgResidual.toFixed(1)}m` : 'n/a', state.avgResidual !== null && state.avgResidual <= 100 ? 'good' : state.avgResidual !== null && state.avgResidual <= 300 ? 'warn' : 'risk', 'Solver fit error from readiness data'),
-    railRow('Estimated error', state.avgUncertainty !== null ? `±${Math.round(state.avgUncertainty)}m` : 'n/a', state.avgUncertainty !== null && state.avgUncertainty <= 75 ? 'good' : state.avgUncertainty !== null && state.avgUncertainty <= 200 ? 'warn' : 'risk', 'Average uncertainty across recent positions'),
-    railRow('Failed solves', state.failedSolves !== null ? String(state.failedSolves) : 'n/a', state.failedSolves === 0 ? 'good' : state.failedSolves !== null && state.failedSolves <= 5 ? 'warn' : 'risk', 'Recent solver failures from readiness data'),
+    railRow('Avg quality', overviewPercent(state.avgQuality), state.avgQuality !== null && state.avgQuality >= 0.8 ? 'good' : state.avgQuality !== null && state.avgQuality >= 0.55 ? 'warn' : 'risk', 'Recent solve score'),
+    railRow('Residual', state.avgResidual !== null ? `${state.avgResidual.toFixed(1)}m` : 'n/a', state.avgResidual !== null && state.avgResidual <= 100 ? 'good' : state.avgResidual !== null && state.avgResidual <= 300 ? 'warn' : 'risk', 'Solver fit error'),
+    railRow('Uncertainty', state.avgUncertainty !== null ? `±${Math.round(state.avgUncertainty)}m` : 'n/a', state.avgUncertainty !== null && state.avgUncertainty <= 75 ? 'good' : state.avgUncertainty !== null && state.avgUncertainty <= 200 ? 'warn' : 'risk', 'Average estimated error'),
+    railRow('Failed solves', state.failedSolves !== null ? String(state.failedSolves) : 'n/a', state.failedSolves === 0 ? 'good' : state.failedSolves !== null && state.failedSolves <= 5 ? 'warn' : 'risk', 'Recent readiness failures'),
   ].join('');
 
   const benchmarkTone = /publish|ready|verified|pass/i.test(String(state.benchmarkStatus))
@@ -656,9 +746,9 @@ function renderRail(state) {
       <div class="overview-evidence-row">
         <div>
           <strong>Registry</strong>
-          <span>${overviewEscape(state.mode.registryConfigured ? 'Receiver registry synchronized enough to identify named participants.' : 'No configured receiver registry hash is visible in system mode.')}</span>
+          <span>${overviewEscape(state.mode.registryConfigured ? 'Named participants are available from the current registry state.' : 'No receiver registry hash is visible in the current mode state.')}</span>
         </div>
-        ${overviewBadge(state.mode.registryConfigured ? 'Synchronized' : 'Unconfigured', state.mode.registryConfigured ? 'good' : 'warn')}
+        <span class="overview-inline-status tone-${overviewStatusTone(state.mode.registryConfigured ? 'good' : 'warn')}">${state.mode.registryConfigured ? 'Ready' : 'Missing'}</span>
       </div>
     `,
     `
@@ -667,16 +757,16 @@ function renderRail(state) {
           <strong>Output</strong>
           <span>${overviewEscape(evidenceMeaning(state))}</span>
         </div>
-        ${overviewBadge(state.mode.isLive ? 'Live' : state.mode.isDemo ? 'Replay' : state.mode.isSimulation ? 'Synthetic' : 'Not ready', state.mode.isLive && state.benchmarkableOutput ? 'good' : state.mode.isLive ? 'warn' : 'risk')}
+        <span class="overview-inline-status tone-${overviewStatusTone(state.mode.isLive && state.benchmarkableOutput ? 'good' : state.mode.isLive ? 'warn' : 'warn')}">${overviewEscape(state.mode.isLive ? 'Live' : state.mode.isDemo ? 'Replay' : state.mode.isSimulation ? 'Synthetic' : 'Not ready')}</span>
       </div>
     `,
     `
       <div class="overview-evidence-row">
         <div>
           <strong>Benchmark</strong>
-          <span>${overviewEscape(state.benchmarkableOutput ? 'Current output may support benchmark publication if external evidence is also present.' : 'Benchmarkable output is not yet confirmed by readiness data.')}</span>
+          <span>${overviewEscape(state.benchmarkableOutput ? 'Readiness data currently allows benchmark-oriented interpretation.' : 'Readiness data does not yet confirm benchmarkable output.')}</span>
         </div>
-        ${overviewBadge(String(state.benchmarkStatus).replaceAll('_', ' '), benchmarkTone)}
+        <span class="overview-inline-status tone-${overviewStatusTone(benchmarkTone)}">${overviewEscape(String(state.benchmarkStatus).replaceAll('_', ' '))}</span>
       </div>
     `,
   ].join('');
@@ -686,62 +776,76 @@ function renderRail(state) {
       <div class="overview-rail-head">
         <div>
           <h2>Runtime</h2>
-          <p>Can the control plane ingest, store, and serve current output?</p>
+          <p>Can the control plane serve current MLAT output?</p>
         </div>
       </div>
       <div class="overview-ops-list">${runtimeRows}</div>
+      ${railAction(runtimeAction(state))}
+      ${railLinks([
+        { href: '/app/pipeline.html', label: 'Pipeline' },
+        { href: '/app/settings.html', label: 'Settings' },
+      ])}
     </section>
 
     <section class="overview-rail-section">
       <div class="overview-rail-head">
         <div>
           <h2>Tracking</h2>
-          <p>Are aircraft and receivers active enough to trust the current surface?</p>
+          <p>Are solves and receivers active enough to trust this surface?</p>
         </div>
       </div>
       <div class="overview-ops-list">${trackingRows}</div>
+      ${railAction(trackingAction(state))}
+      ${railLinks([
+        { href: '/app/localization.html', label: 'Live map' },
+        { href: '/app/receivers.html', label: 'Receivers' },
+        { href: '/app/aircraft.html', label: 'Aircraft' },
+      ])}
     </section>
 
     <section class="overview-rail-section">
       <div class="overview-rail-head">
         <div>
-          <h2>Solver</h2>
+          <h2>Solver / readiness</h2>
           <p>How clean do recent solves look?</p>
         </div>
       </div>
       <div class="overview-ops-list">${solverRows}</div>
+      ${railAction(solverAction(state))}
+      ${railLinks([
+        { href: '/app/analytics.html', label: 'Metrics' },
+        { href: '/app/localization.html', label: 'Map detail' },
+      ])}
     </section>
 
     <section class="overview-rail-section overview-rail-section-evidence">
       <div class="overview-rail-head">
         <div>
           <h2>Trust summary</h2>
-          <p>Can the current output be treated as operationally trustworthy and benchmarkable?</p>
+          <p>Is the current output ready to defend as evidence-backed?</p>
         </div>
       </div>
       <div class="overview-evidence-list">${evidenceRows}</div>
+      ${railAction(trustAction(state))}
+      ${railLinks([
+        { href: '/app/analytics.html', label: 'Evidence gates' },
+        { href: '/app/settings.html', label: 'Mode setup' },
+      ])}
     </section>
   `;
 }
 
-function renderDrilldowns(state) {
+function renderDrilldowns() {
   const target = document.getElementById('overview-drilldowns');
   if (!target) return;
   target.innerHTML = `
-    <a class="action-chip" href="/app/localization.html">Investigate live positions</a>
-    <a class="action-chip" href="/app/aircraft.html">Inspect recent solves</a>
-    <a class="action-chip" href="/app/receivers.html">Check receiver health</a>
-    <a class="action-chip" href="/app/analytics.html">Review evidence gates</a>
-    <a class="action-chip" href="/app/pipeline.html">Trace pipeline blockers</a>
+    <a class="action-chip" href="/app/localization.html">Open live map</a>
+    <a class="action-chip" href="/app/aircraft.html">Inspect aircraft</a>
+    <a class="action-chip" href="/app/receivers.html">Inspect receivers</a>
+    <a class="action-chip" href="/app/pipeline.html">Review pipeline</a>
+    <a class="action-chip" href="/app/analytics.html">Check metrics</a>
+    <a class="action-chip" href="/app/settings.html">Open settings</a>
   `;
-
-  const summary = document.getElementById('overview-next-step');
-  if (summary) {
-    summary.innerHTML = `
-      <strong>Next operator question</strong>
-      <span>${overviewEscape(state.nextQuestion)}</span>
-    `;
-  }
 }
 
 function updateShellMetrics(state) {
@@ -759,7 +863,7 @@ function updateShellMetrics(state) {
   if (typeof window.setShellMetric === 'function') {
     window.setShellMetric('aircraft', String(state.aircraftCount), state.aircraftCount > 0 ? `${state.recentPositionCount} recent positions in readiness data` : 'No current aircraft solves');
     window.setShellMetric('receivers', String(state.activeReceiverCount), state.receiverCount > 0 ? `${state.activeReceiverCount}/${state.receiverCount} receivers active or online` : 'No receivers visible');
-    window.setShellMetric('freshness', overviewAge(state.lastSignalAge), `${state.mode.sourceLabel} · ${state.mode.feedStatus}`);
+    window.setShellMetric('freshness', overviewAge(state.lastSignalAge), `${state.mode.sourceLabel}`);
     window.setShellMetric('status', state.operatorTone === 'good' ? 'LIVE' : state.operatorTone === 'warn' ? 'WATCH' : 'CHECK', state.operatorVerdict);
   }
 }

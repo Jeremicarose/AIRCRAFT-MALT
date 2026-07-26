@@ -6,30 +6,33 @@
   <meta name="description" content="Operational view of MLAT aircraft output, receiver coverage, and runtime readiness.">
   <title>MLAT Airspace · Overview</title>
   <link rel="stylesheet" href="/vendor/leaflet.css">
-  <link rel="stylesheet" href="/app-shell.css?v=20260720a">
+  <link rel="stylesheet" href="/app-shell.css?v=20260725b">
 </head>
 <body class="app-body" data-app-page="overview">
-  <div class="app-shell">
-    <aside class="app-sidebar">
+  <div class="app-shell overview-shell">
+    <aside class="app-sidebar overview-sidebar">
       <div class="app-brand"><div class="app-brand-mark">⌁</div><div><strong>MLAT Console</strong><span>Receiver control plane</span></div></div>
-      <nav class="app-nav" aria-label="Primary navigation">
-        <a href="/app/overview.html" data-app-nav="overview"><span>Overview</span></a>
-        <a href="/app/localization.html" data-app-nav="localization"><span>Live map</span></a>
-        <a href="/app/aircraft.html" data-app-nav="aircraft"><span>Aircraft</span></a>
-        <a href="/app/receivers.html" data-app-nav="receivers"><span>Receivers</span></a>
+      <div class="app-sidebar-section">Operate</div>
+      <nav class="app-nav overview-nav-group" aria-label="Operate">
+        <a href="/app/overview.html" data-app-nav="overview"><span>Overview</span><small>Current state</small></a>
+        <a href="/app/localization.html" data-app-nav="localization"><span>Live map</span><small>Track solves</small></a>
+        <a href="/app/aircraft.html" data-app-nav="aircraft"><span>Aircraft</span><small>Inspect traffic</small></a>
+        <a href="/app/receivers.html" data-app-nav="receivers"><span>Receivers</span><small>Check network</small></a>
       </nav>
-      <nav class="app-nav" aria-label="System navigation">
-        <a href="/app/pipeline.html" data-app-nav="pipeline"><span>Pipeline</span></a>
-        <a href="/app/analytics.html" data-app-nav="analytics"><span>Metrics</span></a>
-        <a href="/app/settings.html" data-app-nav="settings"><span>Settings</span></a>
+      <div class="app-sidebar-section">Diagnose</div>
+      <nav class="app-nav overview-nav-group" aria-label="Diagnose">
+        <a href="/app/pipeline.html" data-app-nav="pipeline"><span>Pipeline</span><small>Trace blockers</small></a>
+        <a href="/app/analytics.html" data-app-nav="analytics"><span>Metrics</span><small>Review evidence</small></a>
+        <a href="/app/settings.html" data-app-nav="settings"><span>Settings</span><small>Mode & runtime</small></a>
       </nav>
+      <p class="app-sidebar-note">Keep the top bar focused on page context and shell status; use the sidebar for navigation and drill-down paths.</p>
     </aside>
 
     <main class="app-main overview-main">
-      <header class="app-topbar">
-        <div class="app-title">
-          <h1>Airspace overview</h1>
-          <p>Answer the operator’s first question immediately: what this MLAT system is doing right now, whether the output is trustworthy, and where to inspect next.</p>
+      <header class="app-topbar overview-topbar">
+        <div class="app-title overview-page-title">
+          <h1>MLAT airspace</h1>
+          <p>Operator snapshot of runtime state, tracked traffic, and whether the visible output is ready to act on.</p>
         </div>
         <div class="shell-badges" aria-label="Runtime status">
           <span id="shell-mode-pill" class="status-pill mode-sim">Loading mode</span>
@@ -37,40 +40,35 @@
         </div>
       </header>
 
-      <section id="overview-briefing" class="app-panel overview-briefing-panel" aria-label="Operational briefing"></section>
-
-      <section id="overview-metrics" class="app-metrics" aria-label="Operational status cards">
+      <section id="overview-metrics" class="app-metrics overview-metrics-strip" aria-label="Operational status cards">
         <article class="metric-card"><strong>Loading</strong><span>…</span><small>Preparing overview</small></article>
         <article class="metric-card"><strong>Loading</strong><span>…</span><small>Preparing overview</small></article>
         <article class="metric-card"><strong>Loading</strong><span>…</span><small>Preparing overview</small></article>
         <article class="metric-card"><strong>Loading</strong><span>…</span><small>Preparing overview</small></article>
       </section>
 
-      <section class="overview-layout">
-        <div class="map-workspace overview-map-workspace">
-          <div id="overview-map" class="overview-map" aria-label="Current airspace and receiver map"></div>
-          <div class="map-hud overview-map-hud">
-            <span class="map-hud-title">Receiver → signal → MLAT solve → aircraft position</span>
-            <span id="overview-map-status" class="map-hud-status">Awaiting observations</span>
+      <section class="overview-hero-stage" aria-label="Overview workspace">
+        <section class="overview-layout">
+          <div class="map-workspace overview-map-workspace">
+            <section id="overview-briefing" class="app-panel overview-briefing-panel" aria-label="Operational briefing"></section>
+            <div id="overview-map" class="overview-map" aria-label="Current airspace and receiver map"></div>
+            <div class="map-hud overview-map-hud">
+              <span id="overview-map-status" class="map-hud-status">Awaiting observations</span>
+            </div>
+            <div id="overview-map-story" class="overview-map-story">Loading receiver-to-aircraft relationships.</div>
+            <a class="action-chip overview-map-cta" href="/app/localization.html">Open live map</a>
+            <div id="overview-map-legend" class="overview-map-legend" aria-label="Map legend"></div>
+            <div id="overview-selected-aircraft" class="overview-selected-aircraft" aria-label="Selected aircraft summary"></div>
           </div>
-          <div id="overview-map-story" class="overview-map-story">Loading receiver-to-aircraft relationships.</div>
-          <div id="overview-map-legend" class="overview-map-legend" aria-label="Map legend"></div>
-          <div id="overview-selected-aircraft" class="overview-selected-aircraft" aria-label="Selected aircraft summary"></div>
-        </div>
-        <aside id="overview-ops-rail" class="ops-rail overview-ops-rail" aria-label="Operational summary rail"></aside>
+          <aside id="overview-ops-rail" class="ops-rail overview-ops-rail" aria-label="Operational summary rail"></aside>
+        </section>
       </section>
 
-      <section class="app-panel overview-actions-panel" aria-label="Operator drill-downs">
-        <div class="panel-head">
-          <div>
-            <h2>Where should the operator look next?</h2>
-            <p>Each path answers a specific operational question without leaving the current control-plane story.</p>
-          </div>
-        </div>
+      <section class="app-panel overview-actions-panel" aria-label="Secondary drill-downs">
         <div class="overview-actions-body">
-          <div id="overview-next-step" class="overview-next-step">
-            <strong>Next operator question</strong>
-            <span>Loading next action</span>
+          <div class="overview-secondary-copy">
+            <strong>Secondary routes</strong>
+            <span>Primary actions live beside the state that triggered them. Keep this strip for low-priority navigation only.</span>
           </div>
           <div id="overview-drilldowns" class="ops-rail-actions overview-drilldowns"></div>
         </div>
@@ -80,6 +78,6 @@
 
   <script src="/vendor/leaflet.js"></script>
   <script src="/app-shell.js?v=20260717a"></script>
-  <script src="/app-overview.js?v=20260720a"></script>
+  <script src="/app-overview.js?v=20260725b"></script>
 </body>
 </html>
