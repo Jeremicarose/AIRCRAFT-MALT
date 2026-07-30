@@ -99,6 +99,16 @@ def verify_bundle(bundle: Path, *, live: bool = False) -> dict[str, Any]:
     if not manifest_path.is_file():
         return {"pass": False, "checks": verification.checks}
     manifest = load_json(manifest_path)
+    verification.require(
+        "manifest status complete",
+        manifest.get("status") == "complete",
+        str(manifest.get("status")),
+    )
+    verification.require(
+        "private keys excluded",
+        manifest.get("private_keys_included") is False,
+        str(manifest.get("private_keys_included")),
+    )
 
     binary_path = bundle / "contract" / "receiver-registry"
     verification.require("contract binary exists", binary_path.is_file(), str(binary_path))
@@ -112,6 +122,27 @@ def verify_bundle(bundle: Path, *, live: bool = False) -> dict[str, Any]:
             "contract CKB data hash",
             ckb_hash(binary_path) == manifest["contract"]["binary_ckb_data_hash"],
             manifest["contract"]["binary_ckb_data_hash"],
+        )
+
+    local_ci_path = bundle / "ci" / "local.json"
+    github_ci_path = bundle / "ci" / "github.json"
+    verification.require("local CI evidence exists", local_ci_path.is_file(), str(local_ci_path))
+    verification.require("GitHub CI evidence exists", github_ci_path.is_file(), str(github_ci_path))
+    if local_ci_path.is_file():
+        local_ci = load_json(local_ci_path)
+        verification.require("local CI passed", local_ci.get("pass") is True, str(local_ci.get("pass")))
+    if github_ci_path.is_file():
+        github_ci = load_json(github_ci_path)
+        verification.require(
+            "GitHub CI passed",
+            github_ci.get("status") == "completed" and github_ci.get("conclusion") == "success",
+            f"{github_ci.get('status')}/{github_ci.get('conclusion')}",
+        )
+        verification.require(
+            "GitHub artifact matches deployment binary",
+            github_ci.get("artifact", {}).get("receiver_registry_sha256")
+            == manifest["contract"]["binary_sha256"],
+            str(github_ci.get("artifact", {}).get("receiver_registry_sha256")),
         )
 
     accepted = manifest["accepted_transactions"]
@@ -133,6 +164,15 @@ def verify_bundle(bundle: Path, *, live: bool = False) -> dict[str, Any]:
         )
 
     if all(stage in saved for stage in LIFECYCLE_STAGES):
+        create_parent = first_input_out_point(saved["create"])
+        expected_funding = manifest["lifecycle_funding"]["out_point"]
+        verification.require(
+            "creation spends declared lifecycle funding",
+            create_parent.get("tx_hash") == expected_funding["tx_hash"]
+            and int(create_parent.get("index", "0x0"), 0)
+            == int(expected_funding["index"], 0),
+            str(create_parent),
+        )
         expected_parents = {
             "update": accepted["create"],
             "transfer": accepted["update"],
@@ -206,8 +246,19 @@ def verify_bundle(bundle: Path, *, live: bool = False) -> dict[str, Any]:
     verification.require("indexer discovery snapshots", len(discovery_files) >= 4, str(len(discovery_files)))
     verification.require("adapter discovery snapshots", len(adapter_files) >= 4, str(len(adapter_files)))
 
-    api_files = list((bundle / "api").glob("*.json"))
+    api_files = {path.stem.removesuffix("-receivers"): path for path in (bundle / "api").glob("*.json")}
     verification.require("API responses captured", len(api_files) >= 4, str(len(api_files)))
+    for stage, expected_count in (("create", 1), ("update", 1), ("transfer", 1), ("revoke", 0)):
+        path = api_files.get(stage)
+        if path is None:
+            continue
+        capture = load_json(path)
+        body = capture.get("body") or {}
+        verification.require(
+            f"{stage} API response",
+            capture.get("status_code") == 200 and body.get("count") == expected_count,
+            f"status={capture.get('status_code')} count={body.get('count')}",
+        )
 
     if live:
         for stage, tx_hash in accepted.items():

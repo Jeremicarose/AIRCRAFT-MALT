@@ -58,7 +58,7 @@ The lifecycle suite executes real `secp256k1_blake160_sighash_all` lock scripts
 inside CKB-VM. It does not use Always Success.
 
 The canonical deployment binary is the exact Ubuntu artifact produced and
-tested by GitHub Actions run `30506489518`. The macOS build is retained as
+tested by GitHub Actions run `30507336197`. The macOS build is retained as
 `contract/receiver-registry-local-darwin`; it is semantically test-equivalent
 but not byte-reproducible because the current Rust/CKB build embeds
 platform-specific paths and toolchain details. It is not deployed.

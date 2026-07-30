@@ -67,6 +67,7 @@ def build_bundle(tmp_path):
     write_json(
         bundle / "manifest.json",
         {
+            "status": "complete",
             "contract": {
                 "binary_sha256": hashlib.sha256(binary.read_bytes()).hexdigest(),
                 "binary_ckb_data_hash": "0x" + ckb_digest,
@@ -77,9 +78,24 @@ def build_bundle(tmp_path):
                 "owner_a": {"lock_arg": owner_a},
                 "owner_b": {"lock_arg": owner_b},
             },
+            "lifecycle_funding": {
+                "out_point": {"tx_hash": hashes["deployment"], "index": "0x0"}
+            },
             "accepted_transactions": hashes,
             "rejected_attacks": [],
             "rpc_url": "https://testnet.invalid/rpc",
+            "private_keys_included": False,
+        },
+    )
+    write_json(bundle / "ci" / "local.json", {"pass": True})
+    write_json(
+        bundle / "ci" / "github.json",
+        {
+            "status": "completed",
+            "conclusion": "success",
+            "artifact": {
+                "receiver_registry_sha256": hashlib.sha256(binary.read_bytes()).hexdigest()
+            },
         },
     )
     write_json(
@@ -99,8 +115,11 @@ def build_bundle(tmp_path):
         )
         write_json(bundle / "discovery" / f"{stage}-indexer.json", {})
         write_json(bundle / "discovery" / f"{stage}-adapter.json", [])
-    for stage in ("create", "update", "transfer", "revoke"):
-        write_json(bundle / "api" / f"{stage}-receivers.json", {})
+    for stage, count in (("create", 1), ("update", 1), ("transfer", 1), ("revoke", 0)):
+        write_json(
+            bundle / "api" / f"{stage}-receivers.json",
+            {"status_code": 200, "body": {"count": count}},
+        )
     return bundle
 
 

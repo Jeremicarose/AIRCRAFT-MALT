@@ -12,6 +12,7 @@ import hashlib
 import json
 from pathlib import Path
 import re
+import shutil
 import stat
 import subprocess
 import sys
@@ -502,6 +503,14 @@ def main() -> None:
     if owner_a["lock_arg"] != deployment_lock_arg:
         raise SystemExit("Owner A key does not match the deployment lifecycle lock")
 
+    deployment_evidence_dir = evidence_dir / "deployment"
+    deployment_evidence_dir.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(deployment_info_path, deployment_evidence_dir / "deployment-info.json")
+    for artifact_name in ("deployment.toml", "lifecycle-funding.bin"):
+        source = deployment_info_path.parent / artifact_name
+        if source.is_file():
+            shutil.copy2(source, deployment_evidence_dir / artifact_name)
+
     committed_deployment = wait_committed(
         args.rpc_url, deployment_tx_hash, args.confirmation_timeout
     )
@@ -775,18 +784,40 @@ def main() -> None:
             expect_accept=False,
         )
 
+    tooling_commit = subprocess.run(
+        ["git", "rev-parse", "HEAD"],
+        cwd=ROOT,
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout.strip()
+    github_ci_path = evidence_dir / "ci" / "github.json"
+    github_ci = json.loads(github_ci_path.read_text()) if github_ci_path.is_file() else None
     manifest = {
         "schema_version": 1,
+        "status": "complete",
         "generated_at": utc_now(),
         "network": "CKB testnet",
         "rpc_url": args.rpc_url,
         "indexer_url": args.indexer_url,
+        "source": {
+            "repository": "https://github.com/Jeremicarose/AIRCRAFT-MALT",
+            "branch": "registry-v2-testnet-evidence",
+            "contract_source_commit": "61ab011de58397cb8d6ca3cecb5c659c69e2fc8c",
+            "lifecycle_tooling_commit": tooling_commit,
+        },
         "contract": {
             "deployment_tx_hash": deployment_tx_hash,
             "out_point": {"tx_hash": deployment_tx_hash, "index": hex(contract_index)},
+            "binary_bytes": contract_binary_path.stat().st_size,
             "binary_sha256": sha256(contract_binary_path),
             "binary_ckb_data_hash": contract["data_hash"],
             "type_script_hash_for_registry_code_hash": contract_code_hash,
+        },
+        "lifecycle_funding": {
+            "out_point": {"tx_hash": deployment_tx_hash, "index": hex(funding_index)},
+            "capacity_shannons": funding_capacity,
+            "data_hash": funding["data_hash"],
         },
         "receiver": {
             "identity_id": identity_id,
@@ -810,6 +841,7 @@ def main() -> None:
             "resurrection",
             "tombstone-burn",
         ],
+        "github_ci": github_ci,
         "private_keys_included": False,
     }
     atomic_json(evidence_dir / "manifest.json", manifest)
