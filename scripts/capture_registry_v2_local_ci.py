@@ -8,6 +8,7 @@ from datetime import datetime, timezone
 import hashlib
 import json
 from pathlib import Path
+import platform
 import shutil
 import subprocess
 
@@ -92,7 +93,8 @@ def main() -> None:
 
     if not binary.is_file():
         raise SystemExit(f"Contract binary was not produced: {binary}")
-    public_binary = evidence_dir / "contract" / "receiver-registry"
+    platform_name = platform.system().lower() or "unknown"
+    public_binary = evidence_dir / "contract" / f"receiver-registry-local-{platform_name}"
     public_binary.parent.mkdir(parents=True, exist_ok=True)
     shutil.copy2(binary, public_binary)
     binary_bytes = public_binary.read_bytes()

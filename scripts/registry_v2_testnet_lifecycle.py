@@ -45,11 +45,11 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--deployment-info",
-        default="deploy/registry-v2-testnet-2026-07-30-final/deployment-info.json",
+        default="deploy/registry-v2-testnet-2026-07-30-canonical/deployment-info.json",
     )
     parser.add_argument(
         "--contract-binary",
-        default="contracts/receiver-registry/target/riscv64imac-unknown-none-elf/release/receiver-registry",
+        default="evidence/registry-v2-testnet-2026-07-30-final/contract/receiver-registry",
     )
     parser.add_argument("--owner-a-key", default="/private/tmp/registry-v2-owner-a.key")
     parser.add_argument("--owner-b-key", default="/private/tmp/registry-v2-owner-b.key")

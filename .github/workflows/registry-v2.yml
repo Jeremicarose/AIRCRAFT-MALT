@@ -36,7 +36,7 @@ permissions:
 
 jobs:
   off-chain-registry:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-python@v6
@@ -60,7 +60,7 @@ jobs:
           tests/test_registry_v2_evidence_verifier.py
 
   on-chain-registry:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     env:
       CC_riscv64imac_unknown_none_elf: riscv64-unknown-elf-gcc
       AR_riscv64imac_unknown_none_elf: riscv64-unknown-elf-ar
@@ -77,6 +77,12 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install --no-install-recommends -y gcc-riscv64-unknown-elf
+      - name: Print build toolchain provenance
+        run: |
+          rustc -vV
+          cargo -V
+          riscv64-unknown-elf-gcc --version
+          dpkg-query -W gcc-riscv64-unknown-elf binutils-riscv64-unknown-elf
       - name: Check Rust formatting
         run: cargo fmt -- --check
       - name: Build and execute CKB-VM security tests
