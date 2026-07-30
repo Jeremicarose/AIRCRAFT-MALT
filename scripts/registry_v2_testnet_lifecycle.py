@@ -13,6 +13,7 @@ import json
 from pathlib import Path
 import re
 import shutil
+import ssl
 import stat
 import subprocess
 import sys
@@ -85,7 +86,15 @@ def rpc(url: str, method: str, params: list[Any]) -> Any:
         headers={"Content-Type": "application/json", "User-Agent": "mlat-registry-v2-evidence/1"},
         method="POST",
     )
-    with urllib.request.urlopen(request, timeout=30) as response:
+    ssl_context = None
+    if url.startswith("https://"):
+        try:
+            import certifi
+
+            ssl_context = ssl.create_default_context(cafile=certifi.where())
+        except ImportError:
+            ssl_context = ssl.create_default_context()
+    with urllib.request.urlopen(request, timeout=30, context=ssl_context) as response:
         body = json.loads(response.read().decode())
     if body.get("error") is not None:
         raise RuntimeError(json.dumps(body["error"], sort_keys=True))
