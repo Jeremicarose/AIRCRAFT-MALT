@@ -68,6 +68,8 @@ jobs:
       - uses: actions/checkout@v6
       - name: Install pinned Rust target
         run: rustup show
+      - name: Install Rust formatting component
+        run: rustup component add rustfmt
       - name: Check Rust formatting
         run: cargo fmt -- --check
       - name: Build and execute CKB-VM security tests
