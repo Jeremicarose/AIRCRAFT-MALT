@@ -70,6 +70,11 @@ class StoredReceiver:
     last_seen: float
     capabilities: str
     updated_at: str
+    receiver_label: str = ""
+    registry_sequence: int = 0
+    owner_lock_args: str = ""
+    registry_out_point: str = ""
+    metadata_hash: str = ""
 
 
 @dataclass
@@ -211,6 +216,11 @@ class MLATDatabase:
                 status TEXT NOT NULL,
                 last_seen REAL NOT NULL,
                 capabilities TEXT NOT NULL,
+                receiver_label TEXT NOT NULL DEFAULT '',
+                registry_sequence INTEGER NOT NULL DEFAULT 0,
+                owner_lock_args TEXT NOT NULL DEFAULT '',
+                registry_out_point TEXT NOT NULL DEFAULT '',
+                metadata_hash TEXT NOT NULL DEFAULT '',
                 updated_at TEXT NOT NULL
             )
         """)
@@ -242,6 +252,9 @@ class MLATDatabase:
                 synthetic_feed_mode INTEGER NOT NULL DEFAULT 0,
                 failed_solves INTEGER NOT NULL DEFAULT 0,
                 rejected_groups INTEGER NOT NULL DEFAULT 0,
+                clock_rejected_groups INTEGER NOT NULL DEFAULT 0,
+                clock_synchronized_receivers INTEGER NOT NULL DEFAULT 0,
+                max_clock_uncertainty_ns REAL NOT NULL DEFAULT 0.0,
                 created_at TEXT NOT NULL
             )
         """)
@@ -599,6 +612,9 @@ class MLATDatabase:
         last_signal_age_s: Optional[float] = None,
         last_store_age_s: Optional[float] = None,
         synthetic_feed_mode: bool = False,
+        clock_rejected_groups: int = 0,
+        clock_synchronized_receivers: int = 0,
+        max_clock_uncertainty_ns: float = 0.0,
     ):
         """Store system statistics snapshot"""
         cursor = self.conn.cursor()
@@ -625,6 +641,9 @@ class MLATDatabase:
             "last_signal_age_s": "REAL",
             "last_store_age_s": "REAL",
             "synthetic_feed_mode": "INTEGER NOT NULL DEFAULT 0",
+            "clock_rejected_groups": "INTEGER NOT NULL DEFAULT 0",
+            "clock_synchronized_receivers": "INTEGER NOT NULL DEFAULT 0",
+            "max_clock_uncertainty_ns": "REAL NOT NULL DEFAULT 0.0",
         }
         for column_name, definition in migrations.items():
             if column_name not in columns:
@@ -656,6 +675,9 @@ class MLATDatabase:
             "synthetic_feed_mode": int(synthetic_feed_mode),
             "failed_solves": failed_solves,
             "rejected_groups": rejected_groups,
+            "clock_rejected_groups": clock_rejected_groups,
+            "clock_synchronized_receivers": clock_synchronized_receivers,
+            "max_clock_uncertainty_ns": max_clock_uncertainty_ns,
             "created_at": created_at,
         }
         column_sql = ", ".join(payload)
@@ -676,17 +698,38 @@ class MLATDatabase:
         status: str,
         last_seen: float,
         capabilities: List[str],
+        receiver_label: str = "",
+        registry_sequence: int = 0,
+        owner_lock_args: str = "",
+        registry_out_point: str = "",
+        metadata_hash: str = "",
     ):
         """Insert or update a receiver record."""
         cursor = self.conn.cursor()
         updated_at = datetime.now().isoformat()
         capabilities_json = json.dumps(capabilities)
 
+        columns = {row[1] for row in cursor.execute("PRAGMA table_info(receivers)")}
+        migrations = {
+            "receiver_label": "TEXT NOT NULL DEFAULT ''",
+            "registry_sequence": "INTEGER NOT NULL DEFAULT 0",
+            "owner_lock_args": "TEXT NOT NULL DEFAULT ''",
+            "registry_out_point": "TEXT NOT NULL DEFAULT ''",
+            "metadata_hash": "TEXT NOT NULL DEFAULT ''",
+        }
+        for column_name, definition in migrations.items():
+            if column_name not in columns:
+                cursor.execute(
+                    f"ALTER TABLE receivers ADD COLUMN {column_name} {definition}"
+                )
+
         cursor.execute("""
             INSERT INTO receivers (
                 receiver_id, latitude, longitude, altitude,
-                status, last_seen, capabilities, updated_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                status, last_seen, capabilities, receiver_label,
+                registry_sequence, owner_lock_args, registry_out_point,
+                metadata_hash, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(receiver_id) DO UPDATE SET
                 latitude = excluded.latitude,
                 longitude = excluded.longitude,
@@ -694,6 +737,11 @@ class MLATDatabase:
                 status = excluded.status,
                 last_seen = excluded.last_seen,
                 capabilities = excluded.capabilities,
+                receiver_label = excluded.receiver_label,
+                registry_sequence = excluded.registry_sequence,
+                owner_lock_args = excluded.owner_lock_args,
+                registry_out_point = excluded.registry_out_point,
+                metadata_hash = excluded.metadata_hash,
                 updated_at = excluded.updated_at
         """, (
             receiver_id,
@@ -703,6 +751,11 @@ class MLATDatabase:
             status,
             last_seen,
             capabilities_json,
+            receiver_label,
+            registry_sequence,
+            owner_lock_args,
+            registry_out_point,
+            metadata_hash,
             updated_at,
         ))
 
@@ -727,6 +780,11 @@ class MLATDatabase:
                 last_seen=row["last_seen"],
                 capabilities=row["capabilities"],
                 updated_at=row["updated_at"],
+                receiver_label=row["receiver_label"] if "receiver_label" in row.keys() else "",
+                registry_sequence=row["registry_sequence"] if "registry_sequence" in row.keys() else 0,
+                owner_lock_args=row["owner_lock_args"] if "owner_lock_args" in row.keys() else "",
+                registry_out_point=row["registry_out_point"] if "registry_out_point" in row.keys() else "",
+                metadata_hash=row["metadata_hash"] if "metadata_hash" in row.keys() else "",
             )
             for row in rows
         ]

@@ -1,0 +1,105 @@
+{
+  "commands": [
+    {
+      "command": [
+        "cargo",
+        "fmt",
+        "--",
+        "--check"
+      ],
+      "name": "rust-format",
+      "pass": true,
+      "returncode": 0,
+      "stderr": "",
+      "stdout": "",
+      "working_directory": "contracts/receiver-registry"
+    },
+    {
+      "command": [
+        "make",
+        "test"
+      ],
+      "name": "rust-unit-and-ckb-vm",
+      "pass": true,
+      "returncode": 0,
+      "stderr": "    Finished `release` profile [optimized] target(s) in 0.24s\n    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.46s\n     Running unittests src/lib.rs (target/debug/deps/receiver_registry-fd443551d08c3c53)\n     Running tests/lifecycle.rs (target/debug/deps/lifecycle-0f93e4326fa90568)\n",
+      "stdout": "cargo build --locked --release --target riscv64imac-unknown-none-elf --features contract-bin\ncargo test --locked --lib --test lifecycle\n\nrunning 4 tests\ntest record::tests::validates_creation_and_successor ... ok\ntest record::tests::rejects_identity_label_change_and_sequence_jump ... ok\ntest record::tests::revocation_is_terminal ... ok\ntest record::tests::rejects_duplicate_capabilities ... ok\n\ntest result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n\nrunning 10 tests\ntest type_id_matches_off_chain_tooling_vector ... ok\ntest duplicate_registry_outputs_fail ... ok\ntest sequence_jump_fails ... ok\ntest receiver_label_change_fails ... ok\ntest revoked_identity_cannot_be_resurrected ... ok\ntest creation_rejects_forged_identity ... ok\ntest valid_update_and_owner_transfer_pass ... ok\ntest valid_creation_uses_type_id_identity ... ok\ntest wrong_owner_signature_cannot_update ... ok\ntest burn_fails_and_tombstone_revocation_passes ... ok\n\ntest result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.18s\n\n",
+      "working_directory": "contracts/receiver-registry"
+    },
+    {
+      "command": [
+        "make",
+        "check"
+      ],
+      "name": "rust-riscv-check",
+      "pass": true,
+      "returncode": 0,
+      "stderr": "    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.13s\n",
+      "stdout": "cargo check --locked --target riscv64imac-unknown-none-elf --features contract-bin --bin receiver-registry\n",
+      "working_directory": "contracts/receiver-registry"
+    },
+    {
+      "command": [
+        "python3",
+        "-m",
+        "pytest",
+        "-q",
+        "tests/test_ckb_registry.py",
+        "tests/test_ckb_client.py",
+        "tests/test_contract_layout.py",
+        "tests/test_receiver_record_generator.py",
+        "tests/test_receiver_registration_template.py",
+        "tests/test_receiver_registration_commands.py",
+        "tests/test_apply_receiver_type_script.py",
+        "tests/test_deploy_helpers.py",
+        "tests/test_registry_v2_lifecycle_tool.py",
+        "tests/test_registry_v2_evidence_verifier.py"
+      ],
+      "name": "python-registry",
+      "pass": true,
+      "returncode": 0,
+      "stderr": "",
+      "stdout": "............................                                             [100%]\n28 passed in 2.02s\n",
+      "working_directory": "."
+    },
+    {
+      "command": [
+        "python3",
+        "-m",
+        "pytest",
+        "-q"
+      ],
+      "name": "python-full-suite",
+      "pass": true,
+      "returncode": 0,
+      "stderr": "",
+      "stdout": "........................................................................ [ 70%]\n..............................                                           [100%]\n102 passed in 3.67s\n",
+      "working_directory": "."
+    },
+    {
+      "command": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "name": "git-diff-check",
+      "pass": true,
+      "returncode": 0,
+      "stderr": "",
+      "stdout": "",
+      "working_directory": "."
+    }
+  ],
+  "contract_binary": {
+    "bytes": 66576,
+    "ckb_data_hash": "0xa6ee753e15c2cb99ba06dd4f41dd3bedc0990cb4b56ae8fcce451bf3badfe709",
+    "path": "evidence/registry-v2-testnet-2026-07-30-final/contract/receiver-registry",
+    "sha256": "e461d039901167a821bf22f9bb9e85260999407c77a6083ad1066d1d216433d6"
+  },
+  "contract_source_clean": true,
+  "contract_source_status": "",
+  "generated_at": "2026-07-30T00:42:57.971954Z",
+  "pass": true,
+  "schema_version": 1,
+  "source_commit": "61ab011de58397cb8d6ca3cecb5c659c69e2fc8c"
+}

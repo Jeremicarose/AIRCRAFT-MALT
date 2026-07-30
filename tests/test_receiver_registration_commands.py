@@ -42,6 +42,8 @@ def test_print_receiver_registration_commands_selects_plain_funding_cell(tmp_pat
             "ckt1testaddress",
             "--template-file",
             str(template),
+            "--contract-tx-hash",
+            "0x" + "cc" * 32,
         ],
         check=True,
         capture_output=True,

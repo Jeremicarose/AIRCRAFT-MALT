@@ -35,6 +35,11 @@ def parse_args() -> argparse.Namespace:
         help="Receiver registry output capacity in CKB",
     )
     parser.add_argument("--limit", default="5")
+    parser.add_argument(
+        "--contract-tx-hash",
+        required=True,
+        help="Registry V2 contract deployment transaction hash",
+    )
     return parser.parse_args()
 
 
@@ -105,10 +110,11 @@ def main() -> None:
         f"--tx-file {args.tx_file}".format(rpc=args.rpc_url)
     )
     print()
-    print("4. Apply the receiver-registry type script to the tx file:")
+    print("4. Derive the immutable Registry V2 Type ID from that first input and apply the type script:")
     print(
         "   python3 scripts/apply_receiver_type_script.py "
-        f"--tx-file {args.tx_file} --template-file {template_path}"
+        f"--tx-file {args.tx_file} --template-file {template_path} "
+        f"--contract-tx-hash {args.contract_tx_hash}"
     )
     print()
     print("5. Inspect the transaction and calculate a change output:")

@@ -39,7 +39,7 @@ def test_update_env_type_hash(tmp_path):
             sys.executable,
             "scripts/update_env_type_hash.py",
             "--type-hash",
-            "0xdeadbeef",
+            "0x" + "dd" * 32,
             "--env-file",
             str(env_file),
             "--disable-simulation",
@@ -48,5 +48,5 @@ def test_update_env_type_hash(tmp_path):
     )
 
     text = env_file.read_text()
-    assert "RECEIVER_REGISTRY_TYPE_HASH=0xdeadbeef" in text
+    assert "RECEIVER_REGISTRY_TYPE_HASH=" + "0x" + "dd" * 32 in text
     assert "SIMULATE_IF_UNAVAILABLE=false" in text

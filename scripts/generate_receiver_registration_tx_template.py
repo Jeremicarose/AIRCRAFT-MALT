@@ -7,8 +7,18 @@ or integration with ckb-cli / custom tooling.
 from __future__ import annotations
 
 import argparse
+from decimal import Decimal, InvalidOperation
 import json
 from pathlib import Path
+import sys
+
+
+ROOT = Path(__file__).resolve().parents[1]
+SRC = ROOT / "src"
+if str(SRC) not in sys.path:
+    sys.path.insert(0, str(SRC))
+
+from network.receiver_registry import normalize_identity_id
 
 
 def parse_args() -> argparse.Namespace:
@@ -16,18 +26,27 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--lock-arg", required=True, help="Owner lock arg for the receiver cell")
     parser.add_argument("--type-hash", required=True, help="Deployed receiver-registry type hash")
     parser.add_argument("--data-hex-file", default="deploy/receiver-registry-record.hex")
-    parser.add_argument("--capacity", default="100", help="Cell capacity in CKB")
+    parser.add_argument("--capacity", default="1000", help="Cell capacity in CKB")
     parser.add_argument("--output", default="deploy/receiver-registration-tx-template.json")
     return parser.parse_args()
 
 
 def ckb_to_shannons(value: str) -> int:
-    whole = float(value)
-    return int(whole * 100_000_000)
+    try:
+        capacity = Decimal(value)
+    except InvalidOperation as exc:
+        raise ValueError("capacity must be a decimal CKB amount") from exc
+    if capacity <= 0:
+        raise ValueError("capacity must be positive")
+    shannons = capacity * 100_000_000
+    if shannons != shannons.to_integral_value():
+        raise ValueError("capacity supports at most 8 decimal places")
+    return int(shannons)
 
 
 def main() -> None:
     args = parse_args()
+    contract_code_hash = normalize_identity_id(args.type_hash)
     data_hex = Path(args.data_hex_file).read_text().strip()
     output_path = Path(args.output)
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -46,7 +65,7 @@ def main() -> None:
                     "args": args.lock_arg,
                 },
                 "type": {
-                    "code_hash": args.type_hash,
+                    "code_hash": contract_code_hash,
                     "hash_type": "type",
                     "args": "0x",
                 },
@@ -54,6 +73,11 @@ def main() -> None:
         ],
         "outputs_data": [data_hex],
         "witnesses": [],
+        "registry_v2": {
+            "identity_rule": "blake2b(first_input_molecule || output_index_le_u64)",
+            "type_args_pending": True,
+            "next_step": "run scripts/apply_receiver_type_script.py after adding the funding input",
+        },
     }
 
     output_path.write_text(json.dumps(tx_template, indent=2) + "\n")

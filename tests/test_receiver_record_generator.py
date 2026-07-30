@@ -24,6 +24,10 @@ def test_generate_receiver_registry_record(tmp_path):
             "mode-s",
             "--capability",
             "mlat",
+            "--sequence",
+            "0",
+            "--updated-at",
+            "1700000000",
             "--stream-protocol",
             "websocket-json",
             "--stream-format",
@@ -41,5 +45,8 @@ def test_generate_receiver_registry_record(tmp_path):
 
     assert record["receiver_id"] == "RECV_NYC_001"
     assert "mode-s" in record["capabilities"]
-    assert "metadata" not in record
+    assert record["schema_version"] == 2
+    assert record["sequence"] == 0
+    assert record["updated_at"] == 1700000000
+    assert "metadata_hash" not in record
     assert payload_hex.startswith("0x")

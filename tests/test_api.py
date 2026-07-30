@@ -111,6 +111,10 @@ def test_api_health_and_data_endpoints(monkeypatch, tmp_path):
     assert receivers.status_code == 200
     assert positions.status_code == 200
     assert receivers.get_json()["count"] == 1
+    receiver_payload = receivers.get_json()["receivers"][0]
+    assert receiver_payload["identity_id"] == "RECV_NYC_001"
+    assert receiver_payload["receiver_label"] == "RECV_NYC_001"
+    assert receiver_payload["registry"]["sequence"] == 0
     assert positions.get_json()["count"] == 1
 
     health_payload = health.get_json()
@@ -213,6 +217,9 @@ def test_api_reads_processor_telemetry_from_shared_database(monkeypatch, tmp_pat
             synthetic_feed_mode=False,
             failed_solves=0,
             rejected_groups=1,
+            clock_rejected_groups=2,
+            clock_synchronized_receivers=4,
+            max_clock_uncertainty_ns=100.0,
         )
     client = app.test_client()
 
@@ -227,6 +234,8 @@ def test_api_reads_processor_telemetry_from_shared_database(monkeypatch, tmp_pat
     assert health["runtime"]["process_rss_mb"] == 170.0
     assert readiness["dimensions"]["reliability"]["active_receivers"] == 4
     assert readiness["dimensions"]["reliability"]["signal_fresh"] is True
+    assert readiness["dimensions"]["clock"]["ready"] is True
+    assert readiness["dimensions"]["clock"]["rejected_groups"] == 2
     assert mode["runtime_status"] == "active"
     assert mode["mode"] == "live"
     assert mode["registry_discovery_live"] is True
@@ -239,7 +248,7 @@ def test_public_pipeline_and_metrics_evidence_endpoints(monkeypatch, tmp_path):
         tmp_path,
         FOURDSKY_TRANSPORT="command-jsonl",
         SIMULATE_IF_UNAVAILABLE="false",
-        RECEIVER_REGISTRY_TYPE_HASH="0x1234",
+        RECEIVER_REGISTRY_TYPE_HASH="0x" + "12" * 32,
     )
     app = module.create_app()
     _seed_api_db(module, app)
@@ -264,6 +273,8 @@ def test_public_pipeline_and_metrics_evidence_endpoints(monkeypatch, tmp_path):
             synthetic_feed_mode=False,
             failed_solves=1,
             rejected_groups=2,
+            clock_synchronized_receivers=4,
+            max_clock_uncertainty_ns=100.0,
         )
     client = app.test_client()
 
@@ -278,6 +289,7 @@ def test_public_pipeline_and_metrics_evidence_endpoints(monkeypatch, tmp_path):
     assert pipeline_payload["stages"][0]["id"] == "registry"
     assert pipeline_payload["stages"][-1]["id"] == "dashboard"
     assert any(stage["id"] == "ingest" for stage in pipeline_payload["stages"])
+    assert any(stage["id"] == "clock" for stage in pipeline_payload["stages"])
 
     assert metrics.status_code == 200
     metrics_payload = metrics.get_json()

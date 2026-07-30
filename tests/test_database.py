@@ -15,11 +15,19 @@ def test_database_stores_receivers_and_positions(tmp_path):
         status="online",
         last_seen=1_700_000_000.0,
         capabilities=["mode-s", "mlat"],
+        receiver_label="New York receiver",
+        registry_sequence=4,
+        owner_lock_args="0xowner",
+        registry_out_point='{"index":"0x0","tx_hash":"0xtx"}',
+        metadata_hash="0x" + "aa" * 32,
     )
 
     receivers = db.get_receivers()
     assert len(receivers) == 1
     assert receivers[0].receiver_id == "RECV_NYC_001"
+    assert receivers[0].receiver_label == "New York receiver"
+    assert receivers[0].registry_sequence == 4
+    assert receivers[0].owner_lock_args == "0xowner"
 
     assert db.touch_receiver("RECV_NYC_001", last_seen=1_700_000_050.0)
     assert db.get_receivers()[0].last_seen == 1_700_000_050.0
@@ -232,6 +240,9 @@ def test_database_returns_latest_processor_statistics(tmp_path):
         synthetic_feed_mode=False,
         failed_solves=1,
         rejected_groups=2,
+        clock_rejected_groups=3,
+        clock_synchronized_receivers=4,
+        max_clock_uncertainty_ns=75.0,
     )
 
     latest = db.get_latest_statistics()
@@ -247,5 +258,8 @@ def test_database_returns_latest_processor_statistics(tmp_path):
     assert latest["successful_solves"] == 1
     assert latest["synthetic_feed_mode"] == 0
     assert latest["failed_solves"] == 1
+    assert latest["clock_rejected_groups"] == 3
+    assert latest["clock_synchronized_receivers"] == 4
+    assert latest["max_clock_uncertainty_ns"] == 75.0
     assert len(db.get_statistics_history(hours=1)) == 1
     db.close()

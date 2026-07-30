@@ -103,7 +103,7 @@ class CKBReceiverNetworkClient:
         logger.info(f"✅ Selected {len(selected)} receivers for MLAT")
 
         for receiver in selected:
-            self.active_receivers[receiver.receiver_id] = receiver
+            self.active_receivers[receiver.canonical_id] = receiver
 
         self._augment_receivers_for_simulation()
 
@@ -238,9 +238,9 @@ class CKBReceiverNetworkClient:
         simulated_receivers = self.peer_discovery._get_simulated_receivers()
         added = 0
         for receiver in simulated_receivers:
-            if receiver.receiver_id in self.active_receivers:
+            if receiver.canonical_id in self.active_receivers:
                 continue
-            self.active_receivers[receiver.receiver_id] = receiver
+            self.active_receivers[receiver.canonical_id] = receiver
             added += 1
             if len(self.active_receivers) >= min_receivers:
                 break

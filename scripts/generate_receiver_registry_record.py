@@ -16,7 +16,7 @@ SRC = ROOT / "src"
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
-from network.ckb_discovery import ReceiverRegistryRecord
+from network.receiver_registry import ReceiverRegistryRecord
 
 
 def parse_args() -> argparse.Namespace:
@@ -30,8 +30,9 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--stream-endpoint")
     parser.add_argument("--stream-protocol")
     parser.add_argument("--stream-format")
-    parser.add_argument("--metadata-json")
-    parser.add_argument("--timestamp", type=float, default=None)
+    parser.add_argument("--metadata-hash")
+    parser.add_argument("--sequence", type=int, default=0)
+    parser.add_argument("--updated-at", type=int, default=None)
     parser.add_argument("--output-json", default="deploy/receiver-registry-record.json")
     parser.add_argument("--output-hex", default="deploy/receiver-registry-record.hex")
     return parser.parse_args()
@@ -39,7 +40,6 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> None:
     args = parse_args()
-    metadata = json.loads(args.metadata_json) if args.metadata_json else None
     record = ReceiverRegistryRecord(
         receiver_id=args.receiver_id,
         latitude=args.latitude,
@@ -47,13 +47,17 @@ def main() -> None:
         altitude=args.altitude,
         status=args.status,
         capabilities=args.capabilities,
-        timestamp=args.timestamp if args.timestamp is not None else time.time(),
+        sequence=args.sequence,
+        updated_at=args.updated_at if args.updated_at is not None else int(time.time()),
         stream_endpoint=args.stream_endpoint,
         stream_protocol=args.stream_protocol,
         stream_format=args.stream_format,
-        metadata=metadata,
+        metadata_hash=args.metadata_hash,
     )
-    record.validate()
+    if args.sequence == 0:
+        record.validate_creation()
+    else:
+        record.validate()
 
     json_path = Path(args.output_json)
     hex_path = Path(args.output_hex)

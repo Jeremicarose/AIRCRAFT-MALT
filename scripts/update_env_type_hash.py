@@ -7,6 +7,15 @@ from __future__ import annotations
 
 import argparse
 from pathlib import Path
+import sys
+
+
+ROOT = Path(__file__).resolve().parents[1]
+SRC = ROOT / "src"
+if str(SRC) not in sys.path:
+    sys.path.insert(0, str(SRC))
+
+from network.receiver_registry import normalize_identity_id
 
 
 def parse_args() -> argparse.Namespace:
@@ -36,12 +45,13 @@ def replace_line(text: str, key: str, value: str) -> str:
 
 def main() -> None:
     args = parse_args()
+    type_hash = normalize_identity_id(args.type_hash)
     env_path = Path(args.env_file)
     if not env_path.exists():
         raise SystemExit(f"Env file not found: {env_path}")
 
     text = env_path.read_text()
-    text = replace_line(text, "RECEIVER_REGISTRY_TYPE_HASH", args.type_hash)
+    text = replace_line(text, "RECEIVER_REGISTRY_TYPE_HASH", type_hash)
     if args.disable_simulation:
         text = replace_line(text, "SIMULATE_IF_UNAVAILABLE", "false")
     env_path.write_text(text)

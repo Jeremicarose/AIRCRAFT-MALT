@@ -7,7 +7,7 @@ This module uses an app-factory pattern and request-scoped database access.
 from __future__ import annotations
 
 from collections import deque
-from flask import Blueprint, Flask, current_app, g, jsonify, make_response, request, send_from_directory
+from flask import Blueprint, Flask, current_app, g, jsonify, make_response, redirect, request, send_from_directory
 import json
 import logging
 import os
@@ -38,6 +38,7 @@ except ImportError:
     SocketIO = None
 
 from database.mlat_db import MLATDatabase, StoredPosition
+from network.receiver_registry import normalize_identity_id
 import production_main
 
 
@@ -62,7 +63,7 @@ def _split_csv(name: str, default: str = "") -> List[str]:
     return [item.strip() for item in value.split(",") if item.strip()]
 
 
-DEFAULT_ALLOWED_ORIGINS = "http://localhost:8080,http://127.0.0.1:8080"
+DEFAULT_ALLOWED_ORIGINS = "http://localhost:3000,http://127.0.0.1:3000,http://localhost:8080,http://127.0.0.1:8080"
 _broadcast_lock = threading.Lock()
 _api_latencies_ms = deque(maxlen=1000)
 
@@ -114,6 +115,32 @@ def _render_minified_html(filename: str):
     return response
 
 
+def _frontend_app_dir() -> Optional[Path]:
+    configured = os.getenv("NEXT_FRONTEND_DIR")
+    candidates = []
+    if configured:
+        candidates.append(Path(configured))
+    candidates.extend([
+        Path(os.getcwd()) / "frontend",
+        Path(__file__).resolve().parents[2] / "frontend",
+    ])
+    for candidate in candidates:
+        app_dir = candidate / "app"
+        if app_dir.exists():
+            return candidate
+    return None
+
+
+def _frontend_base_url() -> str:
+    return (os.getenv("NEXT_FRONTEND_URL") or "http://127.0.0.1:3000").rstrip("/")
+
+
+def _redirect_to_frontend_path(path: str = ""):
+    normalized = path.lstrip("/")
+    destination = f"{_frontend_base_url()}/{normalized}" if normalized else f"{_frontend_base_url()}/"
+    return redirect(destination, code=302)
+
+
 def load_app_config() -> Dict[str, object]:
     """Load API configuration from environment."""
     settings = load_runtime_settings(max_receivers_default=10)
@@ -130,6 +157,7 @@ def load_app_config() -> Dict[str, object]:
         if cwd_visualization_dir.exists()
         else package_visualization_dir
     )
+    frontend_dir = _frontend_app_dir()
     return {
         "DATABASE_PATH": os.getenv("DATABASE_PATH", "data/mlat_data.db"),
         "BENCHMARK_REPORT_PATH": os.getenv("BENCHMARK_REPORT_PATH", "benchmark/latest.json"),
@@ -166,6 +194,8 @@ def load_app_config() -> Dict[str, object]:
             "label": demo_label,
         },
         "VISUALIZATION_DIR": str(visualization_dir),
+        "NEXT_FRONTEND_DIR": str(frontend_dir) if frontend_dir else None,
+        "NEXT_FRONTEND_URL": _frontend_base_url(),
     }
 
 
@@ -376,6 +406,13 @@ def get_runtime_state(db: Optional[MLATDatabase] = None) -> Optional[Dict[str, o
             "successful_solves": int(latest_stats.get("successful_solves", 0)),
             "failed_solves": int(latest_stats.get("failed_solves", 0)),
             "rejected_groups": int(latest_stats.get("rejected_groups", 0)),
+            "clock_rejected_groups": int(latest_stats.get("clock_rejected_groups", 0)),
+            "clock_synchronized_receivers": int(
+                latest_stats.get("clock_synchronized_receivers", 0)
+            ),
+            "max_clock_uncertainty_ns": float(
+                latest_stats.get("max_clock_uncertainty_ns", 0.0)
+            ),
             "active_receivers": int(latest_stats.get("active_receivers", 0)),
             "signal_fresh": signal_fresh,
             "strict_production_mode": bool(current_app.config.get("STRICT_PRODUCTION_MODE")),
@@ -413,6 +450,14 @@ def record_api_latency(started_at: float):
 
 def _is_synthetic_solver_method(method: Optional[str]) -> bool:
     return method in {"simulated_replay", "simulation", "unknown"}
+
+
+def _valid_registry_code_hash(value: object) -> bool:
+    try:
+        normalize_identity_id(str(value or ""))
+    except ValueError:
+        return False
+    return True
 
 
 
@@ -724,13 +769,23 @@ def readiness_check():
         1 for position in recent_positions
         if _is_synthetic_solver_method(position.solver_method)
     )
-    benchmarkable_output = position_count > 0 and simulated_positions == 0
+    synthetic_feed = bool(runtime_state.get(
+        "synthetic_feed_mode",
+        current_app.config.get("SIMULATION_MODE", False),
+    ))
+    benchmarkable_output = (
+        position_count > 0 and simulated_positions == 0 and not synthetic_feed
+    )
     max_last_store_age = runtime_state.get("last_store_age_s")
     if max_last_store_age is None and recent_positions:
         max_last_store_age = max(0.0, time.time() - recent_positions[0].timestamp)
     signal_fresh = bool(runtime_state.get("signal_fresh"))
     failed_solves = int(runtime_state.get("failed_solves", 0))
     rejected_groups = int(runtime_state.get("rejected_groups", 0))
+    clock_rejected_groups = int(runtime_state.get("clock_rejected_groups", 0))
+    clock_synchronized_receivers = int(
+        runtime_state.get("clock_synchronized_receivers", 0)
+    )
     active_receivers = int(runtime_state.get(
         "active_receivers",
         len([row for row in receiver_rows if row.status == "online"]),
@@ -739,12 +794,20 @@ def readiness_check():
     quality_ready = position_count > 0 and avg_quality_score >= 0.65 and avg_receiver_count >= 4
     freshness_ready = max_last_store_age is not None and max_last_store_age <= 30
     reliability_ready = signal_fresh and active_receivers >= 4 and failed_solves == 0
+    clock_ready = clock_synchronized_receivers >= 4
+    evidence_ready = benchmarkable_output and clock_ready
     packaging_ready = True
     benchmark_report, benchmark_status = _load_benchmark_report()
 
     return jsonify({
         "generated_at": datetime.now().isoformat(),
-        "ready": quality_ready and freshness_ready and reliability_ready and packaging_ready,
+        "ready": (
+            quality_ready
+            and freshness_ready
+            and reliability_ready
+            and packaging_ready
+            and evidence_ready
+        ),
         "dimensions": {
             "quality": {
                 "ready": quality_ready,
@@ -771,6 +834,17 @@ def readiness_check():
                 "failed_solves": failed_solves,
                 "rejected_groups": rejected_groups,
                 "uptime_s": runtime_state.get("uptime_s", 0.0),
+            },
+            "clock": {
+                "ready": clock_ready,
+                "synchronized_receivers": clock_synchronized_receivers,
+                "rejected_groups": clock_rejected_groups,
+                "max_uncertainty_ns": runtime_state.get("max_clock_uncertainty_ns", 0.0),
+            },
+            "evidence": {
+                "ready": evidence_ready,
+                "synthetic_feed_mode": synthetic_feed,
+                "benchmarkable_output": benchmarkable_output,
             },
             "packaging": {
                 "ready": packaging_ready,
@@ -918,7 +992,7 @@ def get_pipeline_evidence():
     receivers = db.get_receivers()
     positions = db.get_recent_positions(seconds=300, limit=500)
     registry_hash = str(current_app.config.get("RECEIVER_REGISTRY_TYPE_HASH") or "")
-    registry_configured = bool(registry_hash)
+    registry_configured = _valid_registry_code_hash(registry_hash)
     registry_discovery_live = bool(runtime_state.get("registry_discovery_live"))
     synthetic = bool(runtime_state.get("synthetic_feed_mode"))
     demo = bool(current_app.config.get("DEMO_MODE"))
@@ -974,6 +1048,16 @@ def get_pipeline_evidence():
         else "pass" if total_positions > 0
         else "waiting"
     )
+    clock_synchronized_receivers = int(
+        runtime_state.get("clock_synchronized_receivers", 0)
+    )
+    clock_ready = clock_synchronized_receivers >= 4
+    clock_status = (
+        "demo" if synthetic and clock_ready
+        else "pass" if not synthetic and clock_ready
+        else "blocked" if signal_fresh
+        else "waiting"
+    )
     solve_status = (
         "demo" if synthetic and latest_position
         else "pass" if latest_position and benchmarkable
@@ -1006,6 +1090,15 @@ def get_pipeline_evidence():
             last_signal_age_s=runtime_state.get("last_signal_age_s"),
         ),
         stage(
+            "clock", "Receiver clock qualification", clock_status,
+            "At least four observations use a qualified common timebase."
+            if clock_ready
+            else "MLAT waits for at least four receivers with comparable nanosecond timestamps.",
+            synchronized_receivers=clock_synchronized_receivers,
+            clock_rejected_groups=runtime_state.get("clock_rejected_groups", 0),
+            max_uncertainty_ns=runtime_state.get("max_clock_uncertainty_ns", 0.0),
+        ),
+        stage(
             "correlation", "Signal correlation", processing_status,
             "Correlated groups are reaching the solve path." if total_positions
             else "Waiting for at least four synchronized observations per transmission.",
@@ -1014,7 +1107,7 @@ def get_pipeline_evidence():
         ),
         stage(
             "solve", "MLAT solve", solve_status,
-            "Replay positions are generated for pipeline validation." if synthetic and latest_position
+            "Replay arrival times were localized by the robust MLAT solver; replay provenance prevents live benchmark claims." if synthetic and latest_position
             else "Robust MLAT positions are available." if latest_position
             else "No solved aircraft position is available yet.",
             solver_method=latest_position.solver_method if latest_position else None,
@@ -1051,6 +1144,8 @@ def get_pipeline_evidence():
         blockers.append("Observation and solve output is replay/synthetic, not live.")
     if not signal_fresh:
         blockers.append("No fresh receiver observations are arriving.")
+    if not clock_ready:
+        blockers.append("Fewer than four receiver clocks meet the timing qualification gate.")
     if not benchmarkable:
         blockers.append("Recent positions are not eligible for live external benchmarking.")
     if not benchmark_publishable:
@@ -1071,6 +1166,7 @@ def get_pipeline_evidence():
             and registry_configured
             and registry_discovery_live
             and signal_fresh
+            and clock_ready
             and benchmarkable
             and benchmark_publishable
         ),
@@ -1085,16 +1181,27 @@ def get_pipeline_evidence():
 
 @api_bp.route("/", methods=["GET"])
 def landing_page():
+    if current_app.config.get("NEXT_FRONTEND_DIR"):
+        return _redirect_to_frontend_path("")
     return _render_minified_html("index.html")
 
 
+@api_bp.route("/dashboard", methods=["GET"])
 @api_bp.route("/dashboard.html", methods=["GET"])
 def dashboard_page():
+    if current_app.config.get("NEXT_FRONTEND_DIR"):
+        return _redirect_to_frontend_path("dashboard")
     return _render_minified_html("app/localization.html")
 
 
+@api_bp.route("/app", methods=["GET"])
+@api_bp.route("/app/", methods=["GET"])
 @api_bp.route("/app/<path:page_name>", methods=["GET"])
-def app_pages(page_name: str):
+def app_pages(page_name: str = ""):
+    frontend_dir = current_app.config.get("NEXT_FRONTEND_DIR")
+    if frontend_dir:
+        normalized = page_name[:-5] if page_name.endswith(".html") else page_name
+        return _redirect_to_frontend_path(f"app/{normalized}".rstrip("/"))
     visualization_dir = Path(current_app.config["VISUALIZATION_DIR"]) / "app"
     if not page_name.endswith(".html"):
         return jsonify({"error": "Endpoint not found"}), 404
@@ -1136,13 +1243,15 @@ def get_system_mode():
         else "unavailable"
     )
     recent_positions = db.get_recent_positions(seconds=300, limit=100)
-    benchmarkable_output = bool(
-        recent_positions
-        and all(not _is_synthetic_solver_method(position.solver_method) for position in recent_positions)
-    )
     configured_simulation = bool(current_app.config["SIMULATION_MODE"])
     strict_production_mode = bool(current_app.config["STRICT_PRODUCTION_MODE"])
     synthetic_feed_mode = bool(runtime_state.get("synthetic_feed_mode", configured_simulation))
+    registry_code_hash = os.getenv("RECEIVER_REGISTRY_TYPE_HASH", "")
+    benchmarkable_output = bool(
+        recent_positions
+        and not synthetic_feed_mode
+        and all(not _is_synthetic_solver_method(position.solver_method) for position in recent_positions)
+    )
     startup_guardrail_status = (
         "strict_live"
         if strict_production_mode and runtime_status == "active"
@@ -1180,7 +1289,9 @@ def get_system_mode():
                 "read_only": bool(current_app.config["DEMO_READ_ONLY"]),
                 "auto_connect": bool(current_app.config["DEMO_AUTO_CONNECT"]),
             },
-            "receiver_registry_type_hash": os.getenv("RECEIVER_REGISTRY_TYPE_HASH", ""),
+            "receiver_registry_type_hash": (
+                registry_code_hash if _valid_registry_code_hash(registry_code_hash) else ""
+            ),
             "registry_discovery_live": bool(runtime_state.get("registry_discovery_live")),
             "websocket_available": SocketIO is not None,
             "synthetic_feed_mode": synthetic_feed_mode,
@@ -1228,6 +1339,8 @@ def get_receivers():
     receiver_data = [
         {
             "receiver_id": receiver.receiver_id,
+            "identity_id": receiver.receiver_id,
+            "receiver_label": receiver.receiver_label or receiver.receiver_id,
             "latitude": receiver.latitude,
             "longitude": receiver.longitude,
             "altitude": receiver.altitude,
@@ -1235,6 +1348,12 @@ def get_receivers():
             "last_seen": receiver.last_seen,
             "capabilities": json.loads(receiver.capabilities),
             "updated_at": receiver.updated_at,
+            "registry": {
+                "sequence": receiver.registry_sequence,
+                "owner_lock_args": receiver.owner_lock_args,
+                "out_point": json.loads(receiver.registry_out_point or "{}"),
+                "metadata_hash": receiver.metadata_hash or None,
+            },
         }
         for receiver in receivers
     ]

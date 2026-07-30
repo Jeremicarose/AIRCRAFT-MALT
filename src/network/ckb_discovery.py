@@ -1,14 +1,12 @@
 """
 CKB Blockchain Integration for MLAT System
 
-This module standardizes a canonical JSON receiver-registry schema:
-- state lives in cell data
-- validation logic lives in this client + the on-chain type script
-- ownership is controlled by the cell's lock script
+This adapter discovers Registry V2 cells and maps their immutable Type IDs,
+owner locks, lifecycle sequences, and current records into runtime receivers.
 """
 
 from typing import Any, Dict, List, Optional
-from dataclasses import asdict, dataclass
+from dataclasses import dataclass
 import json
 import asyncio
 import logging
@@ -17,6 +15,7 @@ import time
 import urllib.request
 
 from demo_scenarios import build_demo_receivers
+from network.receiver_registry import ReceiverRegistryRecord, normalize_identity_id
 
 logger = logging.getLogger(__name__)
 
@@ -33,112 +32,15 @@ class ReceiverInfo:
     capabilities: List[str]
     ckb_address: str  # CKB address of receiver
     lock_hash: str    # Lock script hash for verification
+    identity_id: str = ""
     stream_endpoint: Optional[str] = None
     stream_protocol: Optional[str] = None
     stream_format: Optional[str] = None
     metadata: Optional[Dict[str, Any]] = None
 
-
-@dataclass
-class ReceiverRegistryRecord:
-    """Canonical JSON schema stored in CKB receiver-registry cell data."""
-
-    receiver_id: str
-    latitude: float
-    longitude: float
-    altitude: float
-    status: str
-    capabilities: List[str]
-    timestamp: float
-    stream_endpoint: Optional[str] = None
-    stream_protocol: Optional[str] = None
-    stream_format: Optional[str] = None
-    metadata: Optional[Dict[str, Any]] = None
-
-    def to_payload_dict(self) -> Dict[str, Any]:
-        """Serialize the canonical schema, omitting optional null fields."""
-        payload: Dict[str, Any] = {
-            "receiver_id": self.receiver_id,
-            "latitude": self.latitude,
-            "longitude": self.longitude,
-            "altitude": self.altitude,
-            "status": self.status,
-            "capabilities": self.capabilities,
-            "timestamp": self.timestamp,
-        }
-        if self.stream_endpoint is not None:
-            payload["stream_endpoint"] = self.stream_endpoint
-        if self.stream_protocol is not None:
-            payload["stream_protocol"] = self.stream_protocol
-        if self.stream_format is not None:
-            payload["stream_format"] = self.stream_format
-        if self.metadata is not None:
-            payload["metadata"] = self.metadata
-        return payload
-
-    def validate(self) -> None:
-        """Validate schema contents before storing or using the record."""
-        if not self.receiver_id or not isinstance(self.receiver_id, str):
-            raise ValueError("receiver_id must be a non-empty string")
-
-        if not (-90.0 <= float(self.latitude) <= 90.0):
-            raise ValueError("latitude out of bounds")
-        if not (-180.0 <= float(self.longitude) <= 180.0):
-            raise ValueError("longitude out of bounds")
-        if not (-500.0 <= float(self.altitude) <= 20000.0):
-            raise ValueError("altitude out of bounds")
-
-        if self.status not in {"online", "offline", "degraded"}:
-            raise ValueError("status must be online, offline, or degraded")
-
-        if not isinstance(self.capabilities, list) or not self.capabilities:
-            raise ValueError("capabilities must be a non-empty list")
-        if "mode-s" not in self.capabilities:
-            raise ValueError("capabilities must include mode-s")
-
-        if float(self.timestamp) <= 0:
-            raise ValueError("timestamp must be positive")
-
-        if self.stream_protocol is not None and self.stream_protocol not in {
-            "simulation",
-            "websocket-json",
-            "command-jsonl",
-        }:
-            raise ValueError("unsupported stream_protocol")
-
-        if self.stream_format is not None and self.stream_format not in {
-            "json",
-            "jsonl",
-        }:
-            raise ValueError("unsupported stream_format")
-
-        if self.metadata is not None and not isinstance(self.metadata, dict):
-            raise ValueError("metadata must be an object")
-
-    def to_cell_data_hex(self) -> str:
-        """Encode the canonical JSON schema as CKB cell data."""
-        self.validate()
-        payload = json.dumps(self.to_payload_dict(), separators=(",", ":"), sort_keys=True)
-        return "0x" + payload.encode("utf-8").hex()
-
-    @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "ReceiverRegistryRecord":
-        """Construct and validate a record from decoded JSON."""
-        record = cls(
-            receiver_id=data["receiver_id"],
-            latitude=float(data["latitude"]),
-            longitude=float(data["longitude"]),
-            altitude=float(data["altitude"]),
-            status=data["status"],
-            capabilities=list(data["capabilities"]),
-            timestamp=float(data["timestamp"]),
-            stream_endpoint=data.get("stream_endpoint"),
-            stream_protocol=data.get("stream_protocol"),
-            stream_format=data.get("stream_format"),
-            metadata=data.get("metadata"),
-        )
-        record.validate()
-        return record
+    @property
+    def canonical_id(self) -> str:
+        return self.identity_id or self.receiver_id
 
 
 @dataclass
@@ -153,6 +55,9 @@ class CKBConfig:
     strict_production_mode: bool = False
     ssl_verify: bool = True
     max_record_age_seconds: int = 86400
+    max_future_record_skew_seconds: int = 300
+    registry_page_size: int = 100
+    registry_max_pages: int = 1000
     demo_scenario: str = "default"
 
 
@@ -161,8 +66,8 @@ class CKBPeerDiscovery:
     CKB blockchain-based peer discovery.
     
     Uses Nervos Network to register and discover Mode-S receivers.
-    Receivers publish their metadata to CKB cells, making discovery
-    decentralized and trustless.
+    Receivers publish metadata to CKB cells. The chain proves lifecycle and
+    owner authorization; physical receiver claims still require external evidence.
     """
     
     def __init__(self, config: CKBConfig):
@@ -184,6 +89,13 @@ class CKBPeerDiscovery:
                 "No receiver registry type hash configured; using simulated CKB receivers"
             )
             return
+
+        try:
+            normalize_identity_id(self.config.receiver_registry_type_hash)
+        except ValueError as exc:
+            raise RuntimeError(
+                "RECEIVER_REGISTRY_TYPE_HASH must be a 0x-prefixed 32-byte V2 contract code hash"
+            ) from exc
 
         try:
             tip = await self._get_tip_block_number()
@@ -220,13 +132,14 @@ class CKBPeerDiscovery:
             logger.info("🔍 Discovering peers from simulated CKB registry...")
             receivers = self._get_simulated_receivers()
             for receiver in receivers:
-                self.cached_peers[receiver.receiver_id] = receiver
+                self.cached_peers[receiver.canonical_id] = receiver
             logger.info(f"✅ Discovered {len(receivers)} simulated receivers")
             return receivers
 
         logger.info("🔍 Discovering peers from CKB blockchain...")
-        
-        receivers_by_id: Dict[str, ReceiverInfo] = {}
+        self.cached_peers.clear()
+        receivers_by_identity: Dict[str, ReceiverInfo] = {}
+        duplicate_identities: set[str] = set()
         
         try:
             # Search for receiver registry cells
@@ -239,17 +152,25 @@ class CKBPeerDiscovery:
                 try:
                     receiver = await self._parse_receiver_cell(cell)
                     if receiver and self._is_receiver_valid(receiver):
-                        existing = receivers_by_id.get(receiver.receiver_id)
-                        if existing is None or receiver.last_seen >= existing.last_seen:
-                            receivers_by_id[receiver.receiver_id] = receiver
-                            self.cached_peers[receiver.receiver_id] = receiver
+                        identity_id = receiver.canonical_id
+                        if identity_id in receivers_by_identity:
+                            duplicate_identities.add(identity_id)
+                            receivers_by_identity.pop(identity_id, None)
+                            self.cached_peers.pop(identity_id, None)
+                            logger.error(
+                                "Quarantining duplicate live Receiver Identity %s",
+                                identity_id,
+                            )
+                        elif identity_id not in duplicate_identities:
+                            receivers_by_identity[identity_id] = receiver
+                            self.cached_peers[identity_id] = receiver
                 except Exception as e:
                     logger.warning(f"Failed to parse receiver cell: {e}")
                     continue
             
             receivers = sorted(
-                receivers_by_id.values(),
-                key=lambda receiver: receiver.receiver_id,
+                receivers_by_identity.values(),
+                key=lambda receiver: receiver.identity_id,
             )
             logger.info(f"✅ Discovered {len(receivers)} valid receivers")
             
@@ -274,24 +195,32 @@ class CKBPeerDiscovery:
                     "args": "0x"
                 },
                 "script_type": "type",
+                "script_search_mode": "prefix",
                 "filter": {
                     "script_len_range": ["0x0", "0xffffffff"]
                 }
             }
             
-            # Query cells
-            cells_response = await self._rpc_call(
-                "get_cells",
-                [
-                    search_key,
-                    "asc",
-                    "0x64",
-                ],
-                url=self.config.ckb_indexer_url,
-            )
-            
-            cells = cells_response.get("objects", [])
-            return cells
+            page_size = max(1, min(self.config.registry_page_size, 1000))
+            cells: List[Dict] = []
+            cursor: Optional[str] = None
+            for _ in range(max(1, self.config.registry_max_pages)):
+                params: List[Any] = [search_key, "asc", hex(page_size)]
+                if cursor is not None:
+                    params.append(cursor)
+                cells_response = await self._rpc_call(
+                    "get_cells",
+                    params,
+                    url=self.config.ckb_indexer_url,
+                )
+                page = cells_response.get("objects", [])
+                cells.extend(page)
+                next_cursor = cells_response.get("last_cursor")
+                if len(page) < page_size or not next_cursor or next_cursor == cursor:
+                    return cells
+                cursor = next_cursor
+
+            raise RuntimeError("Receiver registry pagination exceeded registry_max_pages")
             
         except Exception as e:
             logger.error(f"Failed to search receiver cells: {e}")
@@ -368,6 +297,7 @@ class CKBPeerDiscovery:
                     capabilities=receiver["capabilities"],
                     ckb_address=f"ckt1qydemo{index:02d}000000000000000000000000000000",
                     lock_hash=f"0xdemo{index:02d}".ljust(66, "0"),
+                    identity_id=receiver["receiver_id"],
                     stream_protocol="simulation",
                     stream_format="json",
                     metadata=receiver["metadata"],
@@ -403,7 +333,16 @@ class CKBPeerDiscovery:
             data_bytes = bytes.fromhex(output_data[2:])  # Remove 0x prefix
             data_json = json.loads(data_bytes.decode('utf-8'))
             record = ReceiverRegistryRecord.from_dict(data_json)
-            lock = cell.get("output", {}).get("lock", {})
+            output = cell.get("output", {})
+            lock = output.get("lock", {})
+            type_script = output.get("type") or {}
+            if type_script.get("hash_type") != "type":
+                raise ValueError("registry type script must use hash_type=type")
+            configured_code_hash = self.config.receiver_registry_type_hash.lower()
+            if configured_code_hash and str(type_script.get("code_hash", "")).lower() != configured_code_hash:
+                raise ValueError("registry cell code hash does not match configured V2 contract")
+            identity_id = normalize_identity_id(type_script.get("args", ""))
+            out_point = cell.get("out_point") or {}
 
             receiver = ReceiverInfo(
                 receiver_id=record.receiver_id,
@@ -411,14 +350,22 @@ class CKBPeerDiscovery:
                 longitude=record.longitude,
                 altitude=record.altitude,
                 status=record.status,
-                last_seen=record.timestamp,
+                last_seen=float(record.updated_at),
                 capabilities=record.capabilities,
                 ckb_address=lock.get('args', ''),
                 lock_hash=lock.get('hash') or cell.get('lock_hash', ''),
+                identity_id=identity_id,
                 stream_endpoint=record.stream_endpoint,
                 stream_protocol=record.stream_protocol,
                 stream_format=record.stream_format,
-                metadata=record.metadata,
+                metadata={
+                    "schema_version": record.schema_version,
+                    "sequence": record.sequence,
+                    "metadata_hash": record.metadata_hash,
+                    "owner_lock": lock,
+                    "out_point": out_point,
+                    "block_number": cell.get("block_number"),
+                },
             )
             
             return receiver
@@ -457,6 +404,13 @@ class CKBPeerDiscovery:
         
         # Check timestamp freshness
         age_seconds = time.time() - receiver.last_seen
+        if age_seconds < -self.config.max_future_record_skew_seconds:
+            logger.info(
+                "Skipping receiver %s: updated_at is %.0f seconds in the future",
+                receiver.canonical_id,
+                -age_seconds,
+            )
+            return False
         if age_seconds > self.config.max_record_age_seconds:
             logger.info(
                 "Skipping receiver %s: timestamp is stale by %.0f seconds (max %d)",
@@ -502,75 +456,12 @@ class CKBPeerDiscovery:
         metadata: Optional[Dict[str, Any]] = None,
     ) -> bool:
         """
-        Register a new receiver on CKB blockchain.
-        
-        This creates a new cell with receiver information.
-        Requires CKB tokens for transaction fees.
-        
-        Args:
-            receiver_id: Unique receiver identifier
-            latitude: Receiver latitude
-            longitude: Receiver longitude
-            altitude: Receiver altitude (meters)
-            capabilities: List of capabilities
-            private_key: CKB private key for signing
-        
-        Returns:
-            True if registration successful
+        Registry writes require an explicitly built and externally signed CKB
+        transaction. This discovery adapter never handles private keys.
         """
-        logger.info(f"Registering receiver {receiver_id} on CKB...")
-        
-        try:
-            record = ReceiverRegistryRecord(
-                receiver_id=receiver_id,
-                latitude=latitude,
-                longitude=longitude,
-                altitude=altitude,
-                status="online",
-                capabilities=capabilities,
-                timestamp=time.time(),
-                stream_endpoint=stream_endpoint,
-                stream_protocol=stream_protocol,
-                stream_format=stream_format,
-                metadata=metadata,
-            )
-            data_hex = record.to_cell_data_hex()
-            
-            # Build transaction
-            # (This is simplified - real implementation needs proper cell building)
-            tx = {
-                "version": "0x0",
-                "cell_deps": [],
-                "header_deps": [],
-                "inputs": [],
-                "outputs": [{
-                    "capacity": "0x174876e800",  # 100 CKB
-                    "lock": {
-                        "code_hash": "...",  # Your lock script
-                        "hash_type": "type",
-                        "args": "..."
-                    },
-                    "type": {
-                        "code_hash": self.config.receiver_registry_type_hash,
-                        "hash_type": "type",
-                        "args": "0x"
-                    }
-                }],
-                "outputs_data": [data_hex],
-                "witnesses": []
-            }
-            
-            # Sign and send transaction
-            # tx_hash = await self._send_transaction(tx, private_key)
-            
-            logger.info(f"✅ Receiver registered on CKB")
-            # logger.info(f"   Transaction hash: {tx_hash}")
-            
-            return True
-            
-        except Exception as e:
-            logger.error(f"Failed to register receiver: {e}")
-            return False
+        raise NotImplementedError(
+            "Use the Registry V2 transaction tooling; discovery does not sign or broadcast writes"
+        )
     
     async def shutdown(self):
         """Cleanup CKB connection"""
