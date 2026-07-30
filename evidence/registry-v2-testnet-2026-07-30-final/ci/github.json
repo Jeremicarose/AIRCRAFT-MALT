@@ -1,35 +1,35 @@
 {
   "artifact": {
-    "archive_digest": "sha256:de1edf67095cf9260d9c6b0aa463ff8782fe6094b8dd9c31f33eb3e821a764f0",
-    "created_at": "2026-07-30T12:13:37Z",
-    "expires_at": "2026-08-29T12:13:37Z",
-    "id": 8758930780,
-    "name": "receiver-registry-v2-3780fffac64c4a62ec147856a8388675b509eaf5",
+    "archive_digest": "sha256:8987360385ee52a0b895043433e0c9503954c28245dc8279faa6d3ba2a6d8dd8",
+    "created_at": "2026-07-30T12:33:22Z",
+    "expires_at": "2026-08-29T12:33:22Z",
+    "id": 8759485096,
+    "name": "receiver-registry-v2-adbdbd1a5a2afebad4067649dc3af57a682e545a",
     "receiver_registry_sha256": "688fdc5f755029fa3c93365663f0bd2d118d4bacb53340234a1cecb171ad4f77",
     "size_in_bytes": 46004
   },
   "conclusion": "success",
-  "created_at": "2026-07-30T12:12:03Z",
+  "created_at": "2026-07-30T12:31:53Z",
   "event": "push",
-  "head_sha": "3780fffac64c4a62ec147856a8388675b509eaf5",
+  "head_sha": "adbdbd1a5a2afebad4067649dc3af57a682e545a",
   "jobs": [
     {
       "conclusion": "success",
-      "id": 90867327773,
+      "id": 90871794023,
       "name": "off-chain-registry",
-      "url": "https://github.com/Jeremicarose/AIRCRAFT-MALT/actions/runs/30541564431/job/90867327773"
+      "url": "https://github.com/Jeremicarose/AIRCRAFT-MALT/actions/runs/30542926542/job/90871794023"
     },
     {
       "conclusion": "success",
-      "id": 90867327691,
+      "id": 90871793940,
       "name": "on-chain-registry",
-      "url": "https://github.com/Jeremicarose/AIRCRAFT-MALT/actions/runs/30541564431/job/90867327691"
+      "url": "https://github.com/Jeremicarose/AIRCRAFT-MALT/actions/runs/30542926542/job/90871793940"
     }
   ],
-  "run_id": 30541564431,
+  "run_id": 30542926542,
   "schema_version": 1,
   "status": "completed",
-  "updated_at": "2026-07-30T12:13:40Z",
-  "url": "https://github.com/Jeremicarose/AIRCRAFT-MALT/actions/runs/30541564431",
+  "updated_at": "2026-07-30T12:33:25Z",
+  "url": "https://github.com/Jeremicarose/AIRCRAFT-MALT/actions/runs/30542926542",
   "workflow": "Registry V2 Security"
 }

@@ -1,0 +1,9 @@
+{
+  "attempted_at": "2026-07-30T12:40:48.331934Z",
+  "expected": "rejected",
+  "returncode": 1,
+  "signed_tx_file": "attack-tombstone-burn.json",
+  "signed_tx_file_sha256": "c3461d4300733efd477cf9cc1985534880ee20cdd0d18a769d1e5f12fc3b3e40",
+  "stderr": "Send transaction error: jsonrpc error: `Server error: TransactionFailedToVerify: Verification failed Script(TransactionScriptError { source: Inputs[0].Type, cause: ValidationFailure: see error code -5 on page https://nervosnetwork.github.io/ckb-script-error-codes/by-type-hash/1efe03c91687a43e8f8fc24d2fbb911e7071761ec4eaba06281cb52d8b505b6c.html#-5 })`",
+  "stdout": ""
+}

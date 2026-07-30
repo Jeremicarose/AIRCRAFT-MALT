@@ -1,0 +1,97 @@
+{
+  "accepted_transactions": {
+    "create": "0xd25414d6f1d1232320a5451157812ba75e299e5e28116db59d3ecb4f008a448d",
+    "deployment": "0x070820e96a268635edfd0ecdffc2c2d07061ce2cd79e16a8d159a86d472cc3b3",
+    "revoke": "0xc6c6b36d813d809644009766a75bd97d4a8f649113fab2f881c3a2373fa586a6",
+    "transfer": "0xbdf310c482c71261b3c254594a034959864b7d3267fda2f8330054bc13a18c69",
+    "update": "0x160c5c87d3c5339769d81f6f1a79ed02a4e9067ee57673fed4e2613951425c35"
+  },
+  "contract": {
+    "binary_bytes": 66488,
+    "binary_ckb_data_hash": "0x9f5ae883bd5039b6eb3544c69a1597214c655bbccdb920e0fb7284c09d3cc645",
+    "binary_sha256": "688fdc5f755029fa3c93365663f0bd2d118d4bacb53340234a1cecb171ad4f77",
+    "deployment_tx_hash": "0x070820e96a268635edfd0ecdffc2c2d07061ce2cd79e16a8d159a86d472cc3b3",
+    "out_point": {
+      "index": "0x0",
+      "tx_hash": "0x070820e96a268635edfd0ecdffc2c2d07061ce2cd79e16a8d159a86d472cc3b3"
+    },
+    "type_script_hash_for_registry_code_hash": "0x1efe03c91687a43e8f8fc24d2fbb911e7071761ec4eaba06281cb52d8b505b6c"
+  },
+  "generated_at": "2026-07-30T12:40:48.352041Z",
+  "github_ci": {
+    "artifact": {
+      "archive_digest": "sha256:8987360385ee52a0b895043433e0c9503954c28245dc8279faa6d3ba2a6d8dd8",
+      "created_at": "2026-07-30T12:33:22Z",
+      "expires_at": "2026-08-29T12:33:22Z",
+      "id": 8759485096,
+      "name": "receiver-registry-v2-adbdbd1a5a2afebad4067649dc3af57a682e545a",
+      "receiver_registry_sha256": "688fdc5f755029fa3c93365663f0bd2d118d4bacb53340234a1cecb171ad4f77",
+      "size_in_bytes": 46004
+    },
+    "conclusion": "success",
+    "created_at": "2026-07-30T12:31:53Z",
+    "event": "push",
+    "head_sha": "adbdbd1a5a2afebad4067649dc3af57a682e545a",
+    "jobs": [
+      {
+        "conclusion": "success",
+        "id": 90871794023,
+        "name": "off-chain-registry",
+        "url": "https://github.com/Jeremicarose/AIRCRAFT-MALT/actions/runs/30542926542/job/90871794023"
+      },
+      {
+        "conclusion": "success",
+        "id": 90871793940,
+        "name": "on-chain-registry",
+        "url": "https://github.com/Jeremicarose/AIRCRAFT-MALT/actions/runs/30542926542/job/90871793940"
+      }
+    ],
+    "run_id": 30542926542,
+    "schema_version": 1,
+    "status": "completed",
+    "updated_at": "2026-07-30T12:33:25Z",
+    "url": "https://github.com/Jeremicarose/AIRCRAFT-MALT/actions/runs/30542926542",
+    "workflow": "Registry V2 Security"
+  },
+  "indexer_url": "https://testnet.ckb.dev/indexer",
+  "lifecycle_funding": {
+    "capacity_shannons": 210900000000,
+    "data_hash": "0x25e6a20f0beef7bf929d72e39e90247a5d1a8b2e1bf4515144f41079ca751afa",
+    "out_point": {
+      "index": "0x1",
+      "tx_hash": "0x070820e96a268635edfd0ecdffc2c2d07061ce2cd79e16a8d159a86d472cc3b3"
+    }
+  },
+  "network": "CKB testnet",
+  "private_keys_included": false,
+  "receiver": {
+    "identity_id": "0xcca658ee811707def01d466b16b9b3ee133c3f6952388c78a5f90a5c273749e8",
+    "label": "RECV_REGISTRY_V2_EVIDENCE",
+    "owner_a": {
+      "lock_arg": "0xeb30e40fe89ea2a602dae6fe88505f6e8ecf7fb1",
+      "testnet_address": "ckt1qzda0cr08m85hc8jlnfp3zer7xulejywt49kt2rr0vthywaa50xwsq0txrjql6y752nq9khxl6y9qhmw3m8hlvgtt8jty"
+    },
+    "owner_b": {
+      "lock_arg": "0x0c59f15938213d77d8a41353d73dbb5296b611a6",
+      "testnet_address": "ckt1qzda0cr08m85hc8jlnfp3zer7xulejywt49kt2rr0vthywaa50xwsqgvt8c4jwpp84ma3fqn20tnmw6jj6mprfsjpcwag"
+    }
+  },
+  "rejected_attacks": [
+    "forged-identity",
+    "sequence-jump",
+    "label-mutation",
+    "duplicate-output",
+    "burn",
+    "resurrection",
+    "tombstone-burn"
+  ],
+  "rpc_url": "https://testnet.ckb.dev/rpc",
+  "schema_version": 1,
+  "source": {
+    "branch": "registry-v2-testnet-evidence",
+    "contract_source_commit": "61ab011de58397cb8d6ca3cecb5c659c69e2fc8c",
+    "lifecycle_tooling_commit": "adbdbd1a5a2afebad4067649dc3af57a682e545a",
+    "repository": "https://github.com/Jeremicarose/AIRCRAFT-MALT"
+  },
+  "status": "complete"
+}

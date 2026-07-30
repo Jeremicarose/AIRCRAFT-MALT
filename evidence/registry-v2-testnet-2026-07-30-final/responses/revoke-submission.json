@@ -1,0 +1,9 @@
+{
+  "attempted_at": "2026-07-30T12:40:08.705055Z",
+  "expected": "accepted",
+  "returncode": 0,
+  "signed_tx_file": "revoke.json",
+  "signed_tx_file_sha256": "422ec178e155bd972f1d70b99da3e4e5e882a285abdd9f581ff05813999a1fb1",
+  "stderr": "",
+  "stdout": "\"0xc6c6b36d813d809644009766a75bd97d4a8f649113fab2f881c3a2373fa586a6\""
+}

@@ -1,0 +1,422 @@
+{
+  "bundle": "/Users/jeremicarose/Downloads/mlat-system 2/evidence/registry-v2-testnet-2026-07-30-final",
+  "checks": [
+    {
+      "detail": "/Users/jeremicarose/Downloads/mlat-system 2/evidence/registry-v2-testnet-2026-07-30-final/manifest.json",
+      "name": "manifest exists",
+      "pass": true
+    },
+    {
+      "detail": "complete",
+      "name": "manifest status complete",
+      "pass": true
+    },
+    {
+      "detail": "False",
+      "name": "private keys excluded",
+      "pass": true
+    },
+    {
+      "detail": "/Users/jeremicarose/Downloads/mlat-system 2/evidence/registry-v2-testnet-2026-07-30-final/contract/receiver-registry",
+      "name": "contract binary exists",
+      "pass": true
+    },
+    {
+      "detail": "688fdc5f755029fa3c93365663f0bd2d118d4bacb53340234a1cecb171ad4f77",
+      "name": "contract SHA-256",
+      "pass": true
+    },
+    {
+      "detail": "0x9f5ae883bd5039b6eb3544c69a1597214c655bbccdb920e0fb7284c09d3cc645",
+      "name": "contract CKB data hash",
+      "pass": true
+    },
+    {
+      "detail": "/Users/jeremicarose/Downloads/mlat-system 2/evidence/registry-v2-testnet-2026-07-30-final/ci/local.json",
+      "name": "local CI evidence exists",
+      "pass": true
+    },
+    {
+      "detail": "/Users/jeremicarose/Downloads/mlat-system 2/evidence/registry-v2-testnet-2026-07-30-final/ci/github.json",
+      "name": "GitHub CI evidence exists",
+      "pass": true
+    },
+    {
+      "detail": "True",
+      "name": "local CI passed",
+      "pass": true
+    },
+    {
+      "detail": "completed/success",
+      "name": "GitHub CI passed",
+      "pass": true
+    },
+    {
+      "detail": "688fdc5f755029fa3c93365663f0bd2d118d4bacb53340234a1cecb171ad4f77",
+      "name": "GitHub artifact matches deployment binary",
+      "pass": true
+    },
+    {
+      "detail": "/Users/jeremicarose/Downloads/mlat-system 2/evidence/registry-v2-testnet-2026-07-30-final/rpc/deployment-transaction.json",
+      "name": "deployment RPC response exists",
+      "pass": true
+    },
+    {
+      "detail": "committed",
+      "name": "deployment committed",
+      "pass": true
+    },
+    {
+      "detail": "expected=0x070820e96a268635edfd0ecdffc2c2d07061ce2cd79e16a8d159a86d472cc3b3 observed=0x070820e96a268635edfd0ecdffc2c2d07061ce2cd79e16a8d159a86d472cc3b3",
+      "name": "deployment transaction hash",
+      "pass": true
+    },
+    {
+      "detail": "/Users/jeremicarose/Downloads/mlat-system 2/evidence/registry-v2-testnet-2026-07-30-final/rpc/create-transaction.json",
+      "name": "create RPC response exists",
+      "pass": true
+    },
+    {
+      "detail": "committed",
+      "name": "create committed",
+      "pass": true
+    },
+    {
+      "detail": "expected=0xd25414d6f1d1232320a5451157812ba75e299e5e28116db59d3ecb4f008a448d observed=0xd25414d6f1d1232320a5451157812ba75e299e5e28116db59d3ecb4f008a448d",
+      "name": "create transaction hash",
+      "pass": true
+    },
+    {
+      "detail": "/Users/jeremicarose/Downloads/mlat-system 2/evidence/registry-v2-testnet-2026-07-30-final/rpc/update-transaction.json",
+      "name": "update RPC response exists",
+      "pass": true
+    },
+    {
+      "detail": "committed",
+      "name": "update committed",
+      "pass": true
+    },
+    {
+      "detail": "expected=0x160c5c87d3c5339769d81f6f1a79ed02a4e9067ee57673fed4e2613951425c35 observed=0x160c5c87d3c5339769d81f6f1a79ed02a4e9067ee57673fed4e2613951425c35",
+      "name": "update transaction hash",
+      "pass": true
+    },
+    {
+      "detail": "/Users/jeremicarose/Downloads/mlat-system 2/evidence/registry-v2-testnet-2026-07-30-final/rpc/transfer-transaction.json",
+      "name": "transfer RPC response exists",
+      "pass": true
+    },
+    {
+      "detail": "committed",
+      "name": "transfer committed",
+      "pass": true
+    },
+    {
+      "detail": "expected=0xbdf310c482c71261b3c254594a034959864b7d3267fda2f8330054bc13a18c69 observed=0xbdf310c482c71261b3c254594a034959864b7d3267fda2f8330054bc13a18c69",
+      "name": "transfer transaction hash",
+      "pass": true
+    },
+    {
+      "detail": "/Users/jeremicarose/Downloads/mlat-system 2/evidence/registry-v2-testnet-2026-07-30-final/rpc/revoke-transaction.json",
+      "name": "revoke RPC response exists",
+      "pass": true
+    },
+    {
+      "detail": "committed",
+      "name": "revoke committed",
+      "pass": true
+    },
+    {
+      "detail": "expected=0xc6c6b36d813d809644009766a75bd97d4a8f649113fab2f881c3a2373fa586a6 observed=0xc6c6b36d813d809644009766a75bd97d4a8f649113fab2f881c3a2373fa586a6",
+      "name": "revoke transaction hash",
+      "pass": true
+    },
+    {
+      "detail": "{'index': '0x1', 'tx_hash': '0x070820e96a268635edfd0ecdffc2c2d07061ce2cd79e16a8d159a86d472cc3b3'}",
+      "name": "creation spends declared lifecycle funding",
+      "pass": true
+    },
+    {
+      "detail": "{'index': '0x0', 'tx_hash': '0xd25414d6f1d1232320a5451157812ba75e299e5e28116db59d3ecb4f008a448d'}",
+      "name": "update spends previous registry cell",
+      "pass": true
+    },
+    {
+      "detail": "{'index': '0x0', 'tx_hash': '0x160c5c87d3c5339769d81f6f1a79ed02a4e9067ee57673fed4e2613951425c35'}",
+      "name": "transfer spends previous registry cell",
+      "pass": true
+    },
+    {
+      "detail": "{'index': '0x0', 'tx_hash': '0xbdf310c482c71261b3c254594a034959864b7d3267fda2f8330054bc13a18c69'}",
+      "name": "revoke spends previous registry cell",
+      "pass": true
+    },
+    {
+      "detail": "['RECV_REGISTRY_V2_EVIDENCE']",
+      "name": "receiver label immutable",
+      "pass": true
+    },
+    {
+      "detail": "[0, 1, 2, 3]",
+      "name": "sequence is 0,1,2,3",
+      "pass": true
+    },
+    {
+      "detail": "['online', 'online', 'online', 'revoked']",
+      "name": "revocation is final accepted state",
+      "pass": true
+    },
+    {
+      "detail": "['0xcca658ee811707def01d466b16b9b3ee133c3f6952388c78a5f90a5c273749e8']",
+      "name": "immutable Receiver Identity",
+      "pass": true
+    },
+    {
+      "detail": "['0x1efe03c91687a43e8f8fc24d2fbb911e7071761ec4eaba06281cb52d8b505b6c']",
+      "name": "registry code hash",
+      "pass": true
+    },
+    {
+      "detail": "['0xeb30e40fe89ea2a602dae6fe88505f6e8ecf7fb1', '0xeb30e40fe89ea2a602dae6fe88505f6e8ecf7fb1', '0x0c59f15938213d77d8a41353d73dbb5296b611a6', '0x0c59f15938213d77d8a41353d73dbb5296b611a6']",
+      "name": "ownership transfer lock lineage",
+      "pass": true
+    },
+    {
+      "detail": "/Users/jeremicarose/Downloads/mlat-system 2/evidence/registry-v2-testnet-2026-07-30-final/responses/attack-forged-identity.json",
+      "name": "forged-identity response exists",
+      "pass": true
+    },
+    {
+      "detail": "/Users/jeremicarose/Downloads/mlat-system 2/evidence/registry-v2-testnet-2026-07-30-final/transactions/attack-forged-identity.json",
+      "name": "forged-identity signed tx exists",
+      "pass": true
+    },
+    {
+      "detail": "signature groups=1",
+      "name": "forged-identity was signed",
+      "pass": true
+    },
+    {
+      "detail": "Send transaction error: jsonrpc error: `Server error: TransactionFailedToVerify: Verification failed Script(TransactionScriptError { source: Outputs[0].Type, cause: ValidationFailure: see error code -4 on page https://nervosnetwork.github.io/ckb-script-error-codes/by-type-hash/1efe03c91687a43e8f8fc24d2fbb911e7071761ec4eaba06281cb52d8b505b6c.html#-4 })`",
+      "name": "forged-identity rejected",
+      "pass": true
+    },
+    {
+      "detail": "d75ed0597d9ec1cb328abc6e062561ed6d0b7258fc717bd2116f9e8c1cc237eb",
+      "name": "forged-identity transaction file hash",
+      "pass": true
+    },
+    {
+      "detail": "/Users/jeremicarose/Downloads/mlat-system 2/evidence/registry-v2-testnet-2026-07-30-final/responses/attack-sequence-jump.json",
+      "name": "sequence-jump response exists",
+      "pass": true
+    },
+    {
+      "detail": "/Users/jeremicarose/Downloads/mlat-system 2/evidence/registry-v2-testnet-2026-07-30-final/transactions/attack-sequence-jump.json",
+      "name": "sequence-jump signed tx exists",
+      "pass": true
+    },
+    {
+      "detail": "signature groups=1",
+      "name": "sequence-jump was signed",
+      "pass": true
+    },
+    {
+      "detail": "Send transaction error: jsonrpc error: `Server error: TransactionFailedToVerify: Verification failed Script(TransactionScriptError { source: Inputs[0].Type, cause: ValidationFailure: see error code -25 on page https://nervosnetwork.github.io/ckb-script-error-codes/by-type-hash/1efe03c91687a43e8f8fc24d2fbb911e7071761ec4eaba06281cb52d8b505b6c.html#-25 })`",
+      "name": "sequence-jump rejected",
+      "pass": true
+    },
+    {
+      "detail": "da4200b2d6e10472c5098d36417f62e7e09e34d8945b24479ba7d33ae6323a63",
+      "name": "sequence-jump transaction file hash",
+      "pass": true
+    },
+    {
+      "detail": "/Users/jeremicarose/Downloads/mlat-system 2/evidence/registry-v2-testnet-2026-07-30-final/responses/attack-label-mutation.json",
+      "name": "label-mutation response exists",
+      "pass": true
+    },
+    {
+      "detail": "/Users/jeremicarose/Downloads/mlat-system 2/evidence/registry-v2-testnet-2026-07-30-final/transactions/attack-label-mutation.json",
+      "name": "label-mutation signed tx exists",
+      "pass": true
+    },
+    {
+      "detail": "signature groups=1",
+      "name": "label-mutation was signed",
+      "pass": true
+    },
+    {
+      "detail": "Send transaction error: jsonrpc error: `Server error: TransactionFailedToVerify: Verification failed Script(TransactionScriptError { source: Inputs[0].Type, cause: ValidationFailure: see error code -27 on page https://nervosnetwork.github.io/ckb-script-error-codes/by-type-hash/1efe03c91687a43e8f8fc24d2fbb911e7071761ec4eaba06281cb52d8b505b6c.html#-27 })`",
+      "name": "label-mutation rejected",
+      "pass": true
+    },
+    {
+      "detail": "39ef80bdc4829cb9b3f6950507b7ddfc5fbd8c41ff7a9968ef2f775a6a1b772b",
+      "name": "label-mutation transaction file hash",
+      "pass": true
+    },
+    {
+      "detail": "/Users/jeremicarose/Downloads/mlat-system 2/evidence/registry-v2-testnet-2026-07-30-final/responses/attack-duplicate-output.json",
+      "name": "duplicate-output response exists",
+      "pass": true
+    },
+    {
+      "detail": "/Users/jeremicarose/Downloads/mlat-system 2/evidence/registry-v2-testnet-2026-07-30-final/transactions/attack-duplicate-output.json",
+      "name": "duplicate-output signed tx exists",
+      "pass": true
+    },
+    {
+      "detail": "signature groups=1",
+      "name": "duplicate-output was signed",
+      "pass": true
+    },
+    {
+      "detail": "Send transaction error: jsonrpc error: `Server error: TransactionFailedToVerify: Verification failed Script(TransactionScriptError { source: Inputs[0].Type, cause: ValidationFailure: see error code -4 on page https://nervosnetwork.github.io/ckb-script-error-codes/by-type-hash/1efe03c91687a43e8f8fc24d2fbb911e7071761ec4eaba06281cb52d8b505b6c.html#-4 })`",
+      "name": "duplicate-output rejected",
+      "pass": true
+    },
+    {
+      "detail": "55abd26e92a0676de6c65b69cb03ab4f4dcdf42ca4de7a6b3376ed829859917b",
+      "name": "duplicate-output transaction file hash",
+      "pass": true
+    },
+    {
+      "detail": "/Users/jeremicarose/Downloads/mlat-system 2/evidence/registry-v2-testnet-2026-07-30-final/responses/attack-burn.json",
+      "name": "burn response exists",
+      "pass": true
+    },
+    {
+      "detail": "/Users/jeremicarose/Downloads/mlat-system 2/evidence/registry-v2-testnet-2026-07-30-final/transactions/attack-burn.json",
+      "name": "burn signed tx exists",
+      "pass": true
+    },
+    {
+      "detail": "signature groups=1",
+      "name": "burn was signed",
+      "pass": true
+    },
+    {
+      "detail": "Send transaction error: jsonrpc error: `Server error: TransactionFailedToVerify: Verification failed Script(TransactionScriptError { source: Inputs[0].Type, cause: ValidationFailure: see error code -5 on page https://nervosnetwork.github.io/ckb-script-error-codes/by-type-hash/1efe03c91687a43e8f8fc24d2fbb911e7071761ec4eaba06281cb52d8b505b6c.html#-5 })`",
+      "name": "burn rejected",
+      "pass": true
+    },
+    {
+      "detail": "c7da35964589405ea6ba9576861ec4cdd73dec9866a16221b5ec31a3776fd39e",
+      "name": "burn transaction file hash",
+      "pass": true
+    },
+    {
+      "detail": "/Users/jeremicarose/Downloads/mlat-system 2/evidence/registry-v2-testnet-2026-07-30-final/responses/attack-resurrection.json",
+      "name": "resurrection response exists",
+      "pass": true
+    },
+    {
+      "detail": "/Users/jeremicarose/Downloads/mlat-system 2/evidence/registry-v2-testnet-2026-07-30-final/transactions/attack-resurrection.json",
+      "name": "resurrection signed tx exists",
+      "pass": true
+    },
+    {
+      "detail": "signature groups=1",
+      "name": "resurrection was signed",
+      "pass": true
+    },
+    {
+      "detail": "Send transaction error: jsonrpc error: `Server error: TransactionFailedToVerify: Verification failed Script(TransactionScriptError { source: Inputs[0].Type, cause: ValidationFailure: see error code -28 on page https://nervosnetwork.github.io/ckb-script-error-codes/by-type-hash/1efe03c91687a43e8f8fc24d2fbb911e7071761ec4eaba06281cb52d8b505b6c.html#-28 })`",
+      "name": "resurrection rejected",
+      "pass": true
+    },
+    {
+      "detail": "ba60dccf09434e88d3ebe95163ed73943bbf7e5df5b46b0b2fe29319d7fc7f8f",
+      "name": "resurrection transaction file hash",
+      "pass": true
+    },
+    {
+      "detail": "/Users/jeremicarose/Downloads/mlat-system 2/evidence/registry-v2-testnet-2026-07-30-final/responses/attack-tombstone-burn.json",
+      "name": "tombstone-burn response exists",
+      "pass": true
+    },
+    {
+      "detail": "/Users/jeremicarose/Downloads/mlat-system 2/evidence/registry-v2-testnet-2026-07-30-final/transactions/attack-tombstone-burn.json",
+      "name": "tombstone-burn signed tx exists",
+      "pass": true
+    },
+    {
+      "detail": "signature groups=1",
+      "name": "tombstone-burn was signed",
+      "pass": true
+    },
+    {
+      "detail": "Send transaction error: jsonrpc error: `Server error: TransactionFailedToVerify: Verification failed Script(TransactionScriptError { source: Inputs[0].Type, cause: ValidationFailure: see error code -5 on page https://nervosnetwork.github.io/ckb-script-error-codes/by-type-hash/1efe03c91687a43e8f8fc24d2fbb911e7071761ec4eaba06281cb52d8b505b6c.html#-5 })`",
+      "name": "tombstone-burn rejected",
+      "pass": true
+    },
+    {
+      "detail": "c3461d4300733efd477cf9cc1985534880ee20cdd0d18a769d1e5f12fc3b3e40",
+      "name": "tombstone-burn transaction file hash",
+      "pass": true
+    },
+    {
+      "detail": "4",
+      "name": "indexer discovery snapshots",
+      "pass": true
+    },
+    {
+      "detail": "4",
+      "name": "adapter discovery snapshots",
+      "pass": true
+    },
+    {
+      "detail": "4",
+      "name": "API responses captured",
+      "pass": true
+    },
+    {
+      "detail": "status=200 count=1",
+      "name": "create API response",
+      "pass": true
+    },
+    {
+      "detail": "status=200 count=1",
+      "name": "update API response",
+      "pass": true
+    },
+    {
+      "detail": "status=200 count=1",
+      "name": "transfer API response",
+      "pass": true
+    },
+    {
+      "detail": "status=200 count=0",
+      "name": "revoke API response",
+      "pass": true
+    },
+    {
+      "detail": "committed",
+      "name": "live create committed",
+      "pass": true
+    },
+    {
+      "detail": "committed",
+      "name": "live deployment committed",
+      "pass": true
+    },
+    {
+      "detail": "committed",
+      "name": "live revoke committed",
+      "pass": true
+    },
+    {
+      "detail": "committed",
+      "name": "live transfer committed",
+      "pass": true
+    },
+    {
+      "detail": "committed",
+      "name": "live update committed",
+      "pass": true
+    }
+  ],
+  "live_rpc_checked": true,
+  "pass": true
+}

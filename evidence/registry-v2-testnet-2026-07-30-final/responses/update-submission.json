@@ -1,0 +1,9 @@
+{
+  "attempted_at": "2026-07-30T12:38:54.801681Z",
+  "expected": "accepted",
+  "returncode": 0,
+  "signed_tx_file": "update.json",
+  "signed_tx_file_sha256": "468e0f2e0411ed0b2915d2b4cac885c650ba9db83afee6f256ac4b65e433d261",
+  "stderr": "",
+  "stdout": "\"0x160c5c87d3c5339769d81f6f1a79ed02a4e9067ee57673fed4e2613951425c35\""
+}

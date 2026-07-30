@@ -10,14 +10,15 @@ demo**: it demonstrates receiver discovery, observation processing, MLAT output,
 storage, public APIs, pipeline provenance, and system metrics without claiming
 that replay traffic is live receiver evidence.
 
-- **Current proof:** end-to-end replay pipeline, provenance-aware evidence gates,
-  operational metrics, performance baselines, and responsive operator views
+- **Current proof:** end-to-end replay observations localized by the production
+  MLAT solver, exact noiseless solver tests, precision-safe timestamp handling,
+  provenance-aware evidence gates, and operational metrics
 - **Current limitation:** no public synchronized live receiver window has been
   captured and compared with a trusted external reference source
 - **Safest positioning:** decentralized receiver registry and aviation data
   control plane, with CKB identity/discovery and off-chain MLAT processing
 
-[Open the public read-only replay demo](https://mlat-hosted-demo.onrender.com/app/overview.html)
+[Open the public read-only replay demo](https://mlat-hosted-demo.onrender.com/app/overview)
 
 > Render Free sleeps after 15 minutes without traffic. The first visit can show
 > Render's loading screen for about one minute while the service wakes; the demo
@@ -30,8 +31,8 @@ restarts. No persistent production data is stored by this walkthrough.
 
 Reviewers should open these surfaces first:
 
-- [Evidence pipeline](https://mlat-hosted-demo.onrender.com/app/pipeline.html)
-- [System metrics](https://mlat-hosted-demo.onrender.com/app/analytics.html)
+- [Evidence pipeline](https://mlat-hosted-demo.onrender.com/app/pipeline)
+- [System metrics](https://mlat-hosted-demo.onrender.com/app/analytics)
 - [Pipeline JSON](https://mlat-hosted-demo.onrender.com/api/pipeline)
 - [Public metrics JSON](https://mlat-hosted-demo.onrender.com/api/evidence/metrics)
 
@@ -45,7 +46,10 @@ The system is built around four things customers can evaluate directly:
 - **reliability** — the stack includes health, runtime, and operational metrics instead of acting like a one-off demo
 - **packaging** — the API and streaming surfaces can distinguish public/demo access from premium access
 
-CKB remains part of the architecture, but as supporting infrastructure for receiver identity and registry workflows rather than the headline product.
+CKB remains part of the architecture as Registry V2: immutable Type-ID-style
+receiver identities, owner-lock authorization, ordered record updates, explicit
+ownership transfer, and terminal revocation. It is supporting infrastructure
+rather than the headline product.
 
 ## What the product does
 
@@ -60,6 +64,12 @@ The most practical first live ingest path in the current repo is the
 `command-jsonl` transport mode, which lets a local decoder or bridge command
 stream newline-delimited JSON observations into the runtime without requiring a
 hosted websocket integration on day one.
+
+The replay path does not copy scenario coordinates into position output. It
+generates receiver arrival times, runs correlation and the production solver,
+then stores the estimate. Replay remains synthetic and non-benchmarkable. Live
+MLAT additionally requires at least four receivers with qualified integer
+nanosecond timestamps on a common clock; network arrival time is rejected.
 
 Instead of selling raw packet transport, the product direction is to sell **derived aviation outputs** that are easier to inspect, trust, and package.
 
@@ -106,7 +116,8 @@ The current model separates:
 The stack is intentionally split so product value sits above infrastructure details:
 
 1. **Receiver identity and discovery**
-   - CKB-backed registry workflows can provide receiver identity and metadata.
+   - CKB Registry V2 provides collision-resistant lifecycle identities,
+     owner-authorized updates/transfers, sequence ordering, and revocation.
 2. **Feed ingress**
    - live or simulated transports provide receiver observations.
 3. **Correlation and MLAT solving**
@@ -125,7 +136,17 @@ This repository is strongest today as:
 - a **single-node operational deployment** with SQLite hardening
 - a **commercially-aware API surface** with plans, entitlements, and metering
 
-It should **not** be described as a fully proven multi-node production system, and the CKB and 4DSky integrations should still be treated as integration work rather than guaranteed turnkey deployment.
+It should **not** be described as a fully proven multi-node production system.
+Registry V2 now has a signed CKB testnet lifecycle and public verification
+package; live receiver timing and 4DSky integration still require physical
+multi-receiver evidence.
+
+Registry V2 evidence:
+
+- [testnet verification package](evidence/registry-v2-testnet-2026-07-30-final/README.md)
+- [external security review request](docs/REGISTRY_V2_SECURITY_REVIEW_REQUEST.md)
+- deployment transaction `0x070820e96a268635edfd0ecdffc2c2d07061ce2cd79e16a8d159a86d472cc3b3`
+- registry code hash `0x1efe03c91687a43e8f8fc24d2fbb911e7071761ec4eaba06281cb52d8b505b6c`
 
 ## Operating modes
 
@@ -149,6 +170,7 @@ Use demo/replay defaults only when you intentionally want a non-live environment
 
 ```bash
 pip install -r requirements.txt
+cd frontend && npm install
 ```
 
 ### Run tests
@@ -167,14 +189,20 @@ Start the complete local demo (processor, API, and UI) with one command:
 ./run-demo.sh
 ```
 
-Then open `http://localhost:5057/app/overview.html`. The launcher gives the
-processor and API the same database and stops the complete stack if either
+Then run the Next.js frontend from `frontend/`:
+
+```bash
+cd frontend
+npm run dev
+```
+
+Open `http://localhost:3000/app/overview`. The launcher gives the processor and API the same database and stops the backend stack if either
 process fails.
 
 The evidence surfaces are:
 
-- `http://localhost:5057/app/pipeline.html` for the receiver-to-dashboard trace
-- `http://localhost:5057/app/analytics.html` for throughput, freshness,
+- `http://localhost:3000/app/pipeline` for the receiver-to-dashboard trace
+- `http://localhost:3000/app/analytics` for throughput, freshness,
   reliability, memory, latency, and benchmark artifacts
 - `http://localhost:5057/api/pipeline` and
   `http://localhost:5057/api/evidence/metrics` for machine-readable evidence
@@ -188,6 +216,8 @@ SIMULATE_IF_UNAVAILABLE=false
 DEMO_MODE=false
 RECEIVER_REGISTRY_TYPE_HASH=0xYOUR_TYPE_HASH
 FOURDSKY_BRIDGE_COMMAND="python3 scripts/bridge_adapter.py --source stdin"
+FOURDSKY_SYNCHRONIZED_CLOCKS_ATTESTED=true
+MAX_CLOCK_UNCERTAINTY_NS=100
 ```
 
 The strict live launcher checks the bridge source, CKB registry type hash,
@@ -231,8 +261,10 @@ python3 scripts/capture_grant_evidence.py \
 
 ### Open the UI
 
-- product page: `http://localhost:5000/`
-- dashboard: `http://localhost:5000/dashboard.html`
+- frontend landing page: `http://localhost:3000/`
+- frontend dashboard redirect: `http://localhost:3000/dashboard`
+- frontend overview: `http://localhost:3000/app/overview`
+- frontend localization: `http://localhost:3000/app/localization`
 - API root: `http://localhost:5000/api`
 
 ## Key capabilities
@@ -257,6 +289,8 @@ python3 scripts/capture_grant_evidence.py \
 - [Integration Guide](docs/INTEGRATION_GUIDE.md)
 - [Deployment Guide](docs/DEPLOYMENT_GUIDE.md)
 - [CKB Integration Guide](docs/CKB_INTEGRATION_GUIDE.md)
+- [MLAT Solver and Timing Evidence](docs/MLAT_SOLVER_AND_TIMING.md)
+- [Multi-Receiver Beast Runtime](docs/MULTI_RECEIVER_RUNTIME.md)
 - [Grant Evidence Runbook](docs/GRANT_EVIDENCE_RUNBOOK.md)
 - [Five-Minute Evidence Demo](docs/GRANT_DEMO_SCRIPT.md)
 - [Archived project history and planning notes](docs/archive/)

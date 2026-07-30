@@ -12,6 +12,29 @@ transitions are valid. It does not prove that a physical receiver exists, that
 its coordinates are honest, or that its clock is synchronized. Those claims
 need separate operational evidence.
 
+## Public testnet deployment
+
+The canonical Registry V2 deployment and signed lifecycle were verified on CKB
+testnet on 2026-07-30:
+
+- deployment transaction: `0x070820e96a268635edfd0ecdffc2c2d07061ce2cd79e16a8d159a86d472cc3b3`
+- contract outpoint: deployment output `0x0`
+- registry `code_hash`: `0x1efe03c91687a43e8f8fc24d2fbb911e7071761ec4eaba06281cb52d8b505b6c`
+- binary CKB data hash: `0x9f5ae883bd5039b6eb3544c69a1597214c655bbccdb920e0fb7284c09d3cc645`
+- binary SHA-256: `688fdc5f755029fa3c93365663f0bd2d118d4bacb53340234a1cecb171ad4f77`
+- evidence Receiver Identity: `0xcca658ee811707def01d466b16b9b3ee133c3f6952388c78a5f90a5c273749e8`
+
+The create, update, transfer, and revoke transactions plus all signed rejected
+attacks are indexed in
+`evidence/registry-v2-testnet-2026-07-30-final/README.md`. Verify the saved
+package and re-query the live RPC with:
+
+```bash
+python3 scripts/verify_registry_v2_evidence.py \
+  --bundle evidence/registry-v2-testnet-2026-07-30-final \
+  --live
+```
+
 ## Identity model
 
 A Receiver Identity is the exact 32-byte argument of the Registry V2 type

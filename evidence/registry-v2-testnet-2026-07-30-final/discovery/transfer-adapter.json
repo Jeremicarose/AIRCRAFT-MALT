@@ -1,0 +1,35 @@
+[
+  {
+    "altitude": 1795.0,
+    "capabilities": [
+      "mode-s",
+      "mlat"
+    ],
+    "ckb_address": "0x0c59f15938213d77d8a41353d73dbb5296b611a6",
+    "identity_id": "0xcca658ee811707def01d466b16b9b3ee133c3f6952388c78a5f90a5c273749e8",
+    "last_seen": 1785415091.0,
+    "latitude": -1.286389,
+    "lock_hash": "",
+    "longitude": 36.817223,
+    "metadata": {
+      "block_number": "0x14e757d",
+      "metadata_hash": null,
+      "out_point": {
+        "index": "0x0",
+        "tx_hash": "0xbdf310c482c71261b3c254594a034959864b7d3267fda2f8330054bc13a18c69"
+      },
+      "owner_lock": {
+        "args": "0x0c59f15938213d77d8a41353d73dbb5296b611a6",
+        "code_hash": "0x9bd7e06f3ecf4be0f2fcd2188b23f1b9fcc88e5d4b65a8637b17723bbda3cce8",
+        "hash_type": "type"
+      },
+      "schema_version": 2,
+      "sequence": 2
+    },
+    "receiver_id": "RECV_REGISTRY_V2_EVIDENCE",
+    "status": "online",
+    "stream_endpoint": "wss://registry-v2-evidence.invalid/feed",
+    "stream_format": "json",
+    "stream_protocol": "websocket-json"
+  }
+]

@@ -1,0 +1,14 @@
+[[cells]]
+name = "receiver_registry"
+enable_type_id = true
+location = { file = "/Users/jeremicarose/Downloads/mlat-system 2/evidence/registry-v2-testnet-2026-07-30-final/contract/receiver-registry" }
+
+[[cells]]
+name = "lifecycle_funding"
+enable_type_id = false
+location = { file = "/Users/jeremicarose/Downloads/mlat-system 2/deploy/registry-v2-testnet-2026-07-30-canonical/lifecycle-funding.bin" }
+
+[lock]
+code_hash = "0x9bd7e06f3ecf4be0f2fcd2188b23f1b9fcc88e5d4b65a8637b17723bbda3cce8"
+args = "0xeb30e40fe89ea2a602dae6fe88505f6e8ecf7fb1"
+hash_type = "type"

@@ -10,6 +10,7 @@ from datetime import datetime, timezone
 from decimal import Decimal
 import hashlib
 import json
+import os
 from pathlib import Path
 import re
 import shutil
@@ -350,11 +351,25 @@ def capture_api_response(
     peers: list[dict[str, Any]],
     evidence_dir: Path,
 ) -> None:
-    from api.rest_api import create_app
-    from database.mlat_db import MLATDatabase
-
     with tempfile.TemporaryDirectory(prefix="registry-v2-api-") as directory:
         database_path = Path(directory) / "registry.db"
+        previous_database_path = os.environ.get("DATABASE_PATH")
+        previous_broadcaster = os.environ.get("ENABLE_BACKGROUND_BROADCASTER")
+        os.environ["DATABASE_PATH"] = str(database_path)
+        os.environ["ENABLE_BACKGROUND_BROADCASTER"] = "false"
+        try:
+            from api.rest_api import create_app
+            from database.mlat_db import MLATDatabase
+        finally:
+            if previous_database_path is None:
+                os.environ.pop("DATABASE_PATH", None)
+            else:
+                os.environ["DATABASE_PATH"] = previous_database_path
+            if previous_broadcaster is None:
+                os.environ.pop("ENABLE_BACKGROUND_BROADCASTER", None)
+            else:
+                os.environ["ENABLE_BACKGROUND_BROADCASTER"] = previous_broadcaster
+
         database = MLATDatabase(str(database_path))
         database.connect()
         try:
