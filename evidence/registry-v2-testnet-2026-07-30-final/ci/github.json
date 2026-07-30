@@ -1,0 +1,35 @@
+{
+  "artifact": {
+    "archive_digest": "sha256:de1edf67095cf9260d9c6b0aa463ff8782fe6094b8dd9c31f33eb3e821a764f0",
+    "created_at": "2026-07-30T12:13:37Z",
+    "expires_at": "2026-08-29T12:13:37Z",
+    "id": 8758930780,
+    "name": "receiver-registry-v2-3780fffac64c4a62ec147856a8388675b509eaf5",
+    "receiver_registry_sha256": "688fdc5f755029fa3c93365663f0bd2d118d4bacb53340234a1cecb171ad4f77",
+    "size_in_bytes": 46004
+  },
+  "conclusion": "success",
+  "created_at": "2026-07-30T12:12:03Z",
+  "event": "push",
+  "head_sha": "3780fffac64c4a62ec147856a8388675b509eaf5",
+  "jobs": [
+    {
+      "conclusion": "success",
+      "id": 90867327773,
+      "name": "off-chain-registry",
+      "url": "https://github.com/Jeremicarose/AIRCRAFT-MALT/actions/runs/30541564431/job/90867327773"
+    },
+    {
+      "conclusion": "success",
+      "id": 90867327691,
+      "name": "on-chain-registry",
+      "url": "https://github.com/Jeremicarose/AIRCRAFT-MALT/actions/runs/30541564431/job/90867327691"
+    }
+  ],
+  "run_id": 30541564431,
+  "schema_version": 1,
+  "status": "completed",
+  "updated_at": "2026-07-30T12:13:40Z",
+  "url": "https://github.com/Jeremicarose/AIRCRAFT-MALT/actions/runs/30541564431",
+  "workflow": "Registry V2 Security"
+}
