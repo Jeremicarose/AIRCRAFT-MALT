@@ -61,6 +61,9 @@ jobs:
 
   on-chain-registry:
     runs-on: ubuntu-latest
+    env:
+      CC_riscv64imac_unknown_none_elf: riscv64-unknown-elf-gcc
+      AR_riscv64imac_unknown_none_elf: riscv64-unknown-elf-ar
     defaults:
       run:
         working-directory: contracts/receiver-registry
@@ -70,6 +73,10 @@ jobs:
         run: rustup show
       - name: Install Rust formatting component
         run: rustup component add rustfmt
+      - name: Install bare-metal RISC-V compiler
+        run: |
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends -y gcc-riscv64-unknown-elf
       - name: Check Rust formatting
         run: cargo fmt -- --check
       - name: Build and execute CKB-VM security tests
