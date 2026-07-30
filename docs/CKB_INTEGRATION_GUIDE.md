@@ -1,586 +1,190 @@
-# CKB Blockchain Integration Guide
+# CKB Receiver Registry V2 Integration Guide
 
-Complete guide for using Nervos Network (CKB) blockchain with the MLAT system.
+## Security objective
 
-## 🎯 Why CKB for MLAT?
+Registry V2 uses CKB cells to publish a durable Receiver Identity, current
+Receiver Record, and owner lock. The contract prevents identity duplication,
+unauthorized state continuity changes, sequence rollback, deletion, and
+revocation reversal.
 
-CKB (Common Knowledge Base) is used here as a decentralized receiver registry because:
+CKB proves who is authorized to update a registry cell and which state
+transitions are valid. It does not prove that a physical receiver exists, that
+its coordinates are honest, or that its clock is synchronized. Those claims
+need separate operational evidence.
 
-✅ **Truly Decentralized** - No central authority
-✅ **Flexible Cell Model** - Store any data structure
-✅ **Low Transaction Costs** - Affordable for frequent updates
-✅ **Permanent Storage** - Data persists on-chain
-✅ **Programmable** - Custom validation logic
-✅ **Open Ecosystem** - No permission needed
+## Identity model
 
-## 📋 How It Works
+A Receiver Identity is the exact 32-byte argument of the Registry V2 type
+script. Creation follows CKB's Type-ID rule:
 
-### Architecture
-
-```
-┌─────────────────────────────────────────────────────┐
-│              CKB Blockchain                          │
-│                                                      │
-│  ┌──────────────┐  ┌──────────────┐  ┌───────────┐ │
-│  │ Receiver Cell│  │ Receiver Cell│  │ Receiver  │ │
-│  │  NYC Data    │  │  BOS Data    │  │ Cell...   │ │
-│  └──────────────┘  └──────────────┘  └───────────┘ │
-│                                                      │
-└──────────────────────┬───────────────────────────────┘
-                       │
-                       │ RPC Query
-                       │
-        ┌──────────────▼──────────────┐
-        │   CKB Peer Discovery        │
-        │   (ckb_discovery.py)        │
-        └──────────────┬──────────────┘
-                       │
-                       ▼
-        ┌──────────────────────────────┐
-        │   MLAT System receives        │
-        │   receiver metadata          │
-        └──────────────────────────────┘
+```text
+blake2b(first_input_molecule || output_index_le_u64)
 ```
 
-### Data Flow
+The contract requires exactly 32 argument bytes and validates the creation hash
+using `ckb-std::type_id`. The script argument remains unchanged automatically
+because CKB groups inputs and outputs by the complete type script.
 
-1. **Receiver Registration**
-   - Receiver creates or updates a CKB cell with canonical JSON metadata
-   - The type script validates the receiver record schema
-   - The lock script controls ownership/update authority
+The JSON `receiver_id` is a human Receiver Label. It remains immutable during
+the lifecycle but is not globally unique. Consumers must key by the 32-byte
+Receiver Identity, never by the label or record timestamp.
 
-2. **Peer Discovery**
-   - MLAT system queries CKB for receiver cells
-   - Parses canonical JSON receiver records
-   - Filters for active, MLAT-capable receivers
-   - If multiple cells exist for one receiver id, keeps the latest valid record
-   - Caches receiver information
+## Receiver Record schema
 
-3. **Data Streaming**
-   - Connects to receivers via 4DSky
-   - Streams Mode-S data
-   - Performs MLAT calculations
+```json
+{
+  "schema_version": 2,
+  "receiver_id": "RECV_NYC_001",
+  "latitude": 40.7128,
+  "longitude": -74.006,
+  "altitude": 10.0,
+  "status": "online",
+  "capabilities": ["mode-s", "mlat"],
+  "sequence": 0,
+  "updated_at": 1700000000,
+  "stream_endpoint": "wss://feed.example/ws",
+  "stream_protocol": "websocket-json",
+  "stream_format": "json",
+  "metadata_hash": "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+}
+```
 
-## 🚀 Quick Start
+Important invariants:
 
-### 1. Install CKB SDK
+- `schema_version` is exactly `2`.
+- `receiver_id` is 1-64 uppercase ASCII identifier characters.
+- capabilities contain 1-8 unique lowercase identifiers and include `mode-s`.
+- `sequence` is `0` at creation and increments by exactly one.
+- `updated_at` is positive and cannot move backwards, but never resolves
+  identity conflicts.
+- status is `online`, `offline`, `degraded`, or `revoked`.
+- a revoked record cannot advertise a stream.
+- unknown JSON fields and trailing bytes are rejected.
+- arbitrary metadata stays off chain; `metadata_hash` can commit to it.
+
+## Lifecycle transitions
+
+| Group inputs | Group outputs | Meaning | Result |
+|---:|---:|---|---|
+| 0 | 1 | Creation with derived Type ID and sequence 0 | Allowed |
+| 1 | 1 | Metadata update with next sequence | Allowed |
+| 1 | 1 | Ownership transfer by changing output lock | Allowed |
+| 1 | 1 | Transition to `revoked` | Allowed |
+| 1 | 0 | Burn/delete | Rejected |
+| 0 | 2 or 1 | Duplicate mint/output | Rejected |
+| 1 | 1 | Update after revocation | Rejected |
+
+An ownership transfer is authorized by the previous input lock. The type script
+does not contain private keys and does not bypass lock verification. Use a
+reviewed CKB lock such as the network's standard secp256k1 lock or a deliberate
+multisig/OmniLock policy.
+
+## Discovery behavior
+
+`CKBPeerDiscovery` queries all V2 cells with indexer pagination and extracts the
+identity from `output.type.args`. It:
+
+- keys cache and runtime receivers by Receiver Identity
+- never chooses a record by self-declared timestamp
+- keeps duplicate Receiver Labels as distinct identities
+- quarantines duplicate live cells for the same identity
+- rejects malformed identities and future/stale operational records
+- retains owner lock, outpoint, sequence, block number, and metadata hash as
+  provenance
+
+Live feed adapters must put the immutable `0x...` Receiver Identity in their
+`receiver_id` field. The Receiver Label is display metadata only.
+
+## Build and verify
 
 ```bash
-# Install CKB Python SDK
-pip install ckb-py
-
-# Or add to requirements.txt
-echo "ckb-py>=0.1.0" >> requirements.txt
-pip install -r requirements.txt
+cd contracts/receiver-registry
+make test
+make check
 ```
 
-### 2. Setup CKB Account
+The test suite builds the deployable RISC-V binary and executes transaction
+tests in CKB-VM using `ckb-testtool`.
 
-```bash
-# Install CKB CLI
-# Mac
-brew install nervosnetwork/tap/ckb
+## Creation workflow
 
-# Linux
-wget https://github.com/nervosnetwork/ckb/releases/download/v0.109.0/ckb_v0.109.0_x86_64-unknown-linux-gnu.tar.gz
-tar -xzf ckb_v0.109.0_x86_64-unknown-linux-gnu.tar.gz
-
-# Initialize account
-ckb init --chain testnet
-ckb run --indexer
-
-# Create wallet
-ckb-cli account new
-# Save your private key securely!
-```
-
-### 3. Get Testnet CKB
-
-```bash
-# Get testnet CKB from faucet
-# Visit: https://faucet.nervos.org/
-
-# Check balance
-ckb-cli wallet get-capacity --address <your-address>
-```
-
-### 4. Deploy Receiver Registry Contract
-
-```bash
-# Clone the receiver registry contract
-git clone https://github.com/your-org/ckb-receiver-registry
-
-cd ckb-receiver-registry
-
-# Build contract
-capsule build
-
-# Deploy to testnet
-capsule deploy --address <your-address>
-
-# Save the type script hash!
-# e.g., 0x1234567890abcdef...
-```
-
-If you are using this repo’s local contract project, you can generate a compatible `ckb-cli` deployment config with:
-
-```bash
-python3 scripts/generate_receiver_registry_deploy_config.py \
-  --lock-arg 0xYOUR_LOCK_ARG
-```
-
-That will create:
-
-```bash
-deploy/receiver-registry.toml
-```
-
-### 5. Configure MLAT System
-
-Edit `.env`:
-
-```bash
-# CKB Configuration
-CKB_NETWORK=testnet
-CKB_RPC_URL=https://testnet.ckb.dev/rpc
-CKB_INDEXER_URL=https://testnet.ckb.dev/indexer
-RECEIVER_REGISTRY_TYPE_HASH=0x1234567890abcdef...
-
-# Optional: Your CKB private key (for registering receivers)
-CKB_PRIVATE_KEY=0x...
-
-# 4DSky Configuration (still needed for data streaming)
-FOURDSKYAPIKEY=your_api_key
-FOURDSKYENDPOINT=wss://your-feed-endpoint
-FOURDSKY_TRANSPORT=auto
-```
-
-After deployment, you can write the real type hash into `.env` with:
-
-```bash
-python3 scripts/update_env_type_hash.py \
-  --type-hash 0x1234567890abcdef... \
-  --disable-simulation
-```
-
-### 6. Run MLAT System with CKB
-
-```bash
-# Start the system
-mlat-processor
-```
-
-## 📝 Receiver Registration
-
-### Manual Registration
-
-```python
-from network.ckb_discovery import CKBPeerDiscovery, CKBConfig
-
-# Configure
-config = CKBConfig(
-    network="testnet",
-    ckb_rpc_url="https://testnet.ckb.dev/rpc",
-    receiver_registry_type_hash="0x..."
-)
-
-# Create discovery client
-discovery = CKBPeerDiscovery(config)
-await discovery.initialize()
-
-# Register your receiver
-await discovery.register_receiver(
-    receiver_id="RECV_NYC_001",
-    latitude=40.7128,
-    longitude=-74.0060,
-    altitude=10.0,
-    capabilities=["mode-s", "adsb", "mlat"],
-    private_key="0x...",  # Your CKB private key
-    stream_endpoint="wss://your-4dsky-feed",
-    stream_protocol="websocket-json",
-    stream_format="json"
-)
-```
-
-This repo now also includes a helper to generate the canonical receiver record and the exact cell-data payload:
+Generate a sequence-zero Receiver Record:
 
 ```bash
 python3 scripts/generate_receiver_registry_record.py \
   --receiver-id RECV_NYC_001 \
   --latitude 40.7128 \
-  --longitude -74.0060 \
+  --longitude -74.006 \
   --altitude 10 \
   --capability mode-s \
-  --capability adsb \
   --capability mlat \
-  --stream-protocol websocket-json \
-  --stream-format json
+  --sequence 0
 ```
 
-That writes:
-
-```bash
-deploy/receiver-registry-record.json
-deploy/receiver-registry-record.hex
-```
-
-You can also print the manual registration checklist with:
-
-```bash
-python3 scripts/print_receiver_registration_instructions.py
-```
-
-To generate a typed receiver-cell transaction template for manual completion/signing:
+Generate the output template:
 
 ```bash
 python3 scripts/generate_receiver_registration_tx_template.py \
-  --lock-arg 0xYOUR_LOCK_ARG \
-  --type-hash 0xYOUR_DEPLOYED_TYPE_HASH
+  --lock-arg 0xYOUR_OWNER_LOCK_ARG \
+  --type-hash 0xYOUR_V2_CONTRACT_CODE_HASH
 ```
 
-That writes:
+Add the funding input and receiver output to the transaction first. Then derive
+and apply the creation identity:
 
 ```bash
-deploy/receiver-registration-tx-template.json
+python3 scripts/apply_receiver_type_script.py \
+  --tx-file deploy/receiver-registration-tx.json \
+  --contract-tx-hash 0xYOUR_CONTRACT_DEPLOY_TX
 ```
 
-This is a transaction template, not a fully funded/signed transaction. It gives you the exact output cell shape needed for the receiver-registry cell:
+The script calculates the exact Type ID from the transaction's first input and
+the selected registry output index. Never submit a Registry V2 creation output
+with empty arguments.
 
-- owner lock script
-- receiver-registry type script
-- canonical JSON payload in `outputs_data`
+## Update, transfer, and revocation
 
-To print the exact `ckb-cli tx` command sequence for a funded deployer address:
+Spend the current registry cell, preserve its type script, increment sequence by
+one, and provide exactly one replacement output.
+
+For tooling that applies an existing identity explicitly:
 
 ```bash
-python3 scripts/print_receiver_registration_commands.py \
-  --address ckt1YOUR_DEPLOYER_ADDRESS
+python3 scripts/apply_receiver_type_script.py \
+  --tx-file deploy/receiver-update-tx.json \
+  --identity-id 0xYOUR_EXISTING_32_BYTE_IDENTITY \
+  --contract-tx-hash 0xYOUR_CONTRACT_DEPLOY_TX
 ```
 
-This helper:
+- Update: retain owner lock and write the next valid record.
+- Transfer: write the next valid record under the new owner's output lock. The
+  old owner must authorize spending the input.
+- Revoke: write the next sequence with `status=revoked` and no stream fields.
 
-1. fetches live cells
-2. selects a funding cell
-3. prints the exact `ckb-cli tx` commands to:
-   - initialize the tx
-   - add the input
-   - add the output
-   - inspect the tx
-   - sign it
-   - send it
+Revocation is permanent. The tombstone cannot be burned or changed later.
 
-### Automated Registration Script
+## V1 migration
 
-```python
-#!/usr/bin/env python3
-"""Register receiver on CKB blockchain"""
+Registry V1 used empty type arguments and selected duplicate labels by newest
+timestamp. V1 and V2 must use different deployed code hashes.
 
-import asyncio
-import sys
-from network.ckb_discovery import CKBPeerDiscovery, CKBConfig
+Migration procedure:
 
-async def register():
-    # Get parameters
-    receiver_id = input("Receiver ID: ")
-    latitude = float(input("Latitude: "))
-    longitude = float(input("Longitude: "))
-    altitude = float(input("Altitude (m): "))
-    private_key = input("CKB Private Key: ")
-    
-    # Configure
-    config = CKBConfig(
-        network="testnet",
-        ckb_rpc_url="https://testnet.ckb.dev/rpc",
-        receiver_registry_type_hash="0x..."
-    )
-    
-    # Register
-    discovery = CKBPeerDiscovery(config)
-    await discovery.initialize()
-    
-    success = await discovery.register_receiver(
-        receiver_id=receiver_id,
-        latitude=latitude,
-        longitude=longitude,
-        altitude=altitude,
-        capabilities=["mode-s", "adsb", "mlat"],
-        private_key=private_key
-    )
-    
-    if success:
-        print("✅ Receiver registered successfully!")
-    else:
-        print("❌ Registration failed")
-    
-    await discovery.shutdown()
+1. Deploy the V2 binary and record its code hash and contract outpoint.
+2. Create a V2 identity for every receiver under its current authorized owner.
+3. Update feed adapters to emit the new immutable identity.
+4. Set `RECEIVER_REGISTRY_TYPE_HASH` to the V2 contract code hash.
+5. Verify discovery provenance and receiver counts.
+6. Mark V1 records offline where possible; never merge V1 and V2 query results.
 
-if __name__ == "__main__":
-    asyncio.run(register())
-```
+No automatic migration can preserve V1 uniqueness because V1 never established
+a collision-resistant identity in the first place.
 
-## 🔧 CKB Cell Structure
+## Remaining limitations
 
-### Receiver Registry Cell
-
-```javascript
-{
-  // Cell capacity (minimum 61 CKB)
-  capacity: "0x174876e800",  // 100 CKB in hex
-  
-  // Lock script (controls ownership)
-  lock: {
-    code_hash: "0x9bd7e06f3ecf4be0f2fcd2188b23f1b9fcc88e5d4b65a8637b17723bbda3cce8",
-    hash_type: "type",
-    args: "0x..." // Your address
-  },
-  
-  // Type script (identifies as receiver registry)
-  type: {
-    code_hash: "0x...", // Receiver registry type hash
-    hash_type: "type",
-    args: "0x"
-  },
-  
-  // Cell data (canonical receiver metadata as JSON)
-  data: {
-    receiver_id: "RECV_NYC_001",
-    latitude: 40.7128,
-    longitude: -74.0060,
-    altitude: 10.0,
-    status: "online",
-    capabilities: ["mode-s", "adsb", "mlat"],
-    timestamp: 1704067200,
-    stream_endpoint: "wss://feed.example/ws",
-    stream_protocol: "websocket-json",
-    stream_format: "json",
-    metadata: {
-      region: "nyc"
-    }
-  }
-}
-```
-
-Ownership is not stored inside the JSON payload. Ownership is controlled by the **lock script**.
-
-Validation logic belongs in the **type script**.
-
-### Querying Receivers
-
-```python
-async def query_receivers():
-    """Query all receivers from CKB"""
-    
-    from ckb import rpc
-    
-    client = rpc.RPC("https://testnet.ckb.dev/rpc")
-    
-    # Search for receiver cells
-    search_key = {
-        "script": {
-            "code_hash": "0x...",  # Registry type hash
-            "hash_type": "type",
-            "args": "0x"
-        },
-        "script_type": "type"
-    }
-    
-    cells = client.get_cells(search_key, "asc", "0x64")
-    
-    receivers = []
-    for cell in cells.get("objects", []):
-        # Parse cell data
-        data_hex = cell["output_data"]
-        data_bytes = bytes.fromhex(data_hex[2:])
-        receiver_data = json.loads(data_bytes.decode('utf-8'))
-        
-        receivers.append(receiver_data)
-    
-    return receivers
-```
-
-## 🏗️ Receiver Registry Smart Contract
-
-### Contract Structure
-
-```rust
-// Simplified Receiver Registry Contract
-
-use ckb_std::high_level::{load_cell_data, load_script};
-
-pub fn main() -> Result<(), Error> {
-    // Load receiver data
-    let data = load_cell_data(0, Source::GroupInput)?;
-    
-    // Parse canonical receiver JSON
-    let receiver: ReceiverData = serde_json::from_slice(&data)?;
-    
-    // Validate receiver data
-    assert!(receiver.latitude >= -90.0 && receiver.latitude <= 90.0);
-    assert!(receiver.longitude >= -180.0 && receiver.longitude <= 180.0);
-    assert!(receiver.altitude >= 0.0 && receiver.altitude <= 10000.0);
-    assert!(!receiver.capabilities.is_empty());
-    
-    Ok(())
-}
-```
-
-In the final CKB design:
-
-- **state** = cell data
-- **logic** = type script validation
-- **ownership** = lock script authorization
-
-### Building and Deploying
-
-```bash
-# Initialize Capsule project
-capsule new receiver-registry
-cd receiver-registry
-
-# Add code to contracts/receiver-registry/src/entry.rs
-
-# Build
-capsule build
-
-# Test
-capsule test
-
-# Deploy to testnet
-capsule deploy --address <your-address>
-
-# Output will show:
-# Type script hash: 0x1234...
-# Save this for configuration!
-```
-
-## 📊 Monitoring CKB Integration
-
-### Check Receiver Status
-
-```bash
-# Query receivers via RPC
-curl -X POST https://testnet.ckb.dev/rpc \
-  -H 'Content-Type: application/json' \
-  -d '{
-    "jsonrpc": "2.0",
-    "method": "get_cells",
-    "params": [{
-      "script": {
-        "code_hash": "0x...",
-        "hash_type": "type",
-        "args": "0x"
-      },
-      "script_type": "type"
-    }, "asc", "0x64"],
-    "id": 1
-  }'
-```
-
-### Update Receiver Status
-
-```python
-async def update_receiver_status(receiver_id: str, new_status: str):
-    """Update receiver status on CKB"""
-    
-    # 1. Find existing cell
-    # 2. Create transaction consuming old cell
-    # 3. Create new cell with updated status
-    # 4. Sign and send transaction
-    
-    pass  # Implementation details
-```
-
-## 💰 Cost Estimation
-
-### CKB Costs (Testnet/Mainnet)
-
-- **Cell Creation**: ~100 CKB per receiver (~$10-20 on mainnet)
-- **Storage**: Permanent, included in cell capacity
-- **Updates**: ~1 CKB per transaction (~$0.10-0.20)
-
-### Optimization
-
-- **Batch Updates**: Update multiple receivers in one transaction
-- **Cell Recycling**: Consume old cell when updating
-- **Minimal Data**: Store only essential metadata on-chain
-
-## 🔒 Security Considerations
-
-### Private Key Management
-
-```bash
-# NEVER commit private keys!
-# Use environment variables
-export CKB_PRIVATE_KEY="0x..."
-
-# Or use hardware wallet
-# Or use CKB key management service
-```
-
-### Signature Verification
-
-```python
-def verify_receiver_signature(receiver_data: dict) -> bool:
-    """Verify receiver data is signed by owner"""
-    
-    # Extract signature
-    signature = receiver_data.pop('signature')
-    
-    # Compute message hash
-    message = json.dumps(receiver_data, sort_keys=True)
-    message_hash = hashlib.sha256(message.encode()).digest()
-    
-    # Verify signature
-    # ... verification logic
-    
-    return is_valid
-```
-
-## 🎯 Production Checklist
-
-- [ ] CKB node/RPC access configured
-- [ ] Receiver registry contract deployed
-- [ ] Type script hash saved in configuration
-- [ ] Receivers registered on-chain
-- [ ] Query system tested
-- [ ] Backup private keys securely
-- [ ] Monitor CKB node health
-- [ ] Plan for cell capacity management
-- [ ] Setup automated status updates
-- [ ] Test failover scenarios
-
-## 📚 Additional Resources
-
-- **CKB Documentation**: https://docs.nervos.org/
-- **CKB Explorer**: https://explorer.nervos.org/
-- **CKB Faucet**: https://faucet.nervos.org/
-- **Capsule (Smart Contract Dev)**: https://github.com/nervosnetwork/capsule
-- **CKB.py SDK**: https://github.com/nervosnetwork/ckb-py
-
-## 🆚 CKB vs Hedera Comparison
-
-| Feature | CKB | Hedera |
-|---------|-----|--------|
-| Decentralization | Fully decentralized | Permissioned council |
-| Transaction Cost | Low (~$0.10) | Very low (~$0.0001) |
-| Data Storage | Permanent on-chain | Consensus service |
-| Smart Contracts | Full Turing-complete | Limited |
-| Ecosystem | Growing | Enterprise-focused |
-| Developer Tools | Mature | Very mature |
-
-**For MLAT**: CKB provides true decentralization with flexible data storage!
-
----
-
-## ✅ You're Ready!
-
-Your MLAT system now uses **CKB blockchain** for decentralized peer discovery!
-
-**Benefits**:
-✅ No central authority
-✅ Permanent receiver registry
-✅ Trustless verification
-✅ Open participation
-✅ Community-owned infrastructure
-
-Start by deploying the receiver registry contract and registering your receivers! 🚀
+- Receiver Labels are not globally unique.
+- Contract correctness is test-backed but not independently audited.
+- Registration transaction assembly still depends on `ckb-cli` or equivalent
+  wallet tooling for capacity balancing, signing, and broadcast.
+- Physical receiver, location, feed, and timing attestations remain off-chain
+  responsibilities.

@@ -10,14 +10,14 @@ help:
 	@echo "  make build  - build optimized CKB contract binary"
 	@echo "  make clean  - remove build artifacts"
 
-test:
-	cargo test
+test: build
+	cargo test --locked --lib --test lifecycle
 
 check:
-	cargo check --target $(TARGET)
+	cargo check --locked --target $(TARGET) --features contract-bin --bin $(CONTRACT_NAME)
 
 build:
-	cargo build --release --target $(TARGET)
+	cargo build --locked --release --target $(TARGET) --features contract-bin
 
 clean:
 	cargo clean
