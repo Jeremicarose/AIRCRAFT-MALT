@@ -1,0 +1,63 @@
+{
+  "artifacts": {
+    "accuracy.json": {
+      "bytes": 2510,
+      "sha256": "963a24e3af9a2eb6c5ace937811b96e94315962cef20a3d3d13af0a36b5aa750"
+    },
+    "inputs/mlat.jsonl": {
+      "bytes": 736,
+      "sha256": "a1b22ab3703477ad5bb74a5eac6fd7be6f5499ffcd827db645f1f19bcaf04b0e"
+    },
+    "inputs/readiness.json": {
+      "bytes": 264,
+      "sha256": "ced96b803714037e642956b7195682489abd1c1966cce5a8b8caea809ba6299d"
+    },
+    "inputs/reference.jsonl": {
+      "bytes": 313,
+      "sha256": "d0050dc90e54950f7c692d3b1f4bb7f5f69ef270c0967701b7a798a58f6dc2b4"
+    },
+    "source/Dockerfile": {
+      "bytes": 1036,
+      "sha256": "512f81426d4ad3dfb0c25db0d603558bd7a926fc6689ab50a85cfad7ccbd9349"
+    },
+    "source/benchmark_mlat_against_reference.py": {
+      "bytes": 13883,
+      "sha256": "125f54979db9da090fbbcee0ef5eb48417d129bdd8287912d7e30b3002357281"
+    },
+    "source/pyproject.toml": {
+      "bytes": 1048,
+      "sha256": "f3d255d8cf6c7a75353029f551d0c7bb6fa897e9698e7e43272ed980cf568914"
+    },
+    "source/python-version.txt": {
+      "bytes": 8,
+      "sha256": "43fd694bd564dd2215f51a6b23f6a3712834850225e629d7781c81c71076092d"
+    },
+    "source/reproducibility-workflow.yml": {
+      "bytes": 3367,
+      "sha256": "4299af1f3c1b59e385b29747ff862391b12e01f5c8834743a27f97b8207074e2"
+    },
+    "source/requirements-build.in": {
+      "bytes": 113,
+      "sha256": "7ad50bfb0d0449832d943e831ae9f2eacf6590d820942639d0cf7cd5ae179c48"
+    },
+    "source/requirements-dev.lock": {
+      "bytes": 47134,
+      "sha256": "07033e8ef06b003ac801fa58663f8e7379f1475a7a08f5608b69cde65815f3d7"
+    },
+    "source/requirements.lock": {
+      "bytes": 23570,
+      "sha256": "0c7654f317c66293c5441203c2dc0d0226711b98df95fbbb42fab6c880b235ab"
+    },
+    "source/run_reproducible_benchmark.py": {
+      "bytes": 9171,
+      "sha256": "5d8c190c7ffb3ef4ccfc91798db561095885452f30e3372e7f86fa13afe663c1"
+    }
+  },
+  "benchmark_id": "mlat-reference-matching-v1",
+  "claim_scope": "Algorithm and evidence-format reproducibility using synthetic fixtures.",
+  "deterministic": true,
+  "generated_at": "2024-03-09T16:00:03Z",
+  "live_validation": false,
+  "python_target": "3.12.11",
+  "schema_version": 1
+}

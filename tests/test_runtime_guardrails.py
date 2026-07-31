@@ -55,7 +55,7 @@ def test_strict_production_rejects_demo_mode(monkeypatch):
 def test_ckb_discovery_failure_raises_in_strict_mode(monkeypatch):
     discovery = CKBPeerDiscovery(
         CKBConfig(
-            receiver_registry_type_hash="0x1234",
+            receiver_registry_type_hash="0x" + "12" * 32,
             simulate_if_unavailable=True,
             strict_production_mode=True,
         )

@@ -169,9 +169,12 @@ Use demo/replay defaults only when you intentionally want a non-live environment
 ### Install dependencies
 
 ```bash
-pip install -r requirements.txt
-cd frontend && npm install
+python -m pip install --require-hashes -r requirements-dev.lock
 ```
+
+Python is pinned by `.python-version`. `requirements.lock` contains the
+production dependency graph and `requirements-dev.lock` adds the exact test and
+development graph. See [Reproducibility](docs/REPRODUCIBILITY.md).
 
 ### Run tests
 
@@ -233,6 +236,16 @@ be explicitly attested with `FOURDSKY_EXTERNAL_SOURCE_ATTESTED=true`.
 
 ### Capture benchmarks and evidence
 
+Generate and verify the byte-reproducible synthetic regression benchmark:
+
+```bash
+python3 scripts/run_reproducible_benchmark.py
+python3 scripts/run_reproducible_benchmark.py --verify-only
+```
+
+This deterministic artifact validates the benchmark implementation and evidence
+format. It does not count as synchronized live receiver evidence.
+
 Publish a reproducible local operational baseline:
 
 ```bash
@@ -292,6 +305,7 @@ python3 scripts/capture_grant_evidence.py \
 - [MLAT Solver and Timing Evidence](docs/MLAT_SOLVER_AND_TIMING.md)
 - [Multi-Receiver Beast Runtime](docs/MULTI_RECEIVER_RUNTIME.md)
 - [Grant Evidence Runbook](docs/GRANT_EVIDENCE_RUNBOOK.md)
+- [Reproducibility](docs/REPRODUCIBILITY.md)
 - [Five-Minute Evidence Demo](docs/GRANT_DEMO_SCRIPT.md)
 - [Archived project history and planning notes](docs/archive/)
 

@@ -1,5 +1,6 @@
 import importlib
 import json
+import pytest
 import sqlite3
 import sys
 import time
@@ -487,17 +488,31 @@ def test_plan_limits_and_usage_metering(monkeypatch, tmp_path):
 
 def test_websocket_subscription_requires_stream_entitlement(monkeypatch, tmp_path):
     module = _load_api_module(monkeypatch, tmp_path)
+    if module.SocketIO is None:
+        pytest.skip("Flask-SocketIO is not installed in this environment")
     app = module.create_app()
     commercial = _seed_api_db(module, app)
 
-    emitted = []
-    module.emit = lambda event, payload: emitted.append((event, payload))
-    with app.app_context():
-        module.handle_subscribe({"aircraft_id": "A1B2C3", "api_key": commercial["public_key"]})
-        module.handle_subscribe({"aircraft_id": "A1B2C3", "api_key": commercial["premium_key"]})
+    client = module.socketio.test_client(app)
+    assert client.is_connected()
+    client.get_received()
 
-    assert emitted[0][1]["status"] == "denied"
-    assert emitted[1][1]["status"] == "subscribed"
+    client.emit(
+        "subscribe_aircraft",
+        {"aircraft_id": "A1B2C3", "api_key": commercial["public_key"]},
+    )
+    denied = client.get_received()
+    client.emit(
+        "subscribe_aircraft",
+        {"aircraft_id": "A1B2C3", "api_key": commercial["premium_key"]},
+    )
+    subscribed = client.get_received()
+    client.disconnect()
+
+    assert denied[0]["name"] == "subscription_response"
+    assert denied[0]["args"][0]["status"] == "denied"
+    assert subscribed[0]["name"] == "subscription_response"
+    assert subscribed[0]["args"][0]["status"] == "subscribed"
 
 
 def test_broadcast_position_update_includes_receiver_ids(monkeypatch, tmp_path):
