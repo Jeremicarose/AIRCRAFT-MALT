@@ -1,0 +1,132 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-08-06T07:12:09Z",
+  "title": "Design System: MLAT Airspace Console",
+  "extensions": {
+    "colorMeta": {
+      "graphite-deep": { "role": "neutral", "displayName": "Deep Graphite", "canonical": "#080a0d", "tonalRamp": ["#080a0d", "#10141a", "#202730", "#343d48", "#515c69", "#76818d", "#aab2bd", "#f1f4f8"] },
+      "signal-blue": { "role": "primary", "displayName": "Signal Blue", "canonical": "#5b9cff", "tonalRamp": ["#0b1d38", "#12315e", "#1f4f91", "#316fc5", "#5b9cff", "#86b7ff", "#b6d2ff", "#e8f1ff"] },
+      "trust-cyan": { "role": "secondary", "displayName": "Trust Cyan", "canonical": "#68d5e8", "tonalRamp": ["#09252b", "#10414b", "#1c6674", "#3193a4", "#68d5e8", "#91e2ef", "#bceef5", "#e9fbfd"] },
+      "healthy": { "role": "tertiary", "displayName": "Healthy Green", "canonical": "#4fd18b", "tonalRamp": ["#09271a", "#10442d", "#1b6846", "#2f9867", "#4fd18b", "#82e2ad", "#b5f0ce", "#e9fbf1"] },
+      "attention": { "role": "tertiary", "displayName": "Attention Yellow", "canonical": "#e6c45d", "tonalRamp": ["#2b2308", "#4a3c0e", "#705c18", "#a4882e", "#e6c45d", "#efd785", "#f6e8b3", "#fcf7e5"] },
+      "replay": { "role": "tertiary", "displayName": "Replay Orange", "canonical": "#ef9b55", "tonalRamp": ["#301807", "#522a0d", "#7b4018", "#b6632d", "#ef9b55", "#f5b983", "#f9d5b3", "#fdf1e6"] },
+      "failure": { "role": "tertiary", "displayName": "Failure Red", "canonical": "#ef6b72", "tonalRamp": ["#310d10", "#53171b", "#7e252a", "#b83c43", "#ef6b72", "#f5959a", "#fac0c3", "#fdebed"] },
+      "series-teal": { "role": "secondary", "displayName": "Series Teal", "canonical": "#4bb6a3", "tonalRamp": ["#08231f", "#0f3d35", "#195e52", "#2d8978", "#4bb6a3", "#79cdbd", "#ace3d8", "#e5f8f3"] },
+      "series-violet": { "role": "secondary", "displayName": "Series Violet", "canonical": "#9b8cf4", "tonalRamp": ["#1c153e", "#302568", "#4b3c9a", "#705fc9", "#9b8cf4", "#b9adf8", "#d6d0fb", "#f2f0fe"] },
+      "series-gold": { "role": "secondary", "displayName": "Series Gold", "canonical": "#c7a85b", "tonalRamp": ["#281f08", "#44370e", "#685419", "#967a2f", "#c7a85b", "#dcc785", "#ede0b3", "#faf5e5"] }
+    },
+    "typographyMeta": {
+      "headline": { "displayName": "Page Headline", "purpose": "Route titles and primary inspector entities." },
+      "title": { "displayName": "Operational Title", "purpose": "Panel, pipeline stage, and table titles." },
+      "body": { "displayName": "Interface Body", "purpose": "Concise descriptions and operational copy." },
+      "label": { "displayName": "Metadata Label", "purpose": "Control labels and quiet metadata." }
+    },
+    "shadows": [
+      { "name": "overlay", "value": "0 8px 24px rgba(0, 0, 0, 0.34)", "purpose": "Menus, dialogs, and tooltips only." },
+      { "name": "map-control", "value": "0 4px 8px rgba(0, 0, 0, 0.28)", "purpose": "Map controls over variable tile content." }
+    ],
+    "motion": [
+      { "name": "operational", "value": "180ms cubic-bezier(0.22, 1, 0.36, 1)", "purpose": "State changes, focus, and spatial continuity." }
+    ],
+    "breakpoints": [
+      { "name": "sm", "value": "640px" },
+      { "name": "md", "value": "768px" },
+      { "name": "lg", "value": "1024px" },
+      { "name": "xl", "value": "1280px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The single strongest command in a work region.",
+      "html": "<button class=\"ds-btn-primary\">Investigate issue</button>",
+      "css": ".ds-btn-primary{height:36px;padding:0 12px;border:0;border-radius:6px;background:#5b9cff;color:#080a0d;font:600 13px Inter,system-ui,sans-serif;transition:background-color 180ms cubic-bezier(.22,1,.36,1),transform 180ms cubic-bezier(.22,1,.36,1)}.ds-btn-primary:hover{background:#78adff}.ds-btn-primary:active{transform:scale(.98)}.ds-btn-primary:focus-visible{outline:2px solid #5b9cff;outline-offset:2px}"
+    },
+    {
+      "name": "Secondary Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "A compact contextual command.",
+      "html": "<button class=\"ds-btn-secondary\">View evidence</button>",
+      "css": ".ds-btn-secondary{height:36px;padding:0 12px;border:1px solid #2a3039;border-radius:6px;background:#14181e;color:#f1f4f8;font:600 13px Inter,system-ui,sans-serif;transition:background-color 180ms cubic-bezier(.22,1,.36,1),border-color 180ms cubic-bezier(.22,1,.36,1)}.ds-btn-secondary:hover{background:#1b2028;border-color:#3c4654}.ds-btn-secondary:focus-visible{outline:2px solid #5b9cff;outline-offset:2px}"
+    },
+    {
+      "name": "Search Field",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Search and filter input used throughout inventories.",
+      "html": "<input class=\"ds-input\" aria-label=\"Search aircraft\" placeholder=\"Search aircraft\">",
+      "css": ".ds-input{width:280px;height:36px;padding:0 36px;border:1px solid #2a3039;border-radius:6px;background:#14181e;color:#f1f4f8;font:400 13px Inter,system-ui,sans-serif;transition:border-color 180ms cubic-bezier(.22,1,.36,1)}.ds-input::placeholder{color:#aab2bd}.ds-input:hover{border-color:#3c4654}.ds-input:focus-visible{outline:2px solid #5b9cff;outline-offset:1px;border-color:#5b9cff}"
+    },
+    {
+      "name": "Healthy Status Chip",
+      "kind": "chip",
+      "description": "Non-color-only healthy state indicator.",
+      "html": "<span class=\"ds-chip\"><span aria-hidden=\"true\">&#10003;</span> Healthy</span>",
+      "css": ".ds-chip{display:inline-flex;height:24px;align-items:center;gap:6px;padding:0 8px;border-radius:999px;background:rgba(79,209,139,.1);color:#83e5ad;font:600 11px Inter,system-ui,sans-serif}"
+    },
+    {
+      "name": "Operational Surface",
+      "kind": "card",
+      "refersTo": "panel",
+      "description": "A flat bounded region for one operational concern.",
+      "html": "<section class=\"ds-surface\"><strong>Receiver inventory</strong><p>5 registered infrastructure nodes</p></section>",
+      "css": ".ds-surface{width:320px;padding:16px;border:1px solid #2a3039;border-radius:8px;background:#0d1014;color:#f1f4f8;font:400 13px Inter,system-ui,sans-serif}.ds-surface strong{display:block;font-size:14px}.ds-surface p{margin:4px 0 0;color:#aab2bd;font-size:12px}"
+    },
+    {
+      "name": "Active Navigation Item",
+      "kind": "nav",
+      "description": "Current workflow location in the permanent sidebar.",
+      "html": "<a class=\"ds-nav\" href=\"#\" aria-current=\"page\">Aircraft</a>",
+      "css": ".ds-nav{display:flex;height:36px;align-items:center;padding:0 10px;border-radius:6px;background:#1b2028;color:#f1f4f8;text-decoration:none;font:500 13px Inter,system-ui,sans-serif;transition:background-color 180ms cubic-bezier(.22,1,.36,1)}.ds-nav:hover{background:#242a32}.ds-nav:focus-visible{outline:2px solid #5b9cff;outline-offset:1px}"
+    },
+    {
+      "name": "Segmented Control",
+      "kind": "custom",
+      "description": "A compact mutually exclusive view or range selector.",
+      "html": "<div class=\"ds-segmented\" role=\"group\" aria-label=\"Metrics time range\"><button aria-pressed=\"false\">1h</button><button aria-pressed=\"true\">24h</button></div>",
+      "css": ".ds-segmented{display:inline-flex;padding:2px;border:1px solid #2a3039;border-radius:6px;background:#14181e}.ds-segmented button{height:32px;padding:0 12px;border:0;border-radius:4px;background:transparent;color:#7f8996;font:500 12px Inter,system-ui,sans-serif;transition:background-color 180ms cubic-bezier(.22,1,.36,1),color 180ms cubic-bezier(.22,1,.36,1)}.ds-segmented button[aria-pressed=true]{background:#1b2028;color:#f1f4f8}.ds-segmented button:focus-visible{outline:2px solid #5b9cff;outline-offset:-2px}"
+    },
+    {
+      "name": "Console Switch",
+      "kind": "custom",
+      "description": "A local binary preference with native switch semantics.",
+      "html": "<button class=\"ds-switch\" role=\"switch\" aria-checked=\"true\" aria-label=\"Show receiver geometry\"><span></span></button>",
+      "css": ".ds-switch{position:relative;width:36px;height:20px;border:1px solid #5b9cff;border-radius:999px;background:#5b9cff;transition:background-color 180ms cubic-bezier(.22,1,.36,1)}.ds-switch span{position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:999px;background:#080a0d;transform:translateX(16px);transition:transform 180ms cubic-bezier(.22,1,.36,1)}.ds-switch:focus-visible{outline:2px solid #5b9cff;outline-offset:2px}"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Quiet Control Room",
+    "overview": "The interface is designed for an operator seated in a dim operations room, monitoring a high-volume system for hours without fatigue. Deep neutral surfaces reduce glare, airspace and evidence receive the strongest visual hierarchy, and color appears only when it communicates selection, trust, mode, or health. This is a restrained product system built from familiar infrastructure-software patterns.",
+    "keyCharacteristics": [
+      "Airspace-led layouts with compact evidence inspectors",
+      "Tonal depth with thin separators and rare shadows",
+      "One sans-serif family with tabular numerals",
+      "Semantic color backed by text and icon cues",
+      "Motion limited to state, focus, and spatial continuity"
+    ],
+    "rules": [
+      { "name": "The Rare Accent Rule", "body": "Signal blue and trust cyan together occupy less than ten percent of a screen. Their scarcity makes them useful.", "section": "colors" },
+      { "name": "The Status Contract", "body": "Green means healthy, yellow means attention, orange means replay, red means failure, blue means selection, and gray means neutral. No substitutions.", "section": "colors" },
+      { "name": "The One-Family Rule", "body": "Serif display faces, decorative monospace, fluid headings, and negative letter spacing are prohibited.", "section": "typography" },
+      { "name": "The Structural Depth Rule", "body": "A resting panel uses a separator or a tonal change, never a decorative border and wide shadow together.", "section": "elevation" }
+    ],
+    "dos": [
+      "Do make the map the largest visual region on Overview and Live Map.",
+      "Do pair every semantic color with an icon or text label.",
+      "Do keep state transitions at or below 180ms with an ease-out curve.",
+      "Do reveal evidence progressively from summary to exact provenance.",
+      "Do keep healthy state quiet and make operator actions explicit on exceptions."
+    ],
+    "donts": [
+      "Don't resemble a blockchain explorer, a wallet, or a transaction feed.",
+      "Don't use a gaming RGB dashboard, decorative gradients, gradient text, or glowing ornament.",
+      "Don't build generic card-grid admin pages or nest cards inside cards.",
+      "Don't use marketing landing-page composition, oversized glass cards, or walls of explanatory copy.",
+      "Don't use serif display typography, repeated status badges, or decorative motion.",
+      "Don't use cyan as a status color; it is reserved for cryptographic trust."
+    ]
+  }
+}

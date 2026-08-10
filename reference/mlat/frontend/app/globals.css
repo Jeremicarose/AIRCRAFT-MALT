@@ -1,0 +1,263 @@
+@import "tailwindcss";
+@import "maplibre-gl/dist/maplibre-gl.css";
+
+@source "../**/*.{ts,tsx}";
+
+@theme {
+  --font-sans: "IBM Plex Sans", "Avenir Next", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", "SFMono-Regular", Consolas, monospace;
+
+  --color-graphite-deep: #080a0d;
+  --color-graphite: #0d1014;
+  --color-graphite-raised: #14181e;
+  --color-graphite-hover: #1b2028;
+  --color-line: #2a3039;
+  --color-ink: #f1f4f8;
+  --color-ink-secondary: #aab2bd;
+  --color-ink-quiet: #7f8996;
+  --color-signal-blue: #5b9cff;
+  --color-trust-cyan: #68d5e8;
+  --color-healthy: #4fd18b;
+  --color-attention: #e6c45d;
+  --color-replay: #ef9b55;
+  --color-failure: #ef6b72;
+  --color-series-teal: #4bb6a3;
+  --color-series-violet: #9b8cf4;
+  --color-series-gold: #c7a85b;
+
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+
+  --shadow-overlay: 0 8px 24px rgba(0, 0, 0, 0.34);
+  --shadow-map: 0 4px 8px rgba(0, 0, 0, 0.28);
+  --ease-operational: cubic-bezier(0.22, 1, 0.36, 1);
+  --duration-fast: 120ms;
+  --duration-standard: 180ms;
+
+  --z-index-dropdown: 30;
+  --z-index-sticky: 40;
+  --z-index-modal-backdrop: 50;
+  --z-index-modal: 60;
+  --z-index-toast: 70;
+  --z-index-tooltip: 80;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  min-width: 320px;
+  background: #080a0d;
+  color-scheme: dark;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  overflow-x: hidden;
+  background:
+    radial-gradient(circle at top left, rgba(104, 213, 232, 0.08), transparent 28%),
+    radial-gradient(circle at top right, rgba(91, 156, 255, 0.1), transparent 24%),
+    linear-gradient(180deg, #0a0c10 0, #080a0d 260px);
+  color: #f1f4f8;
+  font-family: "IBM Plex Sans", "Avenir Next", ui-sans-serif, system-ui, sans-serif;
+  font-feature-settings: "tnum" 1, "cv02" 1, "cv03" 1;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+button,
+a,
+input,
+[role="button"] {
+  -webkit-tap-highlight-color: transparent;
+}
+
+::selection {
+  background: rgba(91, 156, 255, 0.28);
+  color: #f1f4f8;
+}
+
+.maplibregl-map {
+  width: 100%;
+  height: 100%;
+  background: #090c10;
+  font-family: "IBM Plex Sans", "Avenir Next", ui-sans-serif, system-ui, sans-serif;
+}
+
+.maplibregl-canvas {
+  outline: none;
+}
+
+.maplibregl-ctrl-group {
+  overflow: hidden;
+  border: 1px solid #2a3039;
+  border-radius: 6px;
+  background: #11151a;
+  box-shadow: var(--shadow-map);
+}
+
+.maplibregl-ctrl-group button {
+  width: 32px;
+  height: 32px;
+  background-color: #11151a;
+}
+
+.maplibregl-ctrl-group button + button {
+  border-top-color: #2a3039;
+}
+
+.maplibregl-ctrl-group button:hover {
+  background-color: #1b2028;
+}
+
+.maplibregl-ctrl-icon {
+  filter: invert(0.84);
+}
+
+.maplibregl-ctrl-attrib {
+  background: rgba(8, 10, 13, 0.82) !important;
+  color: #7f8996;
+  font-size: 10px;
+}
+
+.maplibregl-ctrl-attrib a {
+  color: #aab2bd;
+}
+
+.aircraft-map-marker,
+.receiver-map-marker {
+  position: relative;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  transition: transform 200ms var(--ease-operational), filter 200ms var(--ease-operational);
+  will-change: transform;
+}
+
+.aircraft-map-marker {
+  width: 20px;
+  height: 20px;
+  color: #dce9ff;
+  filter: drop-shadow(0 0 5px rgba(91, 156, 255, 0.48));
+}
+
+.aircraft-map-marker::before {
+  content: "";
+  width: 13px;
+  height: 13px;
+  border-radius: 2px 7px 2px 7px;
+  background: currentColor;
+  clip-path: polygon(50% 0, 62% 37%, 100% 58%, 62% 61%, 58% 100%, 42% 100%, 38% 61%, 0 58%, 38% 37%);
+}
+
+.aircraft-map-marker:hover,
+.aircraft-map-marker.is-selected {
+  z-index: 2;
+  transform: scale(1.25);
+  color: #5b9cff;
+  filter: drop-shadow(0 0 8px rgba(91, 156, 255, 0.75));
+}
+
+.receiver-map-marker {
+  width: 17px;
+  height: 17px;
+  border: 1px solid rgba(104, 213, 232, 0.62);
+  border-radius: 50%;
+  background: rgba(8, 10, 13, 0.9);
+  box-shadow: 0 0 0 3px rgba(104, 213, 232, 0.08);
+}
+
+.receiver-map-marker::before {
+  content: "";
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: #68d5e8;
+}
+
+.receiver-map-marker:hover,
+.receiver-map-marker.is-selected {
+  transform: scale(1.2);
+  border-color: #68d5e8;
+  box-shadow: 0 0 0 4px rgba(104, 213, 232, 0.16);
+}
+
+.maplibregl-popup-content {
+  min-width: 180px;
+  padding: 10px 12px;
+  border: 1px solid #2a3039;
+  border-radius: 6px;
+  background: #11151a;
+  color: #f1f4f8;
+  box-shadow: var(--shadow-overlay);
+}
+
+.maplibregl-popup-tip {
+  border-top-color: #11151a !important;
+}
+
+.map-overview {
+  width: 100%;
+  height: 610px;
+}
+
+.map-live {
+  width: 100%;
+  min-height: 620px;
+  height: 100%;
+}
+
+.map-trajectory {
+  width: 100%;
+  height: 390px;
+}
+
+.map-coverage {
+  width: 100%;
+  height: 360px;
+}
+
+@media (max-width: 767px) {
+  .map-overview,
+  .map-live {
+    height: 480px;
+    min-height: 480px;
+  }
+
+  .map-trajectory,
+  .map-coverage {
+    height: 320px;
+  }
+}
+
+.recharts-cartesian-axis-tick-value,
+.recharts-legend-item-text {
+  fill: #7f8996;
+  color: #7f8996 !important;
+  font-size: 11px;
+}
+
+.recharts-cartesian-grid line {
+  stroke: #242a32;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
