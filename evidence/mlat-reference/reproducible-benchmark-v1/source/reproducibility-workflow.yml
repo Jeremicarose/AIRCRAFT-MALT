@@ -1,0 +1,111 @@
+name: Repository CI
+
+on:
+  pull_request:
+  push:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: reproducibility-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  python-tests:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version-file: .python-version
+          cache: pip
+          cache-dependency-path: requirements-dev.lock
+      - name: Install hash-locked dependencies
+        run: python -m pip install --disable-pip-version-check --require-hashes -r requirements-dev.lock
+      - name: Record interpreter and dependency provenance
+        run: |
+          python -VV
+          python -m pip --version
+          python -m pip check
+          python -m pip freeze --all
+      - name: Check Python formatting and lint
+        run: |
+          python -m black --check src/ckb_registry src/mlat_reference tools tests
+          python -m flake8 src/ckb_registry src/mlat_reference tools tests
+      - name: Run complete Python suite
+        run: python -m pytest -q
+      - name: Verify documentation links
+        run: python tools/check_documentation.py
+
+  deterministic-benchmark:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version-file: .python-version
+      - name: Generate benchmark twice
+        run: |
+          python tools/mlat/run_reproducible_benchmark.py --output-dir "${RUNNER_TEMP}/benchmark-a"
+          python tools/mlat/run_reproducible_benchmark.py --output-dir "${RUNNER_TEMP}/benchmark-b"
+      - name: Require byte-identical repeated output
+        run: diff -ru "${RUNNER_TEMP}/benchmark-a" "${RUNNER_TEMP}/benchmark-b"
+      - name: Verify hashes and claim scope
+        run: python tools/mlat/run_reproducible_benchmark.py --output-dir "${RUNNER_TEMP}/benchmark-a" --verify-only
+      - name: Require committed artifact to be current
+        run: diff -ru evidence/mlat-reference/reproducible-benchmark-v1 "${RUNNER_TEMP}/benchmark-a"
+      - name: Capture CI environment
+        run: |
+          mkdir -p ci-artifact
+          cp -R "${RUNNER_TEMP}/benchmark-a" ci-artifact/reproducible-benchmark
+          cp requirements.lock requirements-dev.lock ci-artifact/
+          {
+            python -VV
+            python -m pip --version
+            sha256sum requirements.lock requirements-dev.lock
+            sha256sum ci-artifact/reproducible-benchmark/checksums.sha256
+          } > ci-artifact/ci-environment.txt 2>&1
+      - name: Upload reproducibility evidence
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: reproducibility-${{ github.sha }}
+          path: ci-artifact
+          if-no-files-found: error
+          retention-days: 30
+
+  frontend-build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: reference/mlat/frontend
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 22.23.1
+          cache: npm
+          cache-dependency-path: reference/mlat/frontend/package-lock.json
+      - name: Install locked frontend dependencies
+        run: npm ci
+      - name: Type-check MLAT reference frontend
+        run: npm run typecheck
+      - name: Build MLAT reference frontend
+        run: npm run build
+
+  container-build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - name: Build pinned application image
+        run: docker build --tag mlat-system:ci .
+      - name: Smoke-test installed package and entrypoints
+        run: >-
+          docker run --rm --entrypoint sh mlat-system:ci -c
+          'command -v mlat-processor && command -v mlat-api &&
+          python -c "import mlat_reference.api.rest_api, mlat_reference.runtime; print(\"container imports: pass\")"'

@@ -43,9 +43,9 @@ if command -v gunicorn >/dev/null 2>&1; then
         --access-logfile - \
         --error-logfile - \
         --capture-output \
-        api.rest_api:app &
+        mlat_reference.api.rest_api:app &
 else
-    python3 "$ROOT_DIR/src/api/rest_api.py" &
+    python3 -m mlat_reference.api.rest_api &
 fi
 API_PID=$!
 
@@ -72,7 +72,7 @@ if [ "$API_READY" != "true" ]; then
 fi
 
 echo "MLAT API is ready; starting processor with DATABASE_PATH=$DATABASE_PATH"
-python3 "$ROOT_DIR/src/production_main.py" &
+python3 -m mlat_reference.runtime &
 PROCESSOR_PID=$!
 
 # Keep the service healthy as a unit. If either half exits, the trap stops the

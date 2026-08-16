@@ -21,5 +21,5 @@ export DEMO_LABEL="${DEMO_LABEL:-Hosted demo - Northeast replay}"
 export DEMO_AUTO_CONNECT=true
 export STATS_INTERVAL_SECONDS="${STATS_INTERVAL_SECONDS:-15}"
 
-echo "Starting the MLAT demo at http://localhost:${API_PORT}/app/overview.html"
+echo "Starting the MLAT reference API at http://localhost:${API_PORT}/api"
 exec "$ROOT_DIR/render-entrypoint.sh"

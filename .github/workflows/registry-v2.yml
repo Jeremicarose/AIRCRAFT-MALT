@@ -4,39 +4,31 @@ on:
   pull_request:
     paths:
       - ".github/workflows/registry-v2.yml"
-      - "contracts/receiver-registry/**"
-      - "src/network/ckb_client.py"
-      - "src/network/ckb_discovery.py"
-      - "src/network/receiver_registry.py"
-      - "scripts/*receiver*"
-      - "scripts/registry_v2_testnet_lifecycle.py"
-      - "scripts/verify_registry_v2_evidence.py"
-      - "tests/test_*receiver*"
-      - "tests/test_apply_receiver_type_script.py"
-      - "tests/test_ckb_registry.py"
-      - "tests/test_contract_layout.py"
+      - "contracts/registry-v2/**"
+      - "src/mlat_reference/ingest/client.py"
+      - "src/ckb_registry/**"
+      - "tools/registry/**"
+      - "tests/registry/**"
   push:
-    branches: [main, registry-v2-testnet-evidence]
     paths:
       - ".github/workflows/registry-v2.yml"
-      - "contracts/receiver-registry/**"
-      - "src/network/ckb_client.py"
-      - "src/network/ckb_discovery.py"
-      - "src/network/receiver_registry.py"
-      - "scripts/*receiver*"
-      - "scripts/registry_v2_testnet_lifecycle.py"
-      - "scripts/verify_registry_v2_evidence.py"
-      - "tests/test_*receiver*"
-      - "tests/test_apply_receiver_type_script.py"
-      - "tests/test_ckb_registry.py"
-      - "tests/test_contract_layout.py"
+      - "contracts/registry-v2/**"
+      - "src/mlat_reference/ingest/client.py"
+      - "src/ckb_registry/**"
+      - "tools/registry/**"
+      - "tests/registry/**"
 
 permissions:
   contents: read
 
+concurrency:
+  group: registry-v2-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   off-chain-registry:
     runs-on: ubuntu-24.04
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
       - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
@@ -49,27 +41,17 @@ jobs:
           python -m pip install --disable-pip-version-check
           --require-hashes -r requirements-dev.lock
       - name: Test registry discovery and transaction tooling
-        run: >-
-          python -m pytest -q
-          tests/test_ckb_registry.py
-          tests/test_ckb_client.py
-          tests/test_contract_layout.py
-          tests/test_receiver_record_generator.py
-          tests/test_receiver_registration_template.py
-          tests/test_receiver_registration_commands.py
-          tests/test_apply_receiver_type_script.py
-          tests/test_deploy_helpers.py
-          tests/test_registry_v2_lifecycle_tool.py
-          tests/test_registry_v2_evidence_verifier.py
+        run: python -m pytest -q tests/registry
 
   on-chain-registry:
     runs-on: ubuntu-24.04
+    timeout-minutes: 30
     env:
       CC_riscv64imac_unknown_none_elf: riscv64-unknown-elf-gcc
       AR_riscv64imac_unknown_none_elf: riscv64-unknown-elf-ar
     defaults:
       run:
-        working-directory: contracts/receiver-registry
+        working-directory: contracts/registry-v2
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
       - name: Install pinned Rust target
@@ -101,7 +83,7 @@ jobs:
         with:
           name: receiver-registry-v2-${{ github.sha }}
           path: |
-            contracts/receiver-registry/target/riscv64imac-unknown-none-elf/release/receiver-registry
-            contracts/receiver-registry/receiver-registry.sha256
+            contracts/registry-v2/target/riscv64imac-unknown-none-elf/release/receiver-registry
+            contracts/registry-v2/receiver-registry.sha256
           if-no-files-found: error
           retention-days: 30

@@ -22,13 +22,13 @@ This prevents two live cells from sharing a Receiver Identity. It does not make
 the human Receiver Label globally unique. Discovery keys by Receiver Identity
 and may display duplicate labels without merging them.
 
-See [docs/CKB_INTEGRATION_GUIDE.md](../docs/CKB_INTEGRATION_GUIDE.md) for the
+See [docs/registry/INTEGRATION.md](../docs/registry/INTEGRATION.md) for the
 schema, transaction workflows, migration procedure, and threat model.
 
 ## Verification
 
 ```bash
-cd contracts/receiver-registry
+cd contracts/registry-v2
 make test
 make check
 ```

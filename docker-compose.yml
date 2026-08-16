@@ -1,80 +1,51 @@
-version: '3.8'
+name: ckb-registry-v2-reference
+
+x-mlat-service: &mlat-service
+  build:
+    context: .
+  env_file:
+    - .env
+  environment:
+    HEALTH_STALE_SIGNAL_SECONDS: 120
+    STATS_INTERVAL_SECONDS: 60
+  init: true
+  restart: unless-stopped
+  security_opt:
+    - no-new-privileges:true
+  volumes:
+    - ./data:/app/data
+    - ./logs:/app/logs
 
 services:
-  # Main MLAT processing system
   mlat-processor:
-    build: .
-    container_name: mlat-processor
-    restart: unless-stopped
-    env_file:
-      - .env
-    environment:
-      HEALTH_STALE_SIGNAL_SECONDS: 120
-      STATS_INTERVAL_SECONDS: 60
-    volumes:
-      - ./data:/app/data
-      - ./logs:/app/logs
-    networks:
-      - mlat-network
+    <<: *mlat-service
     command: mlat-processor
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
 
-  # REST API service
   mlat-api:
-    build: .
-    container_name: mlat-api
-    restart: unless-stopped
-    env_file:
-      - .env
-    environment:
-      HEALTH_STALE_SIGNAL_SECONDS: 120
-      STATS_INTERVAL_SECONDS: 60
+    <<: *mlat-service
+    command: mlat-api
     ports:
       - "5000:5000"
-    volumes:
-      - ./data:/app/data
-      - ./logs:/app/logs
-    networks:
-      - mlat-network
-    command: mlat-api
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5000/api/health', timeout=5)"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5000/healthz', timeout=5)"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 10s
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
 
-  # Web dashboard (nginx serving static files)
-  mlat-dashboard:
-    image: nginx:alpine
-    container_name: mlat-dashboard
-    restart: unless-stopped
+  mlat-frontend:
+    build:
+      context: ./reference/mlat/frontend
+      args:
+        NEXT_PUBLIC_API_BASE_URL: http://localhost:5000
+    depends_on:
+      mlat-api:
+        condition: service_healthy
+    environment:
+      MLAT_API_INTERNAL_URL: http://mlat-api:5000
+    init: true
     ports:
-      - "8080:80"
-    volumes:
-      - ./src/visualization:/usr/share/nginx/html:ro
-      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
-    networks:
-      - mlat-network
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "5m"
-        max-file: "2"
-
-networks:
-  mlat-network:
-    driver: bridge
-
-volumes:
-  data:
-  logs:
+      - "3000:3000"
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true

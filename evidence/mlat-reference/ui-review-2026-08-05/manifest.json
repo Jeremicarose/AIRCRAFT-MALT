@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "evidence_class": "validation_only",
+  "captured_at_date": "2026-08-05",
+  "source_commit": "ba0f87fb58572f8db9213418c05798a96dd99fc0",
+  "worktree_clean": false,
+  "application_url": "http://127.0.0.1:3000",
+  "scope": "Desktop-sized local UI route rendering",
+  "artifacts": [
+    {"path": "screenshots/aircraft-desktop.png", "width": 1440, "height": 1000, "sha256": "5c0a5e06ca0e897f14f4d105674d8780c014a04f47a702a9de094b67afb9d1d6"},
+    {"path": "screenshots/command-palette.png", "width": 1440, "height": 1000, "sha256": "1db28f6ffd4eb52be4db6e15310e7f8daea2a78eff5602619bf5cefbce161eff"},
+    {"path": "screenshots/environment-desktop.png", "width": 1440, "height": 919, "sha256": "f56620c192d147284ea04487edcb1d07ac9991f3bd0041fd005799e1ad4939bb"},
+    {"path": "screenshots/initial.png", "width": 1440, "height": 1000, "sha256": "8596d8295db81ce3051b1d61a8d0f7eb6b153b84785924d11ed66d688aec58bd"},
+    {"path": "screenshots/live-map-desktop.png", "width": 1440, "height": 919, "sha256": "318890a26024c76026fcb060106aaa9286a8c49add0023e044aa695dada4bef3"},
+    {"path": "screenshots/metrics-corrected.png", "width": 1280, "height": 639, "sha256": "a4f9fb0ef5764ab183bbd8a184a8d0caab5a21bfd57ff58c1a8f54fac95bd3d3"},
+    {"path": "screenshots/metrics-desktop.png", "width": 1440, "height": 919, "sha256": "c558d8fb7bb632cd0c9ff2d38e298deb50ec4ac42361b7106c424772c25b0fd9"},
+    {"path": "screenshots/overview-desktop.png", "width": 1440, "height": 1000, "sha256": "e58fea1a0f8a731623d19358ce86109acf1e07ff186f7b5ea8380226c8689598"},
+    {"path": "screenshots/pipeline-desktop.png", "width": 1440, "height": 919, "sha256": "6a4fb22f76d919d6cbc8c48b2a7e459fef04608d85a529ccfbff2f5ea5764cfc"},
+    {"path": "screenshots/receivers-desktop.png", "width": 1440, "height": 919, "sha256": "e1093977dc253d5422979a686bb849d7def033b807dd5ae539bb460d255403dd"},
+    {"path": "screenshots/settings-desktop.png", "width": 1440, "height": 919, "sha256": "6a20585ff99a47c54eb5fc88d8235a6c8ad09954018c9d6564d288d2c4e15cd0"}
+  ]
+}

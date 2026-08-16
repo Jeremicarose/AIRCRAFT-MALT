@@ -1,14 +1,14 @@
 services:
   - type: web
-    name: mlat-hosted-demo
+    name: registry-v2-mlat-reference
     runtime: python
-    # Public progress demo: free and ephemeral by design. Replay data is
+    # Reference replay deployment: free and ephemeral by design. Replay data is
     # regenerated after restarts, so no paid persistent disk is required.
     plan: free
     buildCommand: pip install --require-hashes -r requirements.lock
     startCommand: ./render-entrypoint.sh
     # Keep platform liveness independent from the evidence database. The rich
-    # /api/health endpoint remains available to product and benchmark clients.
+    # /api/health endpoint remains available to reference and benchmark clients.
     healthCheckPath: /healthz
     envVars:
       - key: PYTHON_VERSION
@@ -37,7 +37,7 @@ services:
       - key: DEMO_READ_ONLY
         value: "true"
       - key: DEMO_LABEL
-        value: Hosted demo · Northeast replay
+        value: Hosted demo - Northeast replay
       - key: DEMO_AUTO_CONNECT
         value: "true"
       - key: LOG_LEVEL

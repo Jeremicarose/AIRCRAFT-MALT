@@ -1,0 +1,88 @@
+{
+  "receivers": [
+    {
+      "receiver_id": "0x1111111111111111111111111111111111111111111111111111111111111111",
+      "sensor_id": "raw-nyc",
+      "host": "127.0.0.1",
+      "port": 30005,
+      "clock": {
+        "enabled": false,
+        "source": "replace-with-qualified-clock-source",
+        "frequency_hz": 12000000,
+        "anchor_tick": 0,
+        "anchor_time_ns": 0,
+        "uncertainty_ns": 100,
+        "valid_from_ns": 0,
+        "valid_until_ns": 0,
+        "evidence": {
+          "method": "replace-with-qualified-clock-method",
+          "file": "replace-with-clock-evidence-file",
+          "sha256": "replace-with-file-sha256"
+        }
+      }
+    },
+    {
+      "receiver_id": "0x2222222222222222222222222222222222222222222222222222222222222222",
+      "sensor_id": "raw-bos",
+      "host": "127.0.0.1",
+      "port": 30006,
+      "clock": {
+        "enabled": false,
+        "source": "replace-with-qualified-clock-source",
+        "frequency_hz": 12000000,
+        "anchor_tick": 0,
+        "anchor_time_ns": 0,
+        "uncertainty_ns": 100,
+        "valid_from_ns": 0,
+        "valid_until_ns": 0,
+        "evidence": {
+          "method": "replace-with-qualified-clock-method",
+          "file": "replace-with-clock-evidence-file",
+          "sha256": "replace-with-file-sha256"
+        }
+      }
+    },
+    {
+      "receiver_id": "0x3333333333333333333333333333333333333333333333333333333333333333",
+      "sensor_id": "raw-phl",
+      "host": "127.0.0.1",
+      "port": 30007,
+      "clock": {
+        "enabled": false,
+        "source": "replace-with-qualified-clock-source",
+        "frequency_hz": 12000000,
+        "anchor_tick": 0,
+        "anchor_time_ns": 0,
+        "uncertainty_ns": 100,
+        "valid_from_ns": 0,
+        "valid_until_ns": 0,
+        "evidence": {
+          "method": "replace-with-qualified-clock-method",
+          "file": "replace-with-clock-evidence-file",
+          "sha256": "replace-with-file-sha256"
+        }
+      }
+    },
+    {
+      "receiver_id": "0x4444444444444444444444444444444444444444444444444444444444444444",
+      "sensor_id": "raw-dc",
+      "host": "127.0.0.1",
+      "port": 30008,
+      "clock": {
+        "enabled": false,
+        "source": "replace-with-qualified-clock-source",
+        "frequency_hz": 12000000,
+        "anchor_tick": 0,
+        "anchor_time_ns": 0,
+        "uncertainty_ns": 100,
+        "valid_from_ns": 0,
+        "valid_until_ns": 0,
+        "evidence": {
+          "method": "replace-with-qualified-clock-method",
+          "file": "replace-with-clock-evidence-file",
+          "sha256": "replace-with-file-sha256"
+        }
+      }
+    }
+  ]
+}

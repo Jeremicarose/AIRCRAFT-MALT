@@ -1,0 +1,141 @@
+{
+  "schema_version": 1,
+  "record_cases": [
+    {
+      "name": "valid_creation_with_stream",
+      "payload": "{\"schema_version\":2,\"receiver_id\":\"RECV_TEST\",\"latitude\":-1.286389,\"longitude\":36.817223,\"altitude\":1795.0,\"status\":\"online\",\"capabilities\":[\"mode-s\",\"mlat\"],\"sequence\":0,\"updated_at\":1700000000,\"stream_endpoint\":\"wss://feed.example/ws\",\"stream_protocol\":\"websocket-json\",\"stream_format\":\"json\",\"metadata_hash\":\"0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\"}",
+      "valid": true,
+      "creation_valid": true
+    },
+    {
+      "name": "valid_integer_coordinates",
+      "payload": "{\"schema_version\":2,\"receiver_id\":\"RECV_TEST\",\"latitude\":-1,\"longitude\":36,\"altitude\":1795,\"status\":\"offline\",\"capabilities\":[\"mode-s\"],\"sequence\":4,\"updated_at\":1700000004}",
+      "valid": true,
+      "creation_valid": false
+    },
+    {
+      "name": "valid_revoked_tombstone",
+      "payload": "{\"schema_version\":2,\"receiver_id\":\"RECV_TEST\",\"latitude\":-1.286389,\"longitude\":36.817223,\"altitude\":1795.0,\"status\":\"revoked\",\"capabilities\":[\"mode-s\",\"mlat\"],\"sequence\":4,\"updated_at\":1700000004,\"metadata_hash\":null}",
+      "valid": true,
+      "creation_valid": false
+    },
+    {
+      "name": "reject_v1_record",
+      "payload": "{\"receiver_id\":\"RECV_TEST\",\"latitude\":-1.286389,\"longitude\":36.817223,\"altitude\":1795.0,\"status\":\"online\",\"capabilities\":[\"mode-s\"],\"timestamp\":1700000000}",
+      "valid": false,
+      "creation_valid": false
+    },
+    {
+      "name": "reject_unknown_field",
+      "payload": "{\"schema_version\":2,\"receiver_id\":\"RECV_TEST\",\"latitude\":-1.286389,\"longitude\":36.817223,\"altitude\":1795.0,\"status\":\"online\",\"capabilities\":[\"mode-s\"],\"sequence\":0,\"updated_at\":1700000000,\"timestamp\":1700000000}",
+      "valid": false,
+      "creation_valid": false
+    },
+    {
+      "name": "reject_numeric_string",
+      "payload": "{\"schema_version\":2,\"receiver_id\":\"RECV_TEST\",\"latitude\":\"-1.286389\",\"longitude\":36.817223,\"altitude\":1795.0,\"status\":\"online\",\"capabilities\":[\"mode-s\"],\"sequence\":0,\"updated_at\":1700000000}",
+      "valid": false,
+      "creation_valid": false
+    },
+    {
+      "name": "reject_boolean_coordinate",
+      "payload": "{\"schema_version\":2,\"receiver_id\":\"RECV_TEST\",\"latitude\":true,\"longitude\":36.817223,\"altitude\":1795.0,\"status\":\"online\",\"capabilities\":[\"mode-s\"],\"sequence\":0,\"updated_at\":1700000000}",
+      "valid": false,
+      "creation_valid": false
+    },
+    {
+      "name": "reject_revoked_stream",
+      "payload": "{\"schema_version\":2,\"receiver_id\":\"RECV_TEST\",\"latitude\":-1.286389,\"longitude\":36.817223,\"altitude\":1795.0,\"status\":\"revoked\",\"capabilities\":[\"mode-s\"],\"sequence\":4,\"updated_at\":1700000004,\"stream_protocol\":\"websocket-json\"}",
+      "valid": false,
+      "creation_valid": false
+    },
+    {
+      "name": "reject_negative_sequence",
+      "payload": "{\"schema_version\":2,\"receiver_id\":\"RECV_TEST\",\"latitude\":-1.286389,\"longitude\":36.817223,\"altitude\":1795.0,\"status\":\"online\",\"capabilities\":[\"mode-s\"],\"sequence\":-1,\"updated_at\":1700000000}",
+      "valid": false,
+      "creation_valid": false
+    }
+  ],
+  "identity_cases": [
+    {
+      "name": "valid_32_byte_identity",
+      "value": "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "valid": true
+    },
+    {
+      "name": "valid_uppercase_identity",
+      "value": "0xAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+      "valid": true
+    },
+    {
+      "name": "reject_31_byte_identity",
+      "value": "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "valid": false
+    },
+    {
+      "name": "reject_non_hex_identity",
+      "value": "0xzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz",
+      "valid": false
+    }
+  ],
+  "type_id_vectors": [
+    {
+      "name": "first_input_index_one_output_zero",
+      "first_input_tx_hash": "0x1111111111111111111111111111111111111111111111111111111111111111",
+      "first_input_index": 1,
+      "first_input_since": 0,
+      "output_index": 0,
+      "expected": "0x45d0ccb8d96da425ce73e1f2daa91d46e8d9dabc11293897eabad9f31a513cbd"
+    }
+  ],
+  "transition_cases": [
+    {
+      "name": "normal_successor",
+      "previous": "{\"schema_version\":2,\"receiver_id\":\"RECV_TEST\",\"latitude\":-1.2,\"longitude\":36.8,\"altitude\":1700.0,\"status\":\"online\",\"capabilities\":[\"mode-s\",\"mlat\"],\"sequence\":0,\"updated_at\":1700000000}",
+      "next": "{\"schema_version\":2,\"receiver_id\":\"RECV_TEST\",\"latitude\":-1.3,\"longitude\":36.9,\"altitude\":1701.0,\"status\":\"degraded\",\"capabilities\":[\"mode-s\",\"mlat\"],\"sequence\":1,\"updated_at\":1700000001}",
+      "valid": true
+    },
+    {
+      "name": "ownership_transfer_record",
+      "previous": "{\"schema_version\":2,\"receiver_id\":\"RECV_TEST\",\"latitude\":-1.2,\"longitude\":36.8,\"altitude\":1700.0,\"status\":\"online\",\"capabilities\":[\"mode-s\"],\"sequence\":1,\"updated_at\":1700000001}",
+      "next": "{\"schema_version\":2,\"receiver_id\":\"RECV_TEST\",\"latitude\":-1.2,\"longitude\":36.8,\"altitude\":1700.0,\"status\":\"online\",\"capabilities\":[\"mode-s\"],\"sequence\":2,\"updated_at\":1700000001}",
+      "valid": true
+    },
+    {
+      "name": "permanent_revocation",
+      "previous": "{\"schema_version\":2,\"receiver_id\":\"RECV_TEST\",\"latitude\":-1.2,\"longitude\":36.8,\"altitude\":1700.0,\"status\":\"offline\",\"capabilities\":[\"mode-s\"],\"sequence\":2,\"updated_at\":1700000002}",
+      "next": "{\"schema_version\":2,\"receiver_id\":\"RECV_TEST\",\"latitude\":-1.2,\"longitude\":36.8,\"altitude\":1700.0,\"status\":\"revoked\",\"capabilities\":[\"mode-s\"],\"sequence\":3,\"updated_at\":1700000003}",
+      "valid": true
+    },
+    {
+      "name": "reject_sequence_reuse",
+      "previous": "{\"schema_version\":2,\"receiver_id\":\"RECV_TEST\",\"latitude\":-1.2,\"longitude\":36.8,\"altitude\":1700.0,\"status\":\"online\",\"capabilities\":[\"mode-s\"],\"sequence\":2,\"updated_at\":1700000002}",
+      "next": "{\"schema_version\":2,\"receiver_id\":\"RECV_TEST\",\"latitude\":-1.2,\"longitude\":36.8,\"altitude\":1700.0,\"status\":\"online\",\"capabilities\":[\"mode-s\"],\"sequence\":2,\"updated_at\":1700000003}",
+      "valid": false
+    },
+    {
+      "name": "reject_sequence_jump",
+      "previous": "{\"schema_version\":2,\"receiver_id\":\"RECV_TEST\",\"latitude\":-1.2,\"longitude\":36.8,\"altitude\":1700.0,\"status\":\"online\",\"capabilities\":[\"mode-s\"],\"sequence\":2,\"updated_at\":1700000002}",
+      "next": "{\"schema_version\":2,\"receiver_id\":\"RECV_TEST\",\"latitude\":-1.2,\"longitude\":36.8,\"altitude\":1700.0,\"status\":\"online\",\"capabilities\":[\"mode-s\"],\"sequence\":4,\"updated_at\":1700000003}",
+      "valid": false
+    },
+    {
+      "name": "reject_label_mutation",
+      "previous": "{\"schema_version\":2,\"receiver_id\":\"RECV_TEST\",\"latitude\":-1.2,\"longitude\":36.8,\"altitude\":1700.0,\"status\":\"online\",\"capabilities\":[\"mode-s\"],\"sequence\":2,\"updated_at\":1700000002}",
+      "next": "{\"schema_version\":2,\"receiver_id\":\"RECV_OTHER\",\"latitude\":-1.2,\"longitude\":36.8,\"altitude\":1700.0,\"status\":\"online\",\"capabilities\":[\"mode-s\"],\"sequence\":3,\"updated_at\":1700000003}",
+      "valid": false
+    },
+    {
+      "name": "reject_updated_at_rollback",
+      "previous": "{\"schema_version\":2,\"receiver_id\":\"RECV_TEST\",\"latitude\":-1.2,\"longitude\":36.8,\"altitude\":1700.0,\"status\":\"online\",\"capabilities\":[\"mode-s\"],\"sequence\":2,\"updated_at\":1700000002}",
+      "next": "{\"schema_version\":2,\"receiver_id\":\"RECV_TEST\",\"latitude\":-1.2,\"longitude\":36.8,\"altitude\":1700.0,\"status\":\"online\",\"capabilities\":[\"mode-s\"],\"sequence\":3,\"updated_at\":1700000001}",
+      "valid": false
+    },
+    {
+      "name": "reject_resurrection",
+      "previous": "{\"schema_version\":2,\"receiver_id\":\"RECV_TEST\",\"latitude\":-1.2,\"longitude\":36.8,\"altitude\":1700.0,\"status\":\"revoked\",\"capabilities\":[\"mode-s\"],\"sequence\":3,\"updated_at\":1700000003}",
+      "next": "{\"schema_version\":2,\"receiver_id\":\"RECV_TEST\",\"latitude\":-1.2,\"longitude\":36.8,\"altitude\":1700.0,\"status\":\"online\",\"capabilities\":[\"mode-s\"],\"sequence\":4,\"updated_at\":1700000004}",
+      "valid": false
+    }
+  ]
+}

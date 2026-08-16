@@ -2,6 +2,7 @@ __pycache__/
 *.py[cod]
 .pytest_cache/
 .mypy_cache/
+.venv/
 .coverage
 htmlcov/
 
@@ -19,3 +20,10 @@ dist/
 *.egg-info/
 target/
 contracts/**/target/
+reference/mlat/frontend/.next/
+reference/mlat/frontend/node_modules/
+reference/mlat/frontend/out/
+reference/mlat/frontend/.vercel/
+/frontend/
+*.tsbuildinfo
+*.local.json
