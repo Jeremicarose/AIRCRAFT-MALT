@@ -11,11 +11,27 @@ use ckb_testtool::{
     },
     context::Context,
 };
+use receiver_registry::record::{decode_registry_v2_record, MAX_RECORD_BYTES};
 use std::{fs, path::PathBuf};
 
 #[derive(serde::Deserialize)]
 struct TypeIdCorpus {
+    registry_script: RegistryScript,
+    record_cases: Vec<RecordCase>,
     type_id_vectors: Vec<TypeIdVector>,
+    creation_cases: Vec<CreationCase>,
+}
+
+#[derive(serde::Deserialize)]
+struct RegistryScript {
+    code_hash: String,
+    hash_type: String,
+}
+
+#[derive(serde::Deserialize)]
+struct RecordCase {
+    name: String,
+    payload: String,
 }
 
 #[derive(serde::Deserialize)]
@@ -26,6 +42,20 @@ struct TypeIdVector {
     first_input_since: u64,
     output_index: u64,
     expected: String,
+}
+
+#[derive(serde::Deserialize)]
+struct CreationCase {
+    name: String,
+    record_case: String,
+    first_input_tx_hash: String,
+    first_input_index: u32,
+    first_input_since: u64,
+    output_index: u64,
+    code_hash: String,
+    hash_type: String,
+    args: String,
+    valid: bool,
 }
 
 const MAX_CYCLES: u64 = 20_000_000;
@@ -150,28 +180,62 @@ fn type_id_matches_off_chain_tooling_vector() {
         "../../../tests/registry/fixtures/registry_v2_conformance.json"
     ))
     .expect("valid conformance corpus");
-    let vector = &corpus.type_id_vectors[0];
-    let tx_hash: [u8; 32] = hex::decode(vector.first_input_tx_hash.trim_start_matches("0x"))
-        .unwrap()
-        .try_into()
-        .unwrap();
-    let input = CellInput::new_builder()
-        .since(vector.first_input_since)
-        .previous_output(
-            OutPoint::new_builder()
-                .tx_hash(tx_hash.pack())
-                .index(vector.first_input_index)
-                .build(),
-        )
-        .build();
-    let expected = hex::decode(vector.expected.trim_start_matches("0x")).unwrap();
+    for vector in &corpus.type_id_vectors {
+        let tx_hash: [u8; 32] = hex::decode(vector.first_input_tx_hash.trim_start_matches("0x"))
+            .unwrap()
+            .try_into()
+            .unwrap();
+        let input = CellInput::new_builder()
+            .since(vector.first_input_since)
+            .previous_output(
+                OutPoint::new_builder()
+                    .tx_hash(tx_hash.pack())
+                    .index(vector.first_input_index)
+                    .build(),
+            )
+            .build();
+        let expected = hex::decode(vector.expected.trim_start_matches("0x")).unwrap();
 
-    assert_eq!(
-        type_id(&input, vector.output_index).as_slice(),
-        expected.as_slice(),
-        "{}",
-        vector.name
-    );
+        assert_eq!(
+            type_id(&input, vector.output_index).as_slice(),
+            expected.as_slice(),
+            "{}",
+            vector.name
+        );
+    }
+
+    for case in &corpus.creation_cases {
+        let record_valid = corpus
+            .record_cases
+            .iter()
+            .find(|record| record.name == case.record_case)
+            .and_then(|record| decode_registry_v2_record(record.payload.as_bytes()).ok())
+            .is_some_and(|record| record.validate_creation().is_ok());
+        let calculated_identity = hex::decode(case.first_input_tx_hash.trim_start_matches("0x"))
+            .ok()
+            .and_then(|value| <[u8; 32]>::try_from(value).ok())
+            .map(|tx_hash| {
+                let input = CellInput::new_builder()
+                    .since(case.first_input_since)
+                    .previous_output(
+                        OutPoint::new_builder()
+                            .tx_hash(tx_hash.pack())
+                            .index(case.first_input_index)
+                            .build(),
+                    )
+                    .build();
+                format!("0x{}", hex::encode(type_id(&input, case.output_index)))
+            });
+        let accepted = record_valid
+            && case
+                .code_hash
+                .eq_ignore_ascii_case(&corpus.registry_script.code_hash)
+            && case.hash_type == corpus.registry_script.hash_type
+            && calculated_identity
+                .is_some_and(|identity| identity.eq_ignore_ascii_case(&case.args));
+
+        assert_eq!(accepted, case.valid, "{}", case.name);
+    }
 }
 
 fn record(sequence: u64, updated_at: u64, status: &str) -> Bytes {
@@ -205,7 +269,10 @@ fn create_registry_cell(
     )
 }
 
-fn verify_creation(identity_override: Option<[u8; 32]>) -> Result<u64, String> {
+fn verify_creation_with_record(
+    identity_override: Option<[u8; 32]>,
+    output_data: Bytes,
+) -> Result<u64, String> {
     let mut scripts = setup();
     let lock = lock_script(&mut scripts, 1);
     let funding_out_point = scripts.context.create_cell(
@@ -228,7 +295,7 @@ fn verify_creation(identity_override: Option<[u8; 32]>) -> Result<u64, String> {
     let tx = TransactionBuilder::default()
         .input(input)
         .output(output)
-        .output_data(record(0, 1_700_000_000, "online").pack())
+        .output_data(output_data.pack())
         .cell_dep(scripts.secp256k1_data_dep.clone())
         .build();
     let tx = scripts.context.complete_tx(tx);
@@ -237,6 +304,10 @@ fn verify_creation(identity_override: Option<[u8; 32]>) -> Result<u64, String> {
         .context
         .verify_tx(&tx, MAX_CYCLES)
         .map_err(|error| error.to_string())
+}
+
+fn verify_creation(identity_override: Option<[u8; 32]>) -> Result<u64, String> {
+    verify_creation_with_record(identity_override, record(0, 1_700_000_000, "online"))
 }
 
 fn verify_transition(
@@ -305,6 +376,13 @@ fn valid_creation_uses_type_id_identity() {
 #[test]
 fn creation_rejects_forged_identity() {
     assert!(verify_creation(Some([9u8; 32])).is_err());
+}
+
+#[test]
+fn creation_rejects_oversized_record_without_unbounded_loading() {
+    let oversized = Bytes::from(vec![b' '; MAX_RECORD_BYTES + 1]);
+
+    assert!(verify_creation_with_record(None, oversized).is_err());
 }
 
 #[test]

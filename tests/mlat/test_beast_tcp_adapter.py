@@ -162,13 +162,13 @@ def test_multi_receiver_bridge_loads_receiver_config(tmp_path):
             {
                 "receivers": [
                     {
-                        "receiver_id": "0x" + "ab" * 32,
+                        "receiver_identity": "0x" + "ab" * 32,
                         "sensor_id": "raw-nyc",
                         "host": "127.0.0.1",
                         "port": 30005,
                     },
                     {
-                        "receiver_id": "0x" + "bc" * 32,
+                        "receiver_identity": "0x" + "bc" * 32,
                         "sensor_id": "raw-bos",
                         "host": "127.0.0.1",
                         "port": 30006,
@@ -181,7 +181,7 @@ def test_multi_receiver_bridge_loads_receiver_config(tmp_path):
 
     receivers = load_config(str(config_path), require_mlat_ready=False)
     assert len(receivers) == 2
-    assert receivers[0]["receiver_id"] == "0x" + "ab" * 32
+    assert receivers[0]["receiver_identity"] == "0x" + "ab" * 32
 
 
 def test_multi_receiver_bridge_audit_log_matches_stdout(capsys):

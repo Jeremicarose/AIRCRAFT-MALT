@@ -32,6 +32,7 @@ export interface RecentInvestigationEntry {
 }
 
 interface OperatorState {
+  hasHydrated: boolean;
   sidebarCollapsed: boolean;
   mobileNavigationOpen: boolean;
   commandOpen: boolean;
@@ -63,21 +64,23 @@ interface OperatorState {
   toggleStarredRoute: (routeKey: string) => void;
   pushRecentInvestigation: (entry: Omit<RecentInvestigationEntry, 'updatedAt'>) => void;
   clearRecentInvestigations: () => void;
+  setHasHydrated: (value: boolean) => void;
 }
 
 const defaultInvestigationState: InvestigationState = {
   routeKey: undefined,
   query: '',
   focus: undefined,
-  timeRange: '10m',
+  timeRange: '5m',
   watchlist: [],
 };
 
 export const useOperatorStore = create<OperatorState>()(persist((set) => ({
+  hasHydrated: false,
   sidebarCollapsed: false,
   mobileNavigationOpen: false,
   commandOpen: false,
-  rightDockOpen: true,
+  rightDockOpen: false,
   density: 'comfortable',
   selectedAircraftId: null,
   selectedReceiverId: null,
@@ -86,7 +89,7 @@ export const useOperatorStore = create<OperatorState>()(persist((set) => ({
   investigation: defaultInvestigationState,
   dock: null,
   routeHistory: [],
-  starredRoutes: ['overview', 'localization', 'aircraft'],
+  starredRoutes: ['registry', 'receivers', 'overview'],
   recentInvestigations: [],
   setSidebarCollapsed: (sidebarCollapsed) => set({ sidebarCollapsed }),
   setMobileNavigationOpen: (mobileNavigationOpen) => set({ mobileNavigationOpen }),
@@ -127,8 +130,11 @@ export const useOperatorStore = create<OperatorState>()(persist((set) => ({
     return { recentInvestigations: next.slice(0, 8) };
   }),
   clearRecentInvestigations: () => set({ recentInvestigations: [] }),
+  setHasHydrated: (hasHydrated) => set({ hasHydrated }),
 }), {
   name: 'mlat-console-operator-state',
+  version: 1,
+  skipHydration: true,
   partialize: (state) => ({
     sidebarCollapsed: state.sidebarCollapsed,
     rightDockOpen: state.rightDockOpen,

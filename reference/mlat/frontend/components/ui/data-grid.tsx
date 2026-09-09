@@ -58,6 +58,9 @@ export function DataGrid<T>({ data, columns, getRowId, onRowClick, isRowSelected
   const handleKeyboardSelection = (index: number) => {
     setFocusedRowIndex(index);
     virtualizer.scrollToIndex(index, { align: 'auto' });
+    window.requestAnimationFrame(() => {
+      parentRef.current?.querySelector<HTMLElement>(`[data-row-index="${index}"]`)?.focus();
+    });
   };
 
   return (
@@ -84,7 +87,7 @@ export function DataGrid<T>({ data, columns, getRowId, onRowClick, isRowSelected
               const row = rows[virtualRow.index] as Row<T>;
               const selected = isRowSelected?.(row.original);
               return (
-                <div key={row.id} role="row" aria-selected={selected} aria-rowindex={virtualRow.index + 1} aria-label={keyboardColumnLabel?.(row.original)} tabIndex={onRowClick ? (focusedRowIndex === virtualRow.index ? 0 : -1) : undefined} onFocus={() => setFocusedRowIndex(virtualRow.index)} onClick={() => { setFocusedRowIndex(virtualRow.index); onRowClick?.(row.original); }} onKeyDown={(event) => {
+                <div key={row.id} data-row-index={virtualRow.index} role="row" aria-selected={selected} aria-rowindex={virtualRow.index + 1} aria-label={keyboardColumnLabel?.(row.original)} tabIndex={onRowClick ? (focusedRowIndex === virtualRow.index ? 0 : -1) : undefined} onFocus={() => setFocusedRowIndex(virtualRow.index)} onClick={() => { setFocusedRowIndex(virtualRow.index); onRowClick?.(row.original); }} onKeyDown={(event) => {
                   if (!onRowClick) return;
                   if (event.key === 'Enter' || event.key === ' ') {
                     event.preventDefault();

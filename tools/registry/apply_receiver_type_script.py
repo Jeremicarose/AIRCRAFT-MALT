@@ -17,7 +17,7 @@ SRC = ROOT / "src"
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
-from ckb_registry.record import calculate_type_id, normalize_identity_id
+from ckb_registry.record import calculate_type_id, normalize_receiver_identity
 
 
 def parse_args() -> argparse.Namespace:
@@ -39,7 +39,9 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--output-index", type=int, default=0)
     parser.add_argument(
+        "--receiver-identity",
         "--identity-id",
+        dest="receiver_identity",
         help="Existing 32-byte identity for update/transfer/revocation; omit for creation",
     )
     return parser.parse_args()
@@ -92,22 +94,24 @@ def main() -> None:
         raise SystemExit("Template missing outputs")
     template_type = template_outputs[0].get("type") or {}
     try:
-        contract_code_hash = normalize_identity_id(template_type.get("code_hash", ""))
+        contract_code_hash = normalize_receiver_identity(template_type.get("code_hash", ""))
     except ValueError as exc:
         raise SystemExit("Template Registry V2 code_hash must be 32-byte hex") from exc
+    if template_type.get("hash_type") not in {"data1", "type"}:
+        raise SystemExit("Template Registry V2 hash_type must be data1 or type")
 
     if not 0 <= args.output_index < len(outputs):
         raise SystemExit("output-index is outside transaction.outputs")
-    identity_id = (
-        normalize_identity_id(args.identity_id)
-        if args.identity_id
+    receiver_identity = (
+        normalize_receiver_identity(args.receiver_identity)
+        if args.receiver_identity
         else creation_identity(transaction, args.output_index)
     )
     output = outputs[args.output_index]
     output["type"] = {
         **template_type,
         "code_hash": contract_code_hash,
-        "args": identity_id,
+        "args": receiver_identity,
     }
 
     cell_deps = tx.setdefault("transaction", {}).setdefault("cell_deps", [])
@@ -122,7 +126,9 @@ def main() -> None:
         cell_deps.append(contract_dep)
 
     tx_path.write_text(json.dumps(tx, indent=2) + "\n")
-    print(f"Updated Registry V2 identity {identity_id} and contract cell dep in {tx_path}")
+    print(
+        f"Updated Registry V2 receiver_identity {receiver_identity} and contract cell dep in {tx_path}"
+    )
 
 
 if __name__ == "__main__":

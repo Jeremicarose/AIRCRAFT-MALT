@@ -32,6 +32,33 @@ def test_database_stores_receivers_and_positions(tmp_path):
     assert db.touch_receiver("RECV_NYC_001", last_seen=1_700_000_050.0)
     assert db.get_receivers()[0].last_seen == 1_700_000_050.0
     assert not db.touch_receiver("UNKNOWN", last_seen=1_700_000_050.0)
+    assert db.delete_receivers({"RECV_NYC_001"}) == 1
+    assert db.get_receivers() == []
+
+    db.store_receiver(
+        receiver_id="RECV_NYC_001",
+        latitude=40.7128,
+        longitude=-74.0060,
+        altitude=10.0,
+        status="online",
+        last_seen=1_700_000_050.0,
+        capabilities=["mode-s", "mlat"],
+        receiver_identity="0x" + "ab" * 32,
+        data_source="ckb_registry",
+    )
+
+    db.store_receiver(
+        receiver_id="simulation:RECV_BOS_001",
+        latitude=42.0,
+        longitude=-71.0,
+        altitude=15.0,
+        status="online",
+        last_seen=1_700_000_050.0,
+        capabilities=["mode-s", "mlat"],
+        data_source="simulation",
+    )
+    assert db.delete_registry_receivers_except(set()) == 1
+    assert [receiver.receiver_id for receiver in db.get_receivers()] == ["simulation:RECV_BOS_001"]
 
     position_id = db.store_position(
         aircraft_id="A1B2C3",

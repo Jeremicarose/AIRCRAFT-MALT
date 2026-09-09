@@ -123,7 +123,7 @@ def raw_observation_failures(
 def raw_clock_config_failures(
     records: list[dict[str, Any]], configured_receivers: list[dict[str, Any]]
 ) -> list[str]:
-    clocks = {receiver["receiver_id"]: receiver["clock"] for receiver in configured_receivers}
+    clocks = {receiver["receiver_identity"]: receiver["clock"] for receiver in configured_receivers}
     mismatches = 0
     for record in records:
         clock = clocks.get(str(record.get("receiver_id")))
@@ -380,9 +380,9 @@ def main() -> int:
         if not source.is_absolute():
             source = receiver_config_path.parent / source
         suffix = source.suffix or ".artifact"
-        destination = clock_evidence_dir / f'{receiver["receiver_id"][2:]}{suffix}'
+        destination = clock_evidence_dir / f'{receiver["receiver_identity"][2:]}{suffix}'
         shutil.copy2(source, destination)
-        clock_evidence_artifacts[receiver["receiver_id"]] = {
+        clock_evidence_artifacts[receiver["receiver_identity"]] = {
             "artifact": destination.relative_to(bundle).as_posix(),
             "method": evidence["method"],
             "sha256": evidence["sha256"],
@@ -425,7 +425,7 @@ def main() -> int:
     failures.extend(
         raw_observation_failures(
             raw_records,
-            {receiver["receiver_id"] for receiver in configured_receivers},
+            {receiver["receiver_identity"] for receiver in configured_receivers},
         )
     )
     failures.extend(raw_clock_config_failures(raw_records, configured_receivers))

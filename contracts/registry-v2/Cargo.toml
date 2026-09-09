@@ -2,6 +2,7 @@
 name = "receiver-registry"
 version = "0.1.0"
 edition = "2021"
+license = "MIT"
 autobins = false
 
 [lib]
@@ -33,6 +34,7 @@ codegen-units = 1
 strip = true
 
 [dev-dependencies]
+ckb-hash = "0.119.0"
 ckb-system-scripts = "0.5.4"
 ckb-testtool = "1.1.1"
 hex = "0.4.3"

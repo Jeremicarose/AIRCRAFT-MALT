@@ -21,7 +21,7 @@ def _receivers() -> list[dict]:
     for index, octet in enumerate(("ab", "bc", "cd", "de")):
         result.append(
             {
-                "receiver_id": "0x" + octet * 32,
+                "receiver_identity": "0x" + octet * 32,
                 "sensor_id": f"sensor-{index}",
                 "host": "receiver.local",
                 "port": 30005 + index,
@@ -64,7 +64,7 @@ def test_strict_config_accepts_four_unique_current_receivers(tmp_path):
     loaded = load_receiver_config(path, now_ns=NOW_NS)
 
     assert len(loaded) == 4
-    assert loaded[0]["receiver_id"] == "0x" + "ab" * 32
+    assert loaded[0]["receiver_identity"] == "0x" + "ab" * 32
     assert all(receiver["clock"]["enabled"] for receiver in loaded)
 
 
@@ -77,7 +77,7 @@ def test_strict_config_rejects_fewer_than_four_receivers(tmp_path):
 
 def test_strict_config_rejects_duplicate_identity(tmp_path):
     receivers = _receivers()
-    receivers[3]["receiver_id"] = receivers[0]["receiver_id"]
+    receivers[3]["receiver_identity"] = receivers[0]["receiver_identity"]
     path = _write_config(tmp_path, receivers)
 
     with pytest.raises(ValueError, match="duplicate receiver identity"):
@@ -86,7 +86,7 @@ def test_strict_config_rejects_duplicate_identity(tmp_path):
 
 def test_strict_config_rejects_example_identity(tmp_path):
     receivers = _receivers()
-    receivers[0]["receiver_id"] = "0x" + "11" * 32
+    receivers[0]["receiver_identity"] = "0x" + "11" * 32
     path = _write_config(tmp_path, receivers)
 
     with pytest.raises(ValueError, match="example Registry V2 identity"):

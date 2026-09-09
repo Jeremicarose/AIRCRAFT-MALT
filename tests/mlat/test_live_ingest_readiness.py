@@ -20,7 +20,7 @@ def _write_ready_config(tmp_path: Path) -> Path:
         evidence_path.write_bytes(evidence_bytes)
         receivers.append(
             {
-                "receiver_id": "0x" + octet * 32,
+                "receiver_identity": "0x" + octet * 32,
                 "sensor_id": f"sensor-{index}",
                 "host": "127.0.0.1",
                 "port": 31000 + index,

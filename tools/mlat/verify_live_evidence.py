@@ -108,11 +108,11 @@ def resolve_positions(
     tolerance_m: float = 1.0,
 ) -> dict[str, Any]:
     receiver_geometry = {
-        str(receiver.get("identity_id") or receiver.get("receiver_id")): ReceiverPosition(
+        str(receiver.get("receiver_identity")): ReceiverPosition(
             latitude=float(receiver["latitude"]),
             longitude=float(receiver["longitude"]),
             altitude=float(receiver["altitude"]),
-            receiver_id=str(receiver.get("identity_id") or receiver.get("receiver_id")),
+            receiver_id=str(receiver.get("receiver_identity")),
         )
         for receiver in receiver_rows
     }
@@ -224,7 +224,7 @@ def verify_bundle(bundle: Path, *, require_publishable: bool = False) -> dict[st
         return {"valid": False, "failures": failures + [f"Unable to load evidence: {exc}"]}
 
     configured_ids = {
-        str(receiver.get("receiver_id")) for receiver in receiver_config.get("receivers", [])
+        str(receiver.get("receiver_identity")) for receiver in receiver_config.get("receivers", [])
     }
     failures.extend(raw_observation_failures(raw_records, configured_ids))
     configured_receivers = receiver_config.get("receivers", [])
@@ -237,9 +237,9 @@ def verify_bundle(bundle: Path, *, require_publishable: bool = False) -> dict[st
 
     declared_clock_evidence = manifest.get("clock_evidence", {})
     for receiver in receiver_config.get("receivers", []):
-        receiver_id = str(receiver.get("receiver_id"))
+        receiver_identity = str(receiver.get("receiver_identity"))
         clock_evidence = receiver.get("clock", {}).get("evidence", {})
-        captured = declared_clock_evidence.get(receiver_id, {})
+        captured = declared_clock_evidence.get(receiver_identity, {})
         artifact = captured.get("artifact")
         artifact_path = bundle / str(artifact or "missing")
         if (
@@ -249,7 +249,7 @@ def verify_bundle(bundle: Path, *, require_publishable: bool = False) -> dict[st
             or captured.get("sha256") != clock_evidence.get("sha256")
             or file_sha256(artifact_path) != clock_evidence.get("sha256")
         ):
-            failures.append(f"clock evidence mismatch for {receiver_id}")
+            failures.append(f"clock evidence mismatch for {receiver_identity}")
 
     receiver_rows = receiver_snapshot.get("receivers", [])
     if not isinstance(receiver_rows, list):

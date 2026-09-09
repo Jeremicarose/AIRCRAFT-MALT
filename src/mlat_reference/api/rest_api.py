@@ -41,7 +41,7 @@ except ImportError:
     _socketio_emit = None
 
 from mlat_reference.database.database import MLATDatabase, StoredPosition
-from ckb_registry.record import normalize_identity_id
+from ckb_registry.record import decode_registry_v2_record, normalize_receiver_identity
 from mlat_reference import runtime as production_main
 
 if load_dotenv is not None:
@@ -137,6 +137,14 @@ def load_app_config() -> Dict[str, object]:
             "evidence/mlat-reference/experimental/reliability-local-simulation.json",
         ),
         "BENCHMARK_MAX_REPORT_BYTES": int(os.getenv("BENCHMARK_MAX_REPORT_BYTES", "5242880")),
+        "REGISTRY_EVIDENCE_BUNDLE": os.getenv(
+            "REGISTRY_EVIDENCE_BUNDLE",
+            "evidence/registry-v2-testnet-2026-07-30-final",
+        ),
+        "CKB_TESTNET_EXPLORER_TX_URL": os.getenv(
+            "CKB_TESTNET_EXPLORER_TX_URL",
+            "https://pudge.explorer.nervos.org/transaction",
+        ).rstrip("/"),
         "CORS_ALLOWED_ORIGINS": _split_csv("CORS_ALLOWED_ORIGINS", DEFAULT_ALLOWED_ORIGINS),
         "ENABLE_ADMIN_API": _env_bool("ENABLE_ADMIN_API", False),
         "ENABLE_BACKGROUND_BROADCASTER": _env_bool("ENABLE_BACKGROUND_BROADCASTER", True),
@@ -482,10 +490,106 @@ def _is_synthetic_solver_method(method: Optional[str]) -> bool:
 
 def _valid_registry_code_hash(value: object) -> bool:
     try:
-        normalize_identity_id(str(value or ""))
+        normalize_receiver_identity(str(value or ""))
     except ValueError:
         return False
     return True
+
+
+def _read_bounded_json(path: Path) -> Any:
+    if not path.is_file() or path.stat().st_size > int(
+        current_app.config["BENCHMARK_MAX_REPORT_BYTES"]
+    ):
+        raise ValueError(f"invalid evidence file: {path.name}")
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+def _load_registry_evidence() -> tuple[Optional[Dict[str, Any]], str]:
+    """Load the immutable, saved Registry V2 testnet lifecycle evidence."""
+    bundle = Path(str(current_app.config["REGISTRY_EVIDENCE_BUNDLE"])).resolve()
+    manifest_path = bundle / "manifest.json"
+    if not manifest_path.exists():
+        return None, "not_found"
+
+    try:
+        manifest = _read_bounded_json(manifest_path)
+        manifest_receiver = manifest["receiver"]
+        receiver_identity = normalize_receiver_identity(
+            manifest_receiver.get("receiver_identity", manifest_receiver.get("identity_id"))
+        )
+        code_hash = normalize_receiver_identity(
+            manifest["contract"]["type_script_hash_for_registry_code_hash"]
+        )
+        accepted = manifest["accepted_transactions"]
+        lifecycle = []
+        for action in ("create", "update", "transfer", "revoke"):
+            discovery = _read_bounded_json(bundle / "discovery" / f"{action}-indexer.json")
+            objects = discovery.get("objects") if isinstance(discovery, dict) else None
+            if not isinstance(objects, list) or len(objects) != 1:
+                raise ValueError(f"{action} discovery must contain one registry cell")
+            cell = objects[0]
+            output_data = str(cell.get("output_data", ""))
+            if not output_data.startswith("0x"):
+                raise ValueError(f"{action} cell data is not hexadecimal")
+            record = decode_registry_v2_record(bytes.fromhex(output_data[2:]))
+            output = cell.get("output") or {}
+            type_script = output.get("type") or {}
+            out_point = cell.get("out_point") or {}
+            transaction_hash = normalize_receiver_identity(accepted[action])
+            if normalize_receiver_identity(type_script.get("args", "")) != receiver_identity:
+                raise ValueError(f"{action} identity does not match the manifest")
+            if normalize_receiver_identity(type_script.get("code_hash", "")) != code_hash:
+                raise ValueError(f"{action} code hash does not match the manifest")
+            if normalize_receiver_identity(out_point.get("tx_hash", "")) != transaction_hash:
+                raise ValueError(f"{action} transaction does not match the manifest")
+            lifecycle.append(
+                {
+                    "action": action,
+                    "sequence": str(record.sequence),
+                    "status": record.status,
+                    "updated_at": str(record.updated_at),
+                    "owner_lock_args": (output.get("lock") or {}).get("args", ""),
+                    "transaction_hash": transaction_hash,
+                    "block_number": cell.get("block_number"),
+                    "explorer_url": (
+                        f"{current_app.config['CKB_TESTNET_EXPLORER_TX_URL']}/"
+                        f"{transaction_hash}"
+                    ),
+                }
+            )
+    except (
+        KeyError,
+        OSError,
+        UnicodeDecodeError,
+        json.JSONDecodeError,
+        ValueError,
+    ):
+        logger.exception("Failed to load Registry V2 evidence from %s", bundle)
+        return None, "invalid"
+
+    return (
+        {
+            "schema_version": 1,
+            "source": "saved_testnet_evidence",
+            "live_query": False,
+            "network": manifest["network"],
+            "status": manifest["status"],
+            "generated_at": manifest["generated_at"],
+            "private_keys_included": bool(manifest.get("private_keys_included")),
+            "contract": {
+                "code_hash": code_hash,
+                "deployment_transaction": normalize_receiver_identity(
+                    manifest["contract"]["deployment_tx_hash"]
+                ),
+            },
+            "receiver": {
+                "receiver_identity": receiver_identity,
+                "receiver_label": manifest["receiver"]["label"],
+            },
+            "lifecycle": lifecycle,
+        },
+        "available",
+    )
 
 
 def _load_benchmark_report() -> tuple[Optional[Dict[str, Any]], str]:
@@ -1357,6 +1461,7 @@ def get_system_mode():
             "strict_production_mode": strict_production_mode,
             "startup_guardrail_status": startup_guardrail_status,
             "configured_transport": current_app.config["CONFIGURED_TRANSPORT"],
+            "ckb_network": os.getenv("CKB_NETWORK", "testnet"),
             "simulate_if_unavailable": bool(current_app.config["SIMULATE_IF_UNAVAILABLE"]),
             "demo_read_only": bool(current_app.config["DEMO_READ_ONLY"]),
             "demo_label": current_app.config["DEMO_LABEL"],
@@ -1370,7 +1475,15 @@ def get_system_mode():
             "receiver_registry_type_hash": (
                 registry_code_hash if _valid_registry_code_hash(registry_code_hash) else ""
             ),
+            "receiver_registry_hash_type": os.getenv("RECEIVER_REGISTRY_HASH_TYPE", "type"),
+            "registry_code_immutable": os.getenv("RECEIVER_REGISTRY_HASH_TYPE", "type")
+            == "data1",
             "registry_discovery_live": bool(runtime_state.get("registry_discovery_live")),
+            "registry_last_refresh_at": runtime_state.get("registry_last_refresh_at"),
+            "registry_refresh_error": runtime_state.get("registry_refresh_error"),
+            "registry_quarantined_identity_count": int(
+                runtime_state.get("registry_quarantined_identity_count", 0)
+            ),
             "websocket_available": SocketIO is not None,
             "synthetic_feed_mode": synthetic_feed_mode,
             "runtime_status": runtime_status,
@@ -1434,8 +1547,9 @@ def get_receivers():
     receiver_data = [
         {
             "receiver_id": receiver.receiver_id,
-            "identity_id": receiver.receiver_id,
+            "receiver_identity": receiver.receiver_identity,
             "receiver_label": receiver.receiver_label or receiver.receiver_id,
+            "data_source": receiver.data_source,
             "latitude": receiver.latitude,
             "longitude": receiver.longitude,
             "altitude": receiver.altitude,
@@ -1444,8 +1558,10 @@ def get_receivers():
             "capabilities": json.loads(receiver.capabilities),
             "updated_at": receiver.updated_at,
             "registry": {
-                "sequence": receiver.registry_sequence,
+                "sequence": str(receiver.registry_sequence),
+                "updated_at": str(receiver.registry_updated_at),
                 "owner_lock_args": receiver.owner_lock_args,
+                "owner_lock": json.loads(receiver.owner_lock or "{}"),
                 "out_point": json.loads(receiver.registry_out_point or "{}"),
                 "metadata_hash": receiver.metadata_hash or None,
             },
@@ -1453,6 +1569,22 @@ def get_receivers():
         for receiver in receivers
     ]
     return jsonify({"receivers": receiver_data, "count": len(receiver_data)})
+
+
+@api_bp.route("/api/registry/evidence", methods=["GET"])
+def get_registry_evidence():
+    evidence, status = _load_registry_evidence()
+    if evidence is None:
+        return (
+            jsonify(
+                {
+                    "error": "Registry lifecycle evidence is unavailable",
+                    "status": status,
+                }
+            ),
+            404,
+        )
+    return jsonify(evidence)
 
 
 @api_bp.route("/api/aircraft/<aircraft_id>/track", methods=["GET"])
@@ -1649,6 +1781,8 @@ def api_documentation():
             "endpoints": {
                 "GET /api/health": "Health and readiness status including DB and runtime freshness",
                 "GET /api/aircraft": "List active aircraft",
+                "GET /api/receivers": "Current receiver inventory and Registry V2 provenance",
+                "GET /api/registry/evidence": "Saved Registry V2 testnet lifecycle evidence",
                 "GET /api/positions/recent": "Recent positions for all aircraft",
                 "GET /api/aircraft/<id>/track": "Historical track for aircraft",
                 "GET /api/aircraft/<id>/latest": "Latest position for aircraft",

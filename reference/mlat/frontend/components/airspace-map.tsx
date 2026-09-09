@@ -5,6 +5,7 @@ import type { GeoJSONSource, LayerSpecification, Map as MapLibreMap, MapMouseEve
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Position, Receiver } from '@/lib/types';
 import { formatCoordinate, percent, positionCoordinates } from '@/lib/format';
+import { receiverIdentity } from '@/lib/receiver-state';
 
 type Coordinates = [number, number];
 
@@ -26,16 +27,28 @@ interface AirspaceMapProps {
 const baseStyle: StyleSpecification = {
   version: 8,
   sources: {
-    carto: {
+    openstreetmap: {
       type: 'raster',
-      tiles: ['https://a.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}@2x.png', 'https://b.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}@2x.png'],
+      tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
       tileSize: 256,
-      attribution: '© OpenStreetMap © CARTO',
+      maxzoom: 19,
+      attribution: '&copy; OpenStreetMap contributors',
     },
   },
   layers: [
     { id: 'base', type: 'background', paint: { 'background-color': '#090c10' } },
-    { id: 'carto', type: 'raster', source: 'carto', paint: { 'raster-opacity': 0.72, 'raster-saturation': -0.72, 'raster-contrast': 0.14 } },
+    {
+      id: 'openstreetmap',
+      type: 'raster',
+      source: 'openstreetmap',
+      paint: {
+        'raster-opacity': 0.9,
+        'raster-saturation': -0.88,
+        'raster-contrast': 0.18,
+        'raster-brightness-min': 0.03,
+        'raster-brightness-max': 0.48,
+      },
+    },
   ],
 };
 
@@ -100,6 +113,8 @@ export default function AirspaceMap({ aircraft, receivers, selectedAircraftId, s
   const mapRef = useRef<MapLibreMap | null>(null);
   const markersRef = useRef<Marker[]>([]);
   const [ready, setReady] = useState(false);
+  const [mapError, setMapError] = useState<string | null>(null);
+  const [mapAttempt, setMapAttempt] = useState(0);
 
   const selectedAircraft = useMemo(() => aircraft.find((item) => item.aircraft_id === selectedAircraftId) ?? aircraft[0] ?? null, [aircraft, selectedAircraftId]);
   const selectedReceiver = useMemo(() => receivers.find((item) => item.receiver_id === selectedReceiverId) ?? null, [receivers, selectedReceiverId]);
@@ -124,7 +139,17 @@ export default function AirspaceMap({ aircraft, receivers, selectedAircraftId, s
     });
     map.addControl(new maplibregl.NavigationControl({ showCompass: true, visualizePitch: true }), 'top-right');
     map.addControl(new maplibregl.AttributionControl({ compact: true }), 'bottom-right');
-    map.on('load', () => setReady(true));
+    const loadTimeout = window.setTimeout(() => {
+      setMapError('The base map took too long to load. Check the network connection and try again.');
+    }, 12_000);
+    map.on('style.load', () => {
+      window.clearTimeout(loadTimeout);
+      setMapError(null);
+      setReady(true);
+    });
+    map.on('error', () => {
+      if (!map.isStyleLoaded()) setMapError('The base map could not be loaded. Check the network connection and try again.');
+    });
     map.on('contextmenu', (event: MapMouseEvent) => {
       new maplibregl.Popup({ closeButton: false, offset: 10 })
         .setLngLat(event.lngLat)
@@ -133,11 +158,12 @@ export default function AirspaceMap({ aircraft, receivers, selectedAircraftId, s
     });
     mapRef.current = map;
     return () => {
+      window.clearTimeout(loadTimeout);
       markersRef.current.forEach((marker) => marker.remove());
       map.remove();
       mapRef.current = null;
     };
-  }, []);
+  }, [mapAttempt]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -151,9 +177,11 @@ export default function AirspaceMap({ aircraft, receivers, selectedAircraftId, s
       const element = document.createElement('button');
       element.type = 'button';
       element.className = `receiver-map-marker${selectedReceiverId === receiver.receiver_id ? ' is-selected' : ''}`;
-      element.setAttribute('aria-label', `Select receiver ${receiver.receiver_id}`);
+      const receiverLabel = receiver.receiver_label || receiver.receiver_id;
+      const identity = receiverIdentity(receiver);
+      element.setAttribute('aria-label', `Select receiver ${receiverLabel}`);
       element.addEventListener('click', () => onSelectReceiver?.(receiver.receiver_id));
-      const marker = new maplibregl.Marker({ element, anchor: 'center' }).setLngLat(coordinates).setPopup(new maplibregl.Popup({ offset: 12, closeButton: false }).setDOMContent(popupContent(receiver.receiver_id, [formatCoordinate(receiver.latitude, receiver.longitude), receiver.status || 'Status unknown']))).addTo(map);
+      const marker = new maplibregl.Marker({ element, anchor: 'center' }).setLngLat(coordinates).setPopup(new maplibregl.Popup({ offset: 12, closeButton: false }).setDOMContent(popupContent(receiverLabel, [identity ? `Identity ${identity.slice(0, 10)}...${identity.slice(-6)}` : 'No Registry identity', formatCoordinate(receiver.latitude, receiver.longitude), receiver.status || 'Status unknown']))).addTo(map);
       markersRef.current.push(marker);
     });
 
@@ -219,5 +247,17 @@ export default function AirspaceMap({ aircraft, receivers, selectedAircraftId, s
     }
   }, [aircraft, contributingReceivers, fitRequest, ready, receivers, selectedAircraft, selectedReceiver]);
 
-  return <div ref={containerRef} className={className ?? 'h-full min-h-[420px] w-full'} role="region" aria-label="Interactive aircraft and receiver map" />;
+  const retryMap = () => {
+    setReady(false);
+    setMapError(null);
+    setMapAttempt((attempt) => attempt + 1);
+  };
+
+  return (
+    <div className={`relative ${className ?? 'h-full min-h-[420px] w-full'}`} role="region" aria-label="Interactive aircraft and receiver map" aria-busy={!ready && !mapError}>
+      <div ref={containerRef} className="absolute inset-0" aria-hidden="true" />
+      {!ready && !mapError ? <div className="pointer-events-none absolute inset-0 z-overlay grid place-items-center bg-[#090c10] text-xs text-ink-quiet">Loading the network map...</div> : null}
+      {mapError ? <div className="absolute inset-0 z-overlay grid place-items-center bg-[#090c10]/95 p-6 text-center"><div><p className="text-sm font-semibold text-ink">Map unavailable</p><p className="mt-2 max-w-sm text-xs leading-5 text-ink-quiet">{mapError}</p><button type="button" onClick={retryMap} className="mt-4 min-h-10 rounded-md border border-line px-4 text-xs font-semibold text-ink transition-colors hover:bg-graphite-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal-blue">Retry map</button></div></div> : null}
+    </div>
+  );
 }

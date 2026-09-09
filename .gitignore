@@ -21,7 +21,10 @@ dist/
 target/
 contracts/**/target/
 reference/mlat/frontend/.next/
+reference/mlat/frontend/.next-*/
 reference/mlat/frontend/node_modules/
+sdk/typescript/node_modules/
+sdk/typescript/dist/
 reference/mlat/frontend/out/
 reference/mlat/frontend/.vercel/
 /frontend/

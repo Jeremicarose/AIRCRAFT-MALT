@@ -345,6 +345,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "99ba7c72f86f239b3e0154f51d6cd5d0d83bbaa8775fdc7b6bcac459ae24b6fd"
 dependencies = [
  "blake2b-ref",
+ "blake2b-rs",
 ]
 
 [[package]]
@@ -1451,6 +1452,7 @@ dependencies = [
 name = "receiver-registry"
 version = "0.1.0"
 dependencies = [
+ "ckb-hash 0.119.0",
  "ckb-std",
  "ckb-system-scripts",
  "ckb-testtool",

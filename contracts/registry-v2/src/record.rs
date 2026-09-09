@@ -3,6 +3,7 @@ use heapless::{String, Vec};
 use serde::{Deserialize, Serialize};
 
 pub const REGISTRY_SCHEMA_VERSION: u8 = 2;
+pub const MAX_RECORD_BYTES: usize = 16 * 1024;
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 #[serde(deny_unknown_fields)]
@@ -73,6 +74,11 @@ impl ReceiverRegistryRecord {
         if self.updated_at == 0 {
             return Err(Error::InvalidUpdatedAt);
         }
+        if let Some(endpoint) = &self.stream_endpoint {
+            if !valid_wire_text(endpoint.as_str()) {
+                return Err(Error::InvalidStreamEndpoint);
+            }
+        }
         if let Some(protocol) = &self.stream_protocol {
             if !matches!(protocol.as_str(), "websocket-json" | "command-jsonl") {
                 return Err(Error::InvalidStreamProtocol);
@@ -131,6 +137,104 @@ impl ReceiverRegistryRecord {
     }
 }
 
+pub fn decode_registry_v2_record(payload: &[u8]) -> Result<ReceiverRegistryRecord, Error> {
+    if payload.len() > MAX_RECORD_BYTES || !has_strict_json_lexemes(payload) {
+        return Err(Error::Encoding);
+    }
+    let (record, consumed): (ReceiverRegistryRecord, usize) =
+        serde_json_core::from_slice(payload).map_err(|_| Error::Encoding)?;
+    if consumed != payload.len() {
+        return Err(Error::Encoding);
+    }
+    record.validate()?;
+    Ok(record)
+}
+
+fn has_strict_json_lexemes(payload: &[u8]) -> bool {
+    let mut index = 0;
+    let mut in_string = false;
+
+    while index < payload.len() {
+        let byte = payload[index];
+        if in_string {
+            match byte {
+                b'"' => in_string = false,
+                b'\\' | 0..=0x1f => return false,
+                _ => {}
+            }
+            index += 1;
+            continue;
+        }
+
+        match byte {
+            b'"' => {
+                in_string = true;
+                index += 1;
+            }
+            b'+' => return false,
+            b'-' | b'0'..=b'9' => match consume_json_number(payload, index) {
+                Some(next) => index = next,
+                None => return false,
+            },
+            _ => index += 1,
+        }
+    }
+
+    !in_string
+}
+
+fn consume_json_number(payload: &[u8], mut index: usize) -> Option<usize> {
+    if payload.get(index) == Some(&b'-') {
+        index += 1;
+    }
+
+    match payload.get(index)? {
+        b'0' => {
+            index += 1;
+            if payload.get(index).is_some_and(u8::is_ascii_digit) {
+                return None;
+            }
+        }
+        b'1'..=b'9' => {
+            index += 1;
+            while payload.get(index).is_some_and(u8::is_ascii_digit) {
+                index += 1;
+            }
+        }
+        _ => return None,
+    }
+
+    if payload.get(index) == Some(&b'.') {
+        index += 1;
+        let fraction_start = index;
+        while payload.get(index).is_some_and(u8::is_ascii_digit) {
+            index += 1;
+        }
+        if index == fraction_start {
+            return None;
+        }
+    }
+
+    if matches!(payload.get(index), Some(b'e' | b'E')) {
+        index += 1;
+        if matches!(payload.get(index), Some(b'+' | b'-')) {
+            index += 1;
+        }
+        let exponent_start = index;
+        while payload.get(index).is_some_and(u8::is_ascii_digit) {
+            index += 1;
+        }
+        if index == exponent_start {
+            return None;
+        }
+    }
+
+    match payload.get(index) {
+        None | Some(b' ' | b'\t' | b'\n' | b'\r' | b',' | b']' | b'}') => Some(index),
+        _ => None,
+    }
+}
+
 fn valid_receiver_id(value: &str) -> bool {
     let bytes = value.as_bytes();
     !bytes.is_empty()
@@ -154,6 +258,13 @@ fn valid_hash(value: &str) -> bool {
     bytes.len() == 66
         && bytes.starts_with(b"0x")
         && bytes[2..].iter().all(|byte| byte.is_ascii_hexdigit())
+}
+
+fn valid_wire_text(value: &str) -> bool {
+    !value.is_empty()
+        && value
+            .bytes()
+            .all(|byte| byte >= 0x20 && !matches!(byte, b'"' | b'\\'))
 }
 
 trait AsciiIdentifierByte {
@@ -198,6 +309,8 @@ mod tests {
         name: StdString,
         previous: StdString,
         next: StdString,
+        previous_identity: Option<StdString>,
+        next_identity: Option<StdString>,
         valid: bool,
     }
 
@@ -209,13 +322,7 @@ mod tests {
     }
 
     fn parse_record(payload: &str) -> Result<ReceiverRegistryRecord, Error> {
-        let (record, consumed): (ReceiverRegistryRecord, usize) =
-            serde_json_core::from_slice(payload.as_bytes()).map_err(|_| Error::Encoding)?;
-        if consumed != payload.len() {
-            return Err(Error::Encoding);
-        }
-        record.validate()?;
-        Ok(record)
+        decode_registry_v2_record(payload.as_bytes())
     }
 
     fn text<const N: usize>(value: &str) -> String<N> {
@@ -313,7 +420,7 @@ mod tests {
             "../../../tests/registry/fixtures/registry_v2_conformance.json"
         ))
         .expect("valid conformance corpus");
-        assert_eq!(corpus.schema_version, 1);
+        assert_eq!(corpus.schema_version, 2);
 
         for case in corpus.record_cases {
             let parsed = parse_record(&case.payload);
@@ -340,8 +447,9 @@ mod tests {
         for case in corpus.transition_cases {
             let previous = parse_record(&case.previous).expect("valid previous record");
             let next = parse_record(&case.next).expect("valid successor record encoding");
+            let identity_unchanged = case.previous_identity == case.next_identity;
             assert_eq!(
-                next.validate_successor(&previous).is_ok(),
+                identity_unchanged && next.validate_successor(&previous).is_ok(),
                 case.valid,
                 "{}",
                 case.name

@@ -5,7 +5,7 @@ This adapter discovers Registry V2 cells and maps their immutable Type IDs,
 owner locks, lifecycle sequences, and current records into runtime receivers.
 """
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional
 from dataclasses import dataclass
 import json
 import asyncio
@@ -14,7 +14,11 @@ import ssl
 import time
 import urllib.request
 
-from ckb_registry.record import ReceiverRegistryRecord, normalize_identity_id
+from ckb_registry.record import (
+    DEFAULT_MAX_RECORD_BYTES,
+    decode_registry_v2_record,
+    normalize_receiver_identity,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -32,15 +36,26 @@ class ReceiverInfo:
     capabilities: List[str]
     ckb_address: str  # CKB address of receiver
     lock_hash: str  # Lock script hash for verification
-    identity_id: str = ""
+    receiver_identity: Optional[str] = None
+    data_source: str = "runtime"
     stream_endpoint: Optional[str] = None
     stream_protocol: Optional[str] = None
     stream_format: Optional[str] = None
     metadata: Optional[Dict[str, Any]] = None
+    registry_updated_at: Optional[int] = None
+
+    def __post_init__(self) -> None:
+        if self.receiver_identity is not None:
+            self.receiver_identity = normalize_receiver_identity(self.receiver_identity)
+        if self.data_source == "ckb_registry" and self.receiver_identity is None:
+            raise ValueError("CKB Registry receivers require receiver_identity")
 
     @property
-    def canonical_id(self) -> str:
-        return self.identity_id or self.receiver_id
+    def runtime_id(self) -> str:
+        """Return the routing key without treating a human label as CKB identity."""
+        if self.receiver_identity is not None:
+            return self.receiver_identity
+        return f"{self.data_source}:{self.receiver_id}"
 
 
 @dataclass
@@ -51,12 +66,17 @@ class CKBConfig:
     ckb_rpc_url: str = "https://testnet.ckb.dev/rpc"
     ckb_indexer_url: str = "https://testnet.ckb.dev/indexer"
     receiver_registry_type_hash: str = ""  # Type script hash for receiver registry
+    receiver_registry_hash_type: str = "type"  # Historical deployments use type; new ones use data1
+    allow_mutable_registry_code: bool = False
     api_timeout: int = 30
     ssl_verify: bool = True
-    max_record_age_seconds: int = 86400
+    max_record_age_seconds: Optional[int] = None
     max_future_record_skew_seconds: int = 300
     registry_page_size: int = 100
     registry_max_pages: int = 1000
+    registry_max_cells: int = 10_000
+    max_record_bytes: int = DEFAULT_MAX_RECORD_BYTES
+    time_provider: Callable[[], float] = time.time
 
 
 class CKBPeerDiscovery:
@@ -71,6 +91,7 @@ class CKBPeerDiscovery:
     def __init__(self, config: CKBConfig):
         self.config = config
         self.cached_peers: Dict[str, ReceiverInfo] = {}
+        self.quarantined_identities: List[str] = []
         self.rpc_url = config.ckb_rpc_url
 
     async def initialize(self):
@@ -80,12 +101,23 @@ class CKBPeerDiscovery:
         if not self.config.receiver_registry_type_hash:
             raise RuntimeError("RECEIVER_REGISTRY_TYPE_HASH is required for Registry V2 discovery")
 
+        if self.config.receiver_registry_hash_type not in {"data1", "type"}:
+            raise RuntimeError("RECEIVER_REGISTRY_HASH_TYPE must be data1 or type")
         try:
-            normalize_identity_id(self.config.receiver_registry_type_hash)
+            normalize_receiver_identity(self.config.receiver_registry_type_hash)
         except ValueError as exc:
             raise RuntimeError(
                 "RECEIVER_REGISTRY_TYPE_HASH must be a 0x-prefixed 32-byte V2 contract code hash"
             ) from exc
+
+        if (
+            self.config.receiver_registry_hash_type == "type"
+            and not self.config.allow_mutable_registry_code
+        ):
+            raise RuntimeError(
+                "Registry hash_type=type permits mutable contract code; "
+                "set ALLOW_MUTABLE_REGISTRY_CODE=true only for explicit historical read-only compatibility"
+            )
 
         tip = await self._get_tip_block_number()
         logger.info("Connected to CKB node, current block: %s", tip)
@@ -95,7 +127,12 @@ class CKBPeerDiscovery:
         tip = await self._rpc_call("get_tip_block_number", [])
         return int(tip, 16)
 
-    async def discover_peers(self) -> List[ReceiverInfo]:
+    async def discover_peers(
+        self,
+        *,
+        include_inactive: bool = False,
+        include_revoked: bool = False,
+    ) -> List[ReceiverInfo]:
         """
         Discover active Mode-S receivers from CKB blockchain.
 
@@ -107,7 +144,9 @@ class CKBPeerDiscovery:
         """
         logger.info("Discovering peers from CKB blockchain...")
         self.cached_peers.clear()
+        self.quarantined_identities = []
         receivers_by_identity: Dict[str, ReceiverInfo] = {}
+        seen_identities: set[str] = set()
         duplicate_identities: set[str] = set()
 
         cells = await self._search_receiver_cells()
@@ -115,27 +154,41 @@ class CKBPeerDiscovery:
 
         for cell in cells:
             try:
-                receiver = await self._parse_receiver_cell(cell)
-                if receiver and self._is_receiver_valid(receiver):
-                    identity_id = receiver.canonical_id
-                    if identity_id in receivers_by_identity:
-                        duplicate_identities.add(identity_id)
-                        receivers_by_identity.pop(identity_id, None)
-                        self.cached_peers.pop(identity_id, None)
-                        logger.error(
-                            "Quarantining duplicate live Receiver Identity %s",
-                            identity_id,
-                        )
-                    elif identity_id not in duplicate_identities:
-                        receivers_by_identity[identity_id] = receiver
-                        self.cached_peers[identity_id] = receiver
+                receiver_identity = self._receiver_identity_from_cell(cell)
+                if receiver_identity in duplicate_identities:
+                    continue
+                if receiver_identity in seen_identities:
+                    duplicate_identities.add(receiver_identity)
+                    receivers_by_identity.pop(receiver_identity, None)
+                    logger.error(
+                        "Quarantining duplicate live Receiver Identity %s",
+                        receiver_identity,
+                    )
+                    continue
+                seen_identities.add(receiver_identity)
+
+                receiver = await self._parse_receiver_cell(cell, receiver_identity)
+                if receiver is not None:
+                    receivers_by_identity[receiver_identity] = receiver
             except Exception as exc:
                 logger.warning("Failed to parse receiver cell: %s", exc)
 
-        receivers = sorted(
-            receivers_by_identity.values(),
-            key=lambda receiver: receiver.identity_id,
-        )
+        active_receivers = [
+            receiver
+            for receiver in receivers_by_identity.values()
+            if self._is_receiver_valid(
+                receiver,
+                include_inactive=include_inactive,
+                include_revoked=include_revoked,
+            )
+        ]
+        self.cached_peers = {
+            receiver.receiver_identity: receiver
+            for receiver in active_receivers
+            if receiver.receiver_identity is not None
+        }
+        self.quarantined_identities = sorted(duplicate_identities)
+        receivers = sorted(active_receivers, key=lambda receiver: receiver.receiver_identity or "")
         logger.info("Discovered %d valid receivers", len(receivers))
         return receivers
 
@@ -148,7 +201,7 @@ class CKBPeerDiscovery:
         search_key = {
             "script": {
                 "code_hash": self.config.receiver_registry_type_hash,
-                "hash_type": "type",
+                "hash_type": self.config.receiver_registry_hash_type,
                 "args": "0x",
             },
             "script_type": "type",
@@ -168,11 +221,21 @@ class CKBPeerDiscovery:
                 params,
                 url=self.config.ckb_indexer_url,
             )
+            if not isinstance(cells_response, dict):
+                raise RuntimeError("CKB indexer returned a non-object get_cells result")
             page = cells_response.get("objects", [])
+            if not isinstance(page, list):
+                raise RuntimeError("CKB indexer get_cells objects must be a list")
             cells.extend(page)
+            if len(cells) > self.config.registry_max_cells:
+                raise RuntimeError("Receiver registry discovery exceeded registry_max_cells")
             next_cursor = cells_response.get("last_cursor")
-            if len(page) < page_size or not next_cursor or next_cursor == cursor:
+            if not page:
                 return cells
+            if not isinstance(next_cursor, str) or not next_cursor:
+                raise RuntimeError("CKB indexer omitted last_cursor after a non-empty page")
+            if next_cursor == cursor:
+                raise RuntimeError("CKB indexer repeated last_cursor after a non-empty page")
             cursor = next_cursor
 
         raise RuntimeError("Receiver registry pagination exceeded registry_max_pages")
@@ -227,11 +290,32 @@ class CKBPeerDiscovery:
 
         return await asyncio.to_thread(_do_request)
 
-    async def _parse_receiver_cell(self, cell: Dict) -> Optional[ReceiverInfo]:
+    def _receiver_identity_from_cell(self, cell: Dict) -> str:
+        """Validate Registry V2 script binding and return its canonical Type ID."""
+        output = cell.get("output", {})
+        type_script = output.get("type") or {}
+        if type_script.get("hash_type") != self.config.receiver_registry_hash_type:
+            raise ValueError(
+                "registry type script hash_type does not match the configured deployment"
+            )
+        configured_code_hash = self.config.receiver_registry_type_hash.lower()
+        if (
+            configured_code_hash
+            and str(type_script.get("code_hash", "")).lower() != configured_code_hash
+        ):
+            raise ValueError("registry cell code hash does not match configured V2 contract")
+        return normalize_receiver_identity(type_script.get("args", ""))
+
+    async def _parse_receiver_cell(
+        self,
+        cell: Dict,
+        receiver_identity: Optional[str] = None,
+    ) -> Optional[ReceiverInfo]:
         """
         Parse receiver information from CKB cell data.
 
-        Cell data format (JSON in cell output data):
+        Registry V2 JSON is decoded separately from the Type ID script binding.
+        For example:
         {
             "receiver_id": "RECV_NYC_001",
             "latitude": 40.7128,
@@ -239,33 +323,26 @@ class CKBPeerDiscovery:
             "altitude": 10.0,
             "status": "online",
             "capabilities": ["mode-s", "adsb", "mlat"],
-            "timestamp": 1234567890,
-            "signature": "0x..."
+            "sequence": 0,
+            "updated_at": 1234567890
         }
         """
         try:
-            # Get cell output data
             output_data = cell.get("output_data", "0x")
 
-            if output_data == "0x":
+            if not isinstance(output_data, str) or output_data == "0x":
                 return None
+            if not output_data.startswith("0x") or len(output_data) % 2 != 0:
+                raise ValueError("registry cell data must be 0x-prefixed hexadecimal")
 
-            # Decode hex data to canonical JSON
-            data_bytes = bytes.fromhex(output_data[2:])  # Remove 0x prefix
-            data_json = json.loads(data_bytes.decode("utf-8"))
-            record = ReceiverRegistryRecord.from_dict(data_json)
+            data_bytes = bytes.fromhex(output_data[2:])
+            record = decode_registry_v2_record(
+                data_bytes,
+                max_bytes=self.config.max_record_bytes,
+            )
             output = cell.get("output", {})
             lock = output.get("lock", {})
-            type_script = output.get("type") or {}
-            if type_script.get("hash_type") != "type":
-                raise ValueError("registry type script must use hash_type=type")
-            configured_code_hash = self.config.receiver_registry_type_hash.lower()
-            if (
-                configured_code_hash
-                and str(type_script.get("code_hash", "")).lower() != configured_code_hash
-            ):
-                raise ValueError("registry cell code hash does not match configured V2 contract")
-            identity_id = normalize_identity_id(type_script.get("args", ""))
+            receiver_identity = receiver_identity or self._receiver_identity_from_cell(cell)
             out_point = cell.get("out_point") or {}
 
             receiver = ReceiverInfo(
@@ -274,11 +351,12 @@ class CKBPeerDiscovery:
                 longitude=record.longitude,
                 altitude=record.altitude,
                 status=record.status,
-                last_seen=float(record.updated_at),
+                last_seen=0.0,
                 capabilities=record.capabilities,
                 ckb_address=lock.get("args", ""),
                 lock_hash=lock.get("hash") or cell.get("lock_hash", ""),
-                identity_id=identity_id,
+                receiver_identity=receiver_identity,
+                data_source="ckb_registry",
                 stream_endpoint=record.stream_endpoint,
                 stream_protocol=record.stream_protocol,
                 stream_format=record.stream_format,
@@ -289,7 +367,9 @@ class CKBPeerDiscovery:
                     "owner_lock": lock,
                     "out_point": out_point,
                     "block_number": cell.get("block_number"),
+                    "updated_at": record.updated_at,
                 },
+                registry_updated_at=record.updated_at,
             )
 
             return receiver
@@ -298,18 +378,23 @@ class CKBPeerDiscovery:
             logger.warning(f"Failed to parse cell: {e}")
             return None
 
-    def _is_receiver_valid(self, receiver: ReceiverInfo) -> bool:
+    def _is_receiver_valid(
+        self,
+        receiver: ReceiverInfo,
+        *,
+        include_inactive: bool = False,
+        include_revoked: bool = False,
+    ) -> bool:
         """
         Validate receiver information.
 
-        Checks:
-        - Status is online
-        - Has required capabilities
-        - Recent timestamp (last 24 hours)
-        - Valid coordinates
+        Checks status, capabilities, optional record-age policy, and coordinates.
         """
         # Check status
-        if receiver.status != "online":
+        if receiver.status == "revoked" and not include_revoked:
+            logger.info("Skipping receiver %s: identity is revoked", receiver.receiver_identity)
+            return False
+        if receiver.status not in {"online", "revoked"} and not include_inactive:
             logger.info(
                 "Skipping receiver %s: status=%s is not online",
                 receiver.receiver_id,
@@ -326,16 +411,25 @@ class CKBPeerDiscovery:
             )
             return False
 
-        # Check timestamp freshness
-        age_seconds = time.time() - receiver.last_seen
+        # `updated_at` is lifecycle time, not a heartbeat. Only future skew is
+        # rejected by default; deployments may opt into a maximum record age.
+        if receiver.registry_updated_at is None:
+            logger.info(
+                "Skipping receiver %s: Registry updated_at is missing", receiver.receiver_id
+            )
+            return False
+        age_seconds = self.config.time_provider() - receiver.registry_updated_at
         if age_seconds < -self.config.max_future_record_skew_seconds:
             logger.info(
                 "Skipping receiver %s: updated_at is %.0f seconds in the future",
-                receiver.canonical_id,
+                receiver.receiver_identity,
                 -age_seconds,
             )
             return False
-        if age_seconds > self.config.max_record_age_seconds:
+        if (
+            self.config.max_record_age_seconds is not None
+            and age_seconds > self.config.max_record_age_seconds
+        ):
             logger.info(
                 "Skipping receiver %s: timestamp is stale by %.0f seconds (max %d)",
                 receiver.receiver_id,
@@ -362,9 +456,9 @@ class CKBPeerDiscovery:
 
         return True
 
-    async def get_receiver_details(self, receiver_id: str) -> Optional[ReceiverInfo]:
-        """Get cached receiver details"""
-        return self.cached_peers.get(receiver_id)
+    async def get_receiver_details(self, receiver_identity: str) -> Optional[ReceiverInfo]:
+        """Get cached receiver details by canonical CKB Receiver Identity."""
+        return self.cached_peers.get(normalize_receiver_identity(receiver_identity))
 
     async def shutdown(self):
         """Cleanup CKB connection"""

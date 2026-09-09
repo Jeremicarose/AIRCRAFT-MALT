@@ -8,7 +8,6 @@ with 4DSky for Mode-S data streaming.
 from typing import Dict, List, Optional
 from dataclasses import dataclass
 import asyncio
-import contextlib
 import logging
 import time
 
@@ -33,6 +32,8 @@ class NetworkConfig:
     ckb_rpc_url: str = "https://testnet.ckb.dev/rpc"
     ckb_indexer_url: str = "https://testnet.ckb.dev/indexer"
     receiver_registry_type_hash: str = ""
+    receiver_registry_hash_type: str = "type"
+    allow_mutable_registry_code: bool = False
 
     # 4DSky Configuration
     api_key: Optional[str] = None
@@ -49,9 +50,10 @@ class NetworkConfig:
     simulate_if_unavailable: bool = True
     strict_production_mode: bool = False
     ssl_verify: bool = True
-    max_record_age_seconds: int = 86400
+    max_record_age_seconds: Optional[int] = None
     hybrid_simulation_min_receivers: int = 4
     demo_scenario: str = "default"
+    registry_refresh_seconds: int = 30
 
 
 class CKBReceiverNetworkClient:
@@ -71,6 +73,8 @@ class CKBReceiverNetworkClient:
             ckb_rpc_url=config.ckb_rpc_url,
             ckb_indexer_url=config.ckb_indexer_url,
             receiver_registry_type_hash=config.receiver_registry_type_hash,
+            receiver_registry_hash_type=config.receiver_registry_hash_type,
+            allow_mutable_registry_code=config.allow_mutable_registry_code,
             ssl_verify=config.ssl_verify,
             max_record_age_seconds=config.max_record_age_seconds,
         )
@@ -79,8 +83,11 @@ class CKBReceiverNetworkClient:
         self.active_receivers: Dict[str, ReceiverInfo] = {}
         self._stream_tasks: List[asyncio.Task] = []
         self._feed_transport: Optional[BaseFeedTransport] = None
+        self._message_callback = None
         self.discovery_latency_ms = 0.0
         self.registry_discovery_live = False
+        self.last_registry_refresh_at = 0.0
+        self.registry_refresh_error: Optional[str] = None
 
     async def initialize(self):
         """Initialize the network client"""
@@ -103,13 +110,15 @@ class CKBReceiverNetworkClient:
                 exc_info=True,
             )
         self.discovery_latency_ms = (time.perf_counter() - discovery_started_at) * 1000
+        self.last_registry_refresh_at = time.time()
+        self.registry_refresh_error = None
         logger.info("Discovered %d receivers from CKB", len(receivers))
 
         selected = self._select_receivers(receivers)
         logger.info(f"✅ Selected {len(selected)} receivers for MLAT")
 
         for receiver in selected:
-            self.active_receivers[receiver.canonical_id] = receiver
+            self.active_receivers[receiver.runtime_id] = receiver
 
         self._augment_receivers_for_simulation()
 
@@ -124,8 +133,80 @@ class CKBReceiverNetworkClient:
             for receiver in receivers
             if "mlat" in receiver.capabilities and receiver.status == "online"
         ]
-        candidates.sort(key=lambda receiver: receiver.last_seen, reverse=True)
+        # Registry updated_at is lifecycle metadata, not operational freshness.
+        # Discovery quarantines identity conflicts before this stable capacity limit.
+        candidates.sort(key=lambda receiver: receiver.receiver_identity or receiver.runtime_id)
         return candidates[: self.config.max_receivers]
+
+    async def refresh_registry_receivers(self) -> bool:
+        """Refresh Registry receivers while preserving the last verified pool on failure."""
+        if not self.config.receiver_registry_type_hash:
+            return False
+
+        previous = {
+            receiver_id: (
+                receiver.status,
+                receiver.latitude,
+                receiver.longitude,
+                receiver.altitude,
+                tuple(receiver.capabilities),
+                receiver.metadata.get("sequence") if receiver.metadata else None,
+                receiver.stream_endpoint,
+                receiver.stream_protocol,
+                receiver.stream_format,
+                receiver.ckb_address,
+                receiver.lock_hash,
+            )
+            for receiver_id, receiver in self.active_receivers.items()
+        }
+        refresh_started_at = time.perf_counter()
+        try:
+            discovered = await self.peer_discovery.discover_peers()
+            selected = self._select_receivers(discovered)
+        except Exception as exc:
+            self.registry_discovery_live = False
+            self.registry_refresh_error = str(exc)
+            self.discovery_latency_ms = (time.perf_counter() - refresh_started_at) * 1000
+            self.active_receivers = {
+                receiver_id: receiver
+                for receiver_id, receiver in self.active_receivers.items()
+                if receiver.data_source != "ckb_registry"
+            }
+            self._augment_receivers_for_simulation()
+            raise
+
+        retained = {
+            receiver_id: receiver
+            for receiver_id, receiver in self.active_receivers.items()
+            if receiver.data_source != "ckb_registry"
+        }
+        refreshed = {receiver.runtime_id: receiver for receiver in selected}
+        self.active_receivers.clear()
+        self.active_receivers.update(retained)
+        self.active_receivers.update(refreshed)
+        self._augment_receivers_for_simulation()
+
+        self.registry_discovery_live = True
+        self.registry_refresh_error = None
+        self.last_registry_refresh_at = time.time()
+        self.discovery_latency_ms = (time.perf_counter() - refresh_started_at) * 1000
+        current = {
+            receiver_id: (
+                receiver.status,
+                receiver.latitude,
+                receiver.longitude,
+                receiver.altitude,
+                tuple(receiver.capabilities),
+                receiver.metadata.get("sequence") if receiver.metadata else None,
+                receiver.stream_endpoint,
+                receiver.stream_protocol,
+                receiver.stream_format,
+                receiver.ckb_address,
+                receiver.lock_hash,
+            )
+            for receiver_id, receiver in self.active_receivers.items()
+        }
+        return current != previous
 
     async def start_streaming(self, message_callback):
         """
@@ -138,6 +219,7 @@ class CKBReceiverNetworkClient:
         - `auto`
         """
         logger.info("📡 Starting Mode-S data streaming...")
+        self._message_callback = message_callback
 
         if self._stream_tasks:
             logger.info("Streaming already active; keeping current tasks")
@@ -187,6 +269,37 @@ class CKBReceiverNetworkClient:
             f"✅ Streaming from {len(self.active_receivers)} receivers"
             " (CKB discovery + simulated 4DSky feed)"
         )
+
+    async def restart_streaming(self) -> None:
+        """Rebind transport tasks after Registry membership or endpoints change."""
+        callback = self._message_callback
+        if callback is None:
+            return
+        await self._stop_stream_tasks()
+        await self.start_streaming(callback)
+
+    async def monitor_streaming(self) -> None:
+        """Raise when a current transport task exits unexpectedly."""
+        while self._message_callback is not None:
+            for task in tuple(self._stream_tasks):
+                if not task.done():
+                    continue
+                if task.cancelled():
+                    raise RuntimeError("Feed transport task was cancelled unexpectedly")
+                error = task.exception()
+                if error is not None:
+                    raise error
+                raise RuntimeError("Feed transport task stopped unexpectedly")
+            await asyncio.sleep(0.5)
+
+    async def _stop_stream_tasks(self) -> None:
+        tasks = tuple(self._stream_tasks)
+        self._stream_tasks.clear()
+        for task in tasks:
+            task.cancel()
+        if tasks:
+            await asyncio.gather(*tasks, return_exceptions=True)
+        self._feed_transport = None
 
     def _determine_transport(self) -> str:
         """Resolve the active 4DSky transport."""
@@ -245,9 +358,9 @@ class CKBReceiverNetworkClient:
         simulated_receivers = self._get_simulated_receivers()
         added = 0
         for receiver in simulated_receivers:
-            if receiver.canonical_id in self.active_receivers:
+            if receiver.runtime_id in self.active_receivers:
                 continue
-            self.active_receivers[receiver.canonical_id] = receiver
+            self.active_receivers[receiver.runtime_id] = receiver
             added += 1
             if len(self.active_receivers) >= min_receivers:
                 break
@@ -272,7 +385,8 @@ class CKBReceiverNetworkClient:
                 capabilities=receiver["capabilities"],
                 ckb_address=f"demo:{index}",
                 lock_hash="",
-                identity_id=receiver["receiver_id"],
+                receiver_identity=None,
+                data_source="simulation",
                 stream_protocol="simulation",
                 stream_format="json",
                 metadata=receiver["metadata"],
@@ -284,15 +398,8 @@ class CKBReceiverNetworkClient:
         """Gracefully shutdown all connections"""
         logger.info("🛑 Shutting down CKB network client...")
 
-        for task in self._stream_tasks:
-            task.cancel()
-
-        for task in self._stream_tasks:
-            with contextlib.suppress(asyncio.CancelledError):
-                await task
-
-        self._stream_tasks.clear()
-        self._feed_transport = None
+        self._message_callback = None
+        await self._stop_stream_tasks()
         await self.peer_discovery.shutdown()
         self.active_receivers.clear()
         self.registry_discovery_live = False

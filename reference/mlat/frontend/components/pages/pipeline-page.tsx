@@ -6,8 +6,10 @@ import { ActivityRail, IssueList, SignalMarquee, Timeline, WorkspaceHeader, Work
 import { StatusChip } from '@/components/ui/status-chip';
 import { number, titleCase } from '@/lib/format';
 import { useOperatorStore } from '@/lib/operator-store';
-import type { MetricsData, PipelineData, PipelineStageData, StatusTone } from '@/lib/types';
+import type { MetricsData, PipelineData, StatusTone } from '@/lib/types';
 import { ProgressBar } from '@/components/ui/progress-bar';
+import { SystemFlow } from '@/components/system-flow';
+import { cn } from '@/lib/utils';
 
 const actions: Record<string, string> = {
   registry: 'Verify the Registry V2 type hash, RPC connectivity, and live receiver discovery.',
@@ -51,6 +53,9 @@ export function PipelinePage({ pipeline, metrics }: { pipeline: PipelineData | n
   ], [metrics?.sample_count, pipeline?.benchmark?.status]);
 
   const stageTimeline = stages.map((stage) => ({ title: stage.label, detail: stage.detail || `${stage.label} did not report a current explanation.`, tone: stage.id === selectedStage?.id ? 'selection' as StatusTone : stageTone(stage.status), meta: titleCase(stage.status) }));
+  const stageById = new Map(stages.map((stage) => [stage.id, stage]));
+  const receiverCount = Number(stageById.get('discovery')?.metrics?.receiver_count ?? current.active_receivers ?? 0);
+  const aircraftCount = Number(current.active_aircraft ?? 0);
 
   useEffect(() => {
     if (!selectedStage) return;
@@ -87,6 +92,16 @@ export function PipelinePage({ pipeline, metrics }: { pipeline: PipelineData | n
     <div className="space-y-4">
       <WorkspaceHeader eyebrow="Operate" title="Pipeline debugger" description="Stages, blockers, machine-readable proof surfaces, and operator recovery guidance are combined into one interactive failure workspace." status={<StatusChip label={stateLabel} tone={stateTone} />} rail={<SignalMarquee items={[{ label: 'Passing stages', value: `${passed}/${stages.length}`, tone: stateTone }, { label: 'Blockers', value: number(blockers.length), tone: blockers.length ? 'failure' : 'healthy' }, { label: 'Evidence', value: liveReady ? 'Ready' : 'Blocked', tone: liveReady ? 'trust' : 'attention' }, { label: 'Solve success', value: `${number(current.solve_success_percent, 1)}%`, tone: Number(current.solve_success_percent ?? 0) >= 95 ? 'healthy' : 'attention' }]} />} />
 
+      <WorkspacePanel title="Failure chain" detail="The first non-passing stage explains the downstream MLAT and aircraft state." tone={stateTone}>
+        <SystemFlow ariaLabel="Registry discovery MLAT aircraft failure chain" nodes={[
+          { id: 'receiver', label: 'Receivers', detail: `${receiverCount} in runtime inventory`, tone: receiverCount ? 'selection' : 'attention', href: '/app/receivers' },
+          { id: 'registry', label: 'Registry', detail: stageById.get('registry')?.detail ?? 'Registry state unavailable', tone: stageTone(stageById.get('registry')?.status ?? 'waiting'), href: '/app/registry' },
+          { id: 'discovery', label: 'Discovery', detail: stageById.get('discovery')?.detail ?? 'Discovery state unavailable', tone: stageTone(stageById.get('discovery')?.status ?? 'waiting'), href: '/app/receivers' },
+          { id: 'mlat', label: 'MLAT', detail: stageById.get('solve')?.detail ?? 'Localization state unavailable', tone: stageTone(stageById.get('solve')?.status ?? 'waiting'), href: '/app/pipeline' },
+          { id: 'aircraft', label: 'Aircraft', detail: aircraftCount ? `${aircraftCount} currently active` : 'No active localization result', tone: aircraftCount ? 'healthy' : 'attention', href: '/app/aircraft' },
+        ]} />
+      </WorkspacePanel>
+
       <WorkspaceSplit
         secondaryWidth="340px"
         primary={<div className="space-y-4">
@@ -95,7 +110,12 @@ export function PipelinePage({ pipeline, metrics }: { pipeline: PipelineData | n
           </WorkspacePanel>
 
           <WorkspacePanel title="Stage timeline" detail="Select a stage to inspect metrics and recommended action." tone="selection">
-            <Timeline items={stageTimeline.map((item) => ({ ...item, detail: <button type="button" onClick={() => setSelectedStageId(stages.find((stage) => stage.label === item.title)?.id ?? null)} className="text-left underline-offset-2 hover:underline">{item.detail}</button> }))} />
+            <Timeline items={stages.map((stage) => ({
+              title: stage.label,
+              tone: stage.id === selectedStage?.id ? 'selection' : stageTone(stage.status),
+              meta: titleCase(stage.status),
+              detail: <button type="button" aria-pressed={stage.id === selectedStage?.id} aria-label={`Inspect ${stage.label} stage`} onClick={() => setSelectedStageId(stage.id)} className={cn('rounded-sm text-left underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal-blue', stage.id === selectedStage?.id && 'text-ink-secondary')}>{stage.detail || `${stage.label} did not report a current explanation.`}</button>,
+            }))} />
           </WorkspacePanel>
 
           <WorkspacePanel title={selectedStage ? `${selectedStage.label} details` : 'Stage details'} detail={selectedStage?.detail || 'Select a stage to inspect current evidence.'} tone={selectedStage ? stageTone(selectedStage.status) : 'neutral'}>

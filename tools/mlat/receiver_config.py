@@ -16,7 +16,7 @@ SRC = ROOT / "src"
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
-from ckb_registry.record import normalize_identity_id
+from ckb_registry.record import normalize_receiver_identity
 
 MIN_MLAT_RECEIVERS = 4
 BEAST_TICK_MODULUS = 1 << 48
@@ -181,7 +181,7 @@ def load_receiver_config(
 
     launch_time_ns = time.time_ns() if now_ns is None else now_ns
     normalized: list[dict[str, Any]] = []
-    identity_ids: set[str] = set()
+    receiver_identities: set[str] = set()
     sensor_ids: set[str] = set()
     endpoints: set[tuple[str, int]] = set()
 
@@ -191,33 +191,35 @@ def load_receiver_config(
             raise ValueError(f"receiver {name} must be an object")
 
         try:
-            identity_id = normalize_identity_id(raw_receiver.get("receiver_id"))
+            receiver_identity = normalize_receiver_identity(raw_receiver.get("receiver_identity"))
         except ValueError as exc:
             raise ValueError(f"receiver {name} has an invalid Registry V2 identity") from exc
-        if require_mlat_ready and identity_id in EXAMPLE_IDENTITY_IDS:
+        if require_mlat_ready and receiver_identity in EXAMPLE_IDENTITY_IDS:
             raise ValueError(f"receiver {name} still uses an example Registry V2 identity")
-        if identity_id in identity_ids:
-            raise ValueError(f"duplicate receiver identity: {identity_id}")
+        if receiver_identity in receiver_identities:
+            raise ValueError(f"duplicate receiver identity: {receiver_identity}")
 
         sensor_id = str(raw_receiver.get("sensor_id") or "").strip()
         if not sensor_id or len(sensor_id.encode("utf-8")) > 64:
-            raise ValueError(f"receiver {identity_id} sensor_id must contain 1-64 UTF-8 bytes")
+            raise ValueError(
+                f"receiver {receiver_identity} sensor_id must contain 1-64 UTF-8 bytes"
+            )
         if sensor_id in sensor_ids:
             raise ValueError(f"duplicate sensor_id: {sensor_id}")
 
         host = str(raw_receiver.get("host") or "").strip()
         if not host or any(character.isspace() for character in host):
-            raise ValueError(f"receiver {identity_id} host is invalid")
-        port = _integer(raw_receiver.get("port"), f"receiver {identity_id} port")
+            raise ValueError(f"receiver {receiver_identity} host is invalid")
+        port = _integer(raw_receiver.get("port"), f"receiver {receiver_identity} port")
         if not 1 <= port <= 65535:
-            raise ValueError(f"receiver {identity_id} port must be between 1 and 65535")
+            raise ValueError(f"receiver {receiver_identity} port must be between 1 and 65535")
         endpoint = (host, port)
         if endpoint in endpoints:
             raise ValueError(f"duplicate receiver endpoint: {host}:{port}")
 
         clock = validate_clock(
             raw_receiver.get("clock"),
-            receiver_name=identity_id,
+            receiver_name=receiver_identity,
             max_uncertainty_ns=max_uncertainty_ns,
             require_current=require_mlat_ready,
             now_ns=launch_time_ns,
@@ -226,14 +228,14 @@ def load_receiver_config(
         normalized.append(
             {
                 **raw_receiver,
-                "receiver_id": identity_id,
+                "receiver_identity": receiver_identity,
                 "sensor_id": sensor_id,
                 "host": host,
                 "port": port,
                 "clock": clock,
             }
         )
-        identity_ids.add(identity_id)
+        receiver_identities.add(receiver_identity)
         sensor_ids.add(sensor_id)
         endpoints.add(endpoint)
 

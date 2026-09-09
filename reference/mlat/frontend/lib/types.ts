@@ -73,21 +73,61 @@ export interface Position {
 
 export interface Receiver {
   receiver_id: string;
-  identity_id?: string;
+  receiver_identity?: string | null;
   receiver_label?: string;
+  data_source?: 'ckb_registry' | 'replay' | 'simulation' | 'runtime';
   latitude?: number;
   longitude?: number;
   altitude?: number;
   status?: string;
   last_seen?: number;
-  updated_at?: number;
+  updated_at?: string;
   capabilities?: string[];
   registry?: {
-    sequence?: number;
+    sequence?: string;
+    updated_at?: string;
     owner_lock_args?: string;
+    owner_lock?: {
+      code_hash: string;
+      hash_type: string;
+      args: string;
+    };
     metadata_hash?: string | null;
     out_point?: Record<string, JsonValue>;
+    stream_endpoint?: string;
+    stream_protocol?: string;
+    stream_format?: string;
   };
+}
+
+export interface RegistryLifecycleEvent {
+  action: 'create' | 'update' | 'transfer' | 'revoke';
+  sequence: string;
+  status: string;
+  updated_at: string;
+  owner_lock_args: string;
+  transaction_hash: string;
+  block_number?: string;
+  explorer_url: string;
+}
+
+export interface RegistryEvidenceData {
+  schema_version: number;
+  source: 'saved_testnet_evidence';
+  live_query: boolean;
+  network: string;
+  status: string;
+  generated_at: string;
+  private_keys_included: boolean;
+  contract: {
+    code_hash: string;
+    deployment_transaction: string;
+  };
+  receiver: {
+    receiver_identity: string;
+    receiver_label: string;
+  };
+  lifecycle: RegistryLifecycleEvent[];
 }
 
 export interface PositionsResponse {
@@ -112,8 +152,14 @@ export interface ModeData {
   benchmarkable_output?: boolean;
   websocket_available?: boolean;
   configured_transport?: string;
+  ckb_network?: string;
   receiver_registry_type_hash?: string;
+  receiver_registry_hash_type?: string;
+  registry_code_immutable?: boolean;
   registry_discovery_live?: boolean;
+  registry_last_refresh_at?: number;
+  registry_refresh_error?: string | null;
+  registry_quarantined_identity_count?: number;
   evidence_mode?: string;
   [key: string]: unknown;
 }

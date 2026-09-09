@@ -1,6 +1,5 @@
 'use client';
 
-import { motion } from 'framer-motion';
 import { ArrowUpRight, ShieldCheck } from 'lucide-react';
 import Link from 'next/link';
 import type { ReactNode } from 'react';
@@ -11,11 +10,11 @@ import { buttonVariants } from '@/components/ui/button';
 
 export function EvidenceCard({ title, state, tone = 'neutral', children, action }: { title: string; state?: string; tone?: StatusTone; children: ReactNode; action?: ReactNode }) {
   return (
-    <motion.div layout className="border-b border-line py-3 last:border-0" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}>
+    <div className="border-b border-line py-3 last:border-0">
       <div className="flex items-center justify-between gap-3"><p className="text-xs font-semibold text-ink">{title}</p>{state ? <StatusChip label={state} tone={tone} /> : null}</div>
       <div className="mt-2 text-xs leading-5 text-ink-quiet">{children}</div>
       {action ? <div className="mt-2">{action}</div> : null}
-    </motion.div>
+    </div>
   );
 }
 
@@ -35,7 +34,7 @@ export function FactGrid({ items }: { items: Array<{ label: string; value: React
   return <dl className="grid grid-cols-2 gap-px bg-line">{items.map((item) => <div key={item.label} className="min-w-0 bg-graphite px-4 py-3"><dt className="text-[11px] font-medium text-ink-quiet">{item.label}</dt><dd className={cn('mt-1 truncate text-xs font-semibold text-ink-secondary tabular-nums', item.mono && 'font-mono')}>{item.value}</dd></div>)}</dl>;
 }
 
-export function Timeline({ items }: { items: Array<{ title: string; detail: ReactNode; tone?: StatusTone; meta?: string }> }) {
+export function Timeline({ items }: { items: Array<{ title: string; detail: ReactNode; tone?: StatusTone; meta?: ReactNode }> }) {
   return <ol className="p-4">{items.map((item, index) => { const tone = item.tone ?? 'neutral'; return <li key={`${item.title}-${index}`} className="relative flex gap-3 pb-4 last:pb-0"><StatusIcon tone={tone} label={`${item.title}: ${tone}`} className="relative z-10 mt-0.5 size-5" />{index < items.length - 1 ? <span aria-hidden="true" className="absolute left-[9px] top-5 h-[calc(100%-14px)] w-px bg-line" /> : null}<div className="min-w-0"><div className="flex items-center gap-2"><p className="text-xs font-semibold text-ink">{item.title}</p>{item.meta ? <span className="text-[11px] text-ink-quiet">{item.meta}</span> : null}</div><p className="mt-0.5 text-xs leading-5 text-ink-quiet">{item.detail}</p></div></li>; })}</ol>;
 }
 
@@ -54,7 +53,7 @@ export function InvestigationFacts({ items }: { items: InvestigationFact[] }) {
     <dl className="grid gap-2 p-4 sm:grid-cols-2">
       {items.map((item) => (
         <div key={item.label} className="rounded-md border border-line bg-graphite-raised/55 px-3 py-2.5">
-          <dt className="text-[10px] font-semibold uppercase tracking-[0.16em] text-ink-quiet">{item.label}</dt>
+          <dt className="text-[10px] font-semibold text-ink-quiet">{item.label}</dt>
           <dd className={cn('mt-1 text-xs font-semibold text-ink-secondary', item.mono && 'font-mono', item.tone === 'healthy' && 'text-healthy', item.tone === 'attention' && 'text-attention', item.tone === 'failure' && 'text-failure', item.tone === 'trust' && 'text-trust-cyan')}>{item.value}</dd>
         </div>
       ))}
@@ -92,19 +91,19 @@ export function InvestigationActions({ actions }: { actions: InvestigationAction
 
 export function WorkspaceHeader({ eyebrow, title, description, status, actions, rail }: { eyebrow?: string; title: string; description?: ReactNode; status?: ReactNode; actions?: ReactNode; rail?: ReactNode }) {
   return (
-    <motion.div layout initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }} className="overflow-hidden rounded-xl border border-line bg-[linear-gradient(180deg,rgba(17,21,26,0.97),rgba(10,13,17,0.94))] shadow-[inset_0_1px_0_rgba(255,255,255,0.04),0_24px_60px_-42px_rgba(0,0,0,0.85)]">
-      <div className="p-5">
+    <div className="min-w-0 overflow-hidden border-b border-line pb-4">
+      <div className="py-4">
         <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
           <div className="min-w-0">
-            {eyebrow ? <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-trust-cyan">{eyebrow}</p> : null}
+            {eyebrow ? <p className="text-[11px] font-semibold text-trust-cyan">{eyebrow}</p> : null}
             <h2 className="mt-1 text-lg font-semibold text-ink sm:text-xl">{title}</h2>
             {description ? <div className="mt-2 max-w-3xl text-sm leading-6 text-ink-quiet">{description}</div> : null}
           </div>
           <div className="flex flex-wrap items-center gap-2">{status}{actions}</div>
         </div>
       </div>
-      {rail ? <div className="border-t border-line/80 bg-[#0d1116]/86 px-5 py-3">{rail}</div> : null}
-    </motion.div>
+      {rail ? <div className="mt-4 min-w-0 overflow-hidden border-t border-line/80 pt-3">{rail}</div> : null}
+    </div>
   );
 }
 
@@ -117,33 +116,35 @@ export function WorkspacePanel({ title, detail, action, children, className, ton
         ? 'shadow-[inset_0_1px_0_rgba(255,255,255,0.02),0_0_0_1px_rgba(104,213,232,0.08)]'
         : 'shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]';
   return (
-    <motion.section layout initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }} className={cn('overflow-hidden rounded-xl border border-line bg-[linear-gradient(180deg,rgba(14,18,23,0.98),rgba(10,13,17,0.96))]', glow, className)}>
-      <div className="flex min-h-14 items-center justify-between gap-4 border-b border-line px-4 py-3">
+    <section className={cn('overflow-hidden rounded-lg border border-line bg-graphite', glow, className)}>
+      <div className="flex min-h-14 flex-col items-stretch justify-between gap-3 border-b border-line px-4 py-3 sm:flex-row sm:items-center sm:gap-4">
         <div className="min-w-0">
           <h3 className="text-sm font-semibold text-ink">{title}</h3>
           {detail ? <p className="mt-0.5 text-xs leading-5 text-ink-quiet">{detail}</p> : null}
         </div>
-        <div className="flex shrink-0 items-center gap-2">{chrome}{action ? <div className="shrink-0">{action}</div> : null}</div>
+        <div className="flex min-w-0 items-center gap-2 sm:shrink-0">{chrome}{action ? <div className="min-w-0 flex-1 sm:flex-none">{action}</div> : null}</div>
       </div>
       <div className={cn(padded && 'p-4')}>{children}</div>
-    </motion.section>
+    </section>
   );
 }
 
 export function WorkspaceSplit({ primary, secondary, secondaryWidth = '360px', className }: { primary: ReactNode; secondary: ReactNode; secondaryWidth?: string; className?: string }) {
-  return <div className={cn('grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(320px,var(--secondary-width))]', className)} style={{ ['--secondary-width' as string]: secondaryWidth }}>{primary}{secondary}</div>;
+  return <div className={cn('grid min-w-0 grid-cols-[minmax(0,1fr)] gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(320px,var(--secondary-width))]', className)} style={{ ['--secondary-width' as string]: secondaryWidth }}>{primary}{secondary}</div>;
 }
 
 export function SignalMarquee({ items }: { items: Array<{ label: string; value: string; tone?: StatusTone }> }) {
   if (!items.length) return null;
   return (
-    <div className="flex gap-2 overflow-x-auto">
-      {items.map((item) => (
-        <div key={`${item.label}-${item.value}`} className="min-w-[140px] rounded-lg border border-line/80 bg-graphite-raised/45 px-3 py-2.5">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-ink-quiet">{item.label}</p>
-          <p className={cn('mt-1 text-sm font-semibold text-ink-secondary', item.tone === 'healthy' && 'text-healthy', item.tone === 'attention' && 'text-attention', item.tone === 'failure' && 'text-failure', item.tone === 'trust' && 'text-trust-cyan', item.tone === 'selection' && 'text-selection')}>{item.value}</p>
-        </div>
-      ))}
+    <div className="w-full min-w-0 max-w-full overflow-x-auto">
+      <div className="flex w-max min-w-full divide-x divide-line">
+        {items.map((item) => (
+          <div key={`${item.label}-${item.value}`} className="min-w-[130px] px-3 py-1 first:pl-0">
+            <p className="text-[10px] font-semibold text-ink-quiet">{item.label}</p>
+            <p className={cn('mt-1 text-sm font-semibold text-ink-secondary', item.tone === 'healthy' && 'text-healthy', item.tone === 'attention' && 'text-attention', item.tone === 'failure' && 'text-failure', item.tone === 'trust' && 'text-trust-cyan', item.tone === 'selection' && 'text-selection')}>{item.value}</p>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
@@ -204,17 +205,17 @@ export function ActivityRail({ items }: { items: Array<{ title: string; detail: 
             {item.href ? <ArrowUpRight className="size-3.5 shrink-0 text-ink-quiet" /> : null}
           </>
         );
-        const classes = cn('flex items-start gap-3 rounded-lg border border-line/70 bg-graphite-raised/35 px-3 py-2.5 transition-[transform,background-color,border-color] duration-standard', item.tone === 'failure' && 'border-failure/20', item.tone === 'attention' && 'border-attention/20', item.tone === 'trust' && 'border-trust-cyan/20');
+        const classes = 'flex items-start gap-3 border-b border-line/70 px-1 py-3 last:border-0';
         return item.href ? (
-          <motion.div key={`${item.title}-${index}`} layout initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.16, delay: index * 0.02, ease: [0.22, 1, 0.36, 1] }}>
-            <Link href={item.href} className={cn(classes, 'outline-none hover:-translate-y-0.5 hover:bg-graphite-hover focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-signal-blue')}>
+          <div key={`${item.title}-${index}`}>
+            <Link href={item.href} className={cn(classes, 'outline-none hover:bg-graphite-hover focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-signal-blue')}>
               {row}
             </Link>
-          </motion.div>
+          </div>
         ) : (
-          <motion.div key={`${item.title}-${index}`} layout initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.16, delay: index * 0.02, ease: [0.22, 1, 0.36, 1] }} className={classes}>
+          <div key={`${item.title}-${index}`} className={classes}>
             {row}
-          </motion.div>
+          </div>
         );
       })}
     </div>

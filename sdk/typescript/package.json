@@ -1,0 +1,55 @@
+{
+  "name": "@aircraft-malt/registry-v2",
+  "version": "0.1.0",
+  "description": "Narrow TypeScript SDK for CKB Receiver Registry V2",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Jeremicarose/AIRCRAFT-MALT.git",
+    "directory": "sdk/typescript"
+  },
+  "homepage": "https://github.com/Jeremicarose/AIRCRAFT-MALT/tree/main/sdk/typescript#readme",
+  "bugs": {
+    "url": "https://github.com/Jeremicarose/AIRCRAFT-MALT/issues"
+  },
+  "keywords": [
+    "ckb",
+    "nervos",
+    "receiver-registry"
+  ],
+  "type": "module",
+  "main": "./dist/src/index.js",
+  "types": "./dist/src/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/src/index.d.ts",
+      "import": "./dist/src/index.js"
+    }
+  },
+  "files": [
+    "dist/src",
+    "README.md"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "provenance": true,
+    "registry": "https://registry.npmjs.org/"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "prepare": "npm run build",
+    "prepublishOnly": "npm test",
+    "test": "npm run build && node --test dist/test/*.test.js",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@ckb-ccc/core": "1.19.1"
+  },
+  "devDependencies": {
+    "@types/node": "20.19.43",
+    "typescript": "5.9.3"
+  },
+  "engines": {
+    "node": ">=22.0.0 <23"
+  }
+}

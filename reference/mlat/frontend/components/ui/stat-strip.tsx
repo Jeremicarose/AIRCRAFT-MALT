@@ -21,7 +21,7 @@ const layoutClasses = {
 
 export function StatStrip({ items, layout = 'four', className }: { items: StatItem[]; layout?: keyof typeof layoutClasses; className?: string }) {
   return (
-    <Surface className={cn('overflow-hidden rounded-xl bg-[linear-gradient(180deg,rgba(17,21,26,0.95),rgba(9,12,16,0.98))] shadow-[inset_0_1px_0_rgba(255,255,255,0.03),0_24px_50px_-42px_rgba(0,0,0,0.9)]', className)}>
+    <Surface className={cn('overflow-hidden rounded-lg bg-graphite', className)}>
       <dl className={cn('grid divide-y divide-line sm:divide-x sm:divide-y-0', layoutClasses[layout])}>
         {items.map((item) => {
           const Icon = item.icon;
@@ -31,7 +31,7 @@ export function StatStrip({ items, layout = 'four', className }: { items: StatIt
               <div className="flex min-w-0 items-center gap-3">
                 {Icon ? <span className={cn('flex size-8 shrink-0 items-center justify-center rounded-lg', toneSurfaceClass(tone))}><Icon aria-hidden="true" className="size-4" /></span> : null}
                 <div className="min-w-0">
-                  <dt className="truncate text-[11px] uppercase tracking-[0.14em] text-ink-quiet">{item.label}</dt>
+                  <dt className="truncate text-[11px] font-medium text-ink-quiet">{item.label}</dt>
                   <dd className="mt-1 truncate text-xl font-semibold leading-none text-ink tabular-nums">{item.value}</dd>
                   {item.detail ? <p className="mt-1.5 truncate text-[10px] text-ink-quiet">{item.detail}</p> : null}
                 </div>

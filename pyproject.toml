@@ -7,6 +7,8 @@ name = "ckb-registry-v2"
 version = "0.2.0"
 description = "Verifiable identity and lifecycle registry for physical infrastructure on CKB"
 readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
 requires-python = ">=3.11"
 dependencies = [
   "numpy>=1.21.0",
@@ -41,6 +43,7 @@ include = ["ckb_registry*", "mlat_reference*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+pythonpath = [".", "src"]
 addopts = "-ra"
 
 [tool.black]

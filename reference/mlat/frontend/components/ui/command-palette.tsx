@@ -10,7 +10,7 @@ import type { ShellSnapshot } from '@/lib/types';
 import { useOperatorStore } from '@/lib/operator-store';
 import { Button } from '@/components/ui/button';
 
-const icons = { overview: Gauge, localization: Map, aircraft: Plane, receivers: RadioTower, pipeline: Workflow, metrics: Activity, environment: Database, settings: Settings };
+const icons = { registry: Database, overview: Gauge, localization: Map, aircraft: Plane, receivers: RadioTower, pipeline: Workflow, metrics: Activity, environment: Database, settings: Settings };
 
 export function CommandPalette({ snapshot }: { snapshot: ShellSnapshot }) {
   const router = useRouter();
@@ -24,7 +24,6 @@ export function CommandPalette({ snapshot }: { snapshot: ShellSnapshot }) {
   const showUncertainty = useOperatorStore((state) => state.showUncertainty);
   const toggleReceiverLinks = useOperatorStore((state) => state.toggleReceiverLinks);
   const toggleUncertainty = useOperatorStore((state) => state.toggleUncertainty);
-  const investigation = useOperatorStore((state) => state.investigation);
   const setInvestigationContext = useOperatorStore((state) => state.setInvestigationContext);
   const routeHistory = useOperatorStore((state) => state.routeHistory);
   const starredRoutes = useOperatorStore((state) => state.starredRoutes);
@@ -96,16 +95,6 @@ export function CommandPalette({ snapshot }: { snapshot: ShellSnapshot }) {
                   <span className="flex-1">{showUncertainty ? 'Hide' : 'Show'} uncertainty ring</span>
                   <span className="text-xs text-ink-quiet">Map</span>
                 </Command.Item>
-                <Command.Item value="set investigation range 10 minutes" onSelect={() => runAction(() => setInvestigationContext({ timeRange: '10m' }))} className="flex cursor-default items-center gap-3 rounded-md px-3 py-2.5 text-sm text-ink-secondary outline-none data-[selected=true]:bg-graphite-hover data-[selected=true]:text-ink">
-                  <Gauge className="size-4 text-ink-quiet" />
-                  <span className="flex-1">Set investigation window to 10m</span>
-                  <span className="text-xs text-ink-quiet">Context</span>
-                </Command.Item>
-                <Command.Item value="set investigation range 1 hour" onSelect={() => runAction(() => setInvestigationContext({ timeRange: '1h' }))} className="flex cursor-default items-center gap-3 rounded-md px-3 py-2.5 text-sm text-ink-secondary outline-none data-[selected=true]:bg-graphite-hover data-[selected=true]:text-ink">
-                  <Gauge className="size-4 text-ink-quiet" />
-                  <span className="flex-1">Set investigation window to 1h</span>
-                  <span className="text-xs text-ink-quiet">Context</span>
-                </Command.Item>
               </Command.Group>
 
               {starredRoutes.length ? (
@@ -162,27 +151,20 @@ export function CommandPalette({ snapshot }: { snapshot: ShellSnapshot }) {
                 </Command.Group>
               ) : null}
 
-              {(selectedAircraftId || selectedReceiverId || investigation.timeRange) ? (
+              {(selectedAircraftId || selectedReceiverId) ? (
                 <Command.Group heading="Pinned context">
                   {selectedAircraftId ? (
                     <Command.Item value={`selected aircraft ${selectedAircraftId}`} onSelect={() => select(`/app/aircraft?aircraft=${encodeURIComponent(selectedAircraftId)}`)} className="flex cursor-default items-center gap-3 rounded-md px-3 py-2.5 text-sm text-ink-secondary outline-none data-[selected=true]:bg-graphite-hover data-[selected=true]:text-ink">
                       <Plane className="size-4 text-ink-quiet" />
                       <span className="flex-1">Open pinned aircraft {selectedAircraftId}</span>
-                      <span className="text-xs text-ink-quiet">Investigate</span>
+                      <span className="text-xs text-ink-quiet">MLAT reference</span>
                     </Command.Item>
                   ) : null}
                   {selectedReceiverId ? (
                     <Command.Item value={`selected receiver ${selectedReceiverId}`} onSelect={() => select(`/app/receivers?receiver=${encodeURIComponent(selectedReceiverId)}`)} className="flex cursor-default items-center gap-3 rounded-md px-3 py-2.5 text-sm text-ink-secondary outline-none data-[selected=true]:bg-graphite-hover data-[selected=true]:text-ink">
                       <RadioTower className="size-4 text-ink-quiet" />
                       <span className="flex-1">Open pinned receiver {selectedReceiverId}</span>
-                      <span className="text-xs text-ink-quiet">Investigate</span>
-                    </Command.Item>
-                  ) : null}
-                  {investigation.timeRange ? (
-                    <Command.Item value={`investigation range ${investigation.timeRange}`} onSelect={() => runAction(() => undefined)} className="flex cursor-default items-center gap-3 rounded-md px-3 py-2.5 text-sm text-ink-secondary outline-none data-[selected=true]:bg-graphite-hover data-[selected=true]:text-ink">
-                      <Gauge className="size-4 text-ink-quiet" />
-                      <span className="flex-1">Investigation window {investigation.timeRange}</span>
-                      <span className="text-xs text-ink-quiet">Shared</span>
+                      <span className="text-xs text-ink-quiet">Registry</span>
                     </Command.Item>
                   ) : null}
                 </Command.Group>
@@ -198,9 +180,9 @@ export function CommandPalette({ snapshot }: { snapshot: ShellSnapshot }) {
                 </Command.Group>
               ) : null}
               {snapshot.receiverData?.receivers?.length ? (
-                <Command.Group heading="Receivers">
+                <Command.Group heading="MLAT reference receivers">
                   {snapshot.receiverData.receivers.slice(0, 12).map((receiver) => (
-                    <Command.Item key={receiver.receiver_id} value={`receiver ${receiver.receiver_id}`} onSelect={() => select(`/app/receivers?receiver=${encodeURIComponent(receiver.receiver_id)}`)} className="flex cursor-default items-center gap-3 rounded-md px-3 py-2.5 text-sm text-ink-secondary outline-none data-[selected=true]:bg-graphite-hover data-[selected=true]:text-ink">
+                    <Command.Item key={receiver.receiver_id} value={`receiver ${receiver.receiver_id}`} onSelect={() => select(`/app/localization?receiver=${encodeURIComponent(receiver.receiver_id)}`)} className="flex cursor-default items-center gap-3 rounded-md px-3 py-2.5 text-sm text-ink-secondary outline-none data-[selected=true]:bg-graphite-hover data-[selected=true]:text-ink">
                       <RadioTower className="size-4 text-ink-quiet" /><span>{receiver.receiver_id}</span>
                     </Command.Item>
                   ))}

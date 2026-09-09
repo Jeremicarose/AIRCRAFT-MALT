@@ -1,6 +1,7 @@
 import importlib
 import json
 from datetime import datetime, timezone
+from pathlib import Path
 import pytest
 import sqlite3
 import sys
@@ -114,9 +115,10 @@ def test_api_health_and_data_endpoints(monkeypatch, tmp_path):
     assert positions.status_code == 200
     assert receivers.get_json()["count"] == 1
     receiver_payload = receivers.get_json()["receivers"][0]
-    assert receiver_payload["identity_id"] == "RECV_NYC_001"
+    assert receiver_payload["receiver_identity"] is None
     assert receiver_payload["receiver_label"] == "RECV_NYC_001"
-    assert receiver_payload["registry"]["sequence"] == 0
+    assert receiver_payload["data_source"] == "runtime"
+    assert receiver_payload["registry"]["sequence"] == "0"
     assert positions.get_json()["count"] == 1
 
     health_payload = health.get_json()
@@ -137,6 +139,61 @@ def test_api_health_and_data_endpoints(monkeypatch, tmp_path):
         "RECV_PHL_001",
         "RECV_DC_001",
     ]
+
+
+def test_receiver_identity_is_only_exposed_for_a_valid_type_id(monkeypatch, tmp_path):
+    module = _load_api_module(monkeypatch, tmp_path)
+    app = module.create_app()
+    receiver_identity = "0x" + "ab" * 32
+    with app.app_context():
+        module.get_db().store_receiver(
+            receiver_id=receiver_identity,
+            receiver_identity=receiver_identity,
+            data_source="ckb_registry",
+            receiver_label="RECV_CHAIN_001",
+            latitude=40.7128,
+            longitude=-74.0060,
+            altitude=10.0,
+            status="online",
+            last_seen=time.time(),
+            capabilities=["mode-s", "mlat"],
+        )
+
+    receiver = app.test_client().get("/api/receivers").get_json()["receivers"][0]
+
+    assert receiver["receiver_id"] == receiver_identity
+    assert receiver["receiver_identity"] == receiver_identity
+    assert receiver["receiver_label"] == "RECV_CHAIN_001"
+    assert receiver["data_source"] == "ckb_registry"
+
+
+def test_registry_evidence_exposes_saved_testnet_lifecycle(monkeypatch, tmp_path):
+    bundle = (
+        Path(__file__).resolve().parents[2] / "evidence" / "registry-v2-testnet-2026-07-30-final"
+    )
+    module = _load_api_module(
+        monkeypatch,
+        tmp_path,
+        REGISTRY_EVIDENCE_BUNDLE=str(bundle),
+    )
+    app = module.create_app()
+
+    response = app.test_client().get("/api/registry/evidence")
+
+    assert response.status_code == 200
+    payload = response.get_json()
+    assert payload["network"] == "CKB testnet"
+    assert payload["source"] == "saved_testnet_evidence"
+    assert payload["live_query"] is False
+    assert payload["private_keys_included"] is False
+    assert [event["action"] for event in payload["lifecycle"]] == [
+        "create",
+        "update",
+        "transfer",
+        "revoke",
+    ]
+    assert [event["sequence"] for event in payload["lifecycle"]] == ["0", "1", "2", "3"]
+    assert payload["lifecycle"][-1]["status"] == "revoked"
 
 
 def test_liveness_does_not_depend_on_database(monkeypatch, tmp_path):

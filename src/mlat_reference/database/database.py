@@ -73,9 +73,13 @@ class StoredReceiver:
     last_seen: float
     capabilities: str
     updated_at: str
+    receiver_identity: Optional[str] = None
+    data_source: str = "runtime"
     receiver_label: str = ""
     registry_sequence: int = 0
+    registry_updated_at: int = 0
     owner_lock_args: str = ""
+    owner_lock: str = ""
     registry_out_point: str = ""
     metadata_hash: str = ""
 
@@ -213,6 +217,8 @@ class MLATDatabase:
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS receivers (
                 receiver_id TEXT PRIMARY KEY,
+                receiver_identity TEXT NOT NULL DEFAULT '',
+                data_source TEXT NOT NULL DEFAULT 'runtime',
                 latitude REAL NOT NULL,
                 longitude REAL NOT NULL,
                 altitude REAL NOT NULL,
@@ -221,7 +227,10 @@ class MLATDatabase:
                 capabilities TEXT NOT NULL,
                 receiver_label TEXT NOT NULL DEFAULT '',
                 registry_sequence INTEGER NOT NULL DEFAULT 0,
+                registry_sequence_u64 TEXT NOT NULL DEFAULT '0',
+                registry_updated_at_u64 TEXT NOT NULL DEFAULT '0',
                 owner_lock_args TEXT NOT NULL DEFAULT '',
+                owner_lock TEXT NOT NULL DEFAULT '',
                 registry_out_point TEXT NOT NULL DEFAULT '',
                 metadata_hash TEXT NOT NULL DEFAULT '',
                 updated_at TEXT NOT NULL
@@ -752,22 +761,37 @@ class MLATDatabase:
         status: str,
         last_seen: float,
         capabilities: List[str],
+        receiver_identity: Optional[str] = None,
+        data_source: str = "runtime",
         receiver_label: str = "",
         registry_sequence: int = 0,
+        registry_updated_at: int = 0,
         owner_lock_args: str = "",
+        owner_lock: str = "",
         registry_out_point: str = "",
         metadata_hash: str = "",
     ):
         """Insert or update a receiver record."""
+        for field, value in (
+            ("registry_sequence", registry_sequence),
+            ("registry_updated_at", registry_updated_at),
+        ):
+            if isinstance(value, bool) or not isinstance(value, int) or not 0 <= value < 1 << 64:
+                raise ValueError(f"{field} must fit u64")
         cursor = self.conn.cursor()
         updated_at = datetime.now().isoformat()
         capabilities_json = json.dumps(capabilities)
 
         columns = {row[1] for row in cursor.execute("PRAGMA table_info(receivers)")}
         migrations = {
+            "receiver_identity": "TEXT NOT NULL DEFAULT ''",
+            "data_source": "TEXT NOT NULL DEFAULT 'runtime'",
             "receiver_label": "TEXT NOT NULL DEFAULT ''",
             "registry_sequence": "INTEGER NOT NULL DEFAULT 0",
+            "registry_sequence_u64": "TEXT NOT NULL DEFAULT '0'",
+            "registry_updated_at_u64": "TEXT NOT NULL DEFAULT '0'",
             "owner_lock_args": "TEXT NOT NULL DEFAULT ''",
+            "owner_lock": "TEXT NOT NULL DEFAULT ''",
             "registry_out_point": "TEXT NOT NULL DEFAULT ''",
             "metadata_hash": "TEXT NOT NULL DEFAULT ''",
         }
@@ -778,12 +802,14 @@ class MLATDatabase:
         cursor.execute(
             """
             INSERT INTO receivers (
-                receiver_id, latitude, longitude, altitude,
+                receiver_id, receiver_identity, data_source, latitude, longitude, altitude,
                 status, last_seen, capabilities, receiver_label,
-                registry_sequence, owner_lock_args, registry_out_point,
-                metadata_hash, updated_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                registry_sequence, registry_sequence_u64, registry_updated_at_u64,
+                owner_lock_args, owner_lock, registry_out_point, metadata_hash, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(receiver_id) DO UPDATE SET
+                receiver_identity = excluded.receiver_identity,
+                data_source = excluded.data_source,
                 latitude = excluded.latitude,
                 longitude = excluded.longitude,
                 altitude = excluded.altitude,
@@ -792,13 +818,18 @@ class MLATDatabase:
                 capabilities = excluded.capabilities,
                 receiver_label = excluded.receiver_label,
                 registry_sequence = excluded.registry_sequence,
+                registry_sequence_u64 = excluded.registry_sequence_u64,
+                registry_updated_at_u64 = excluded.registry_updated_at_u64,
                 owner_lock_args = excluded.owner_lock_args,
+                owner_lock = excluded.owner_lock,
                 registry_out_point = excluded.registry_out_point,
                 metadata_hash = excluded.metadata_hash,
                 updated_at = excluded.updated_at
         """,
             (
                 receiver_id,
+                receiver_identity or "",
+                data_source,
                 latitude,
                 longitude,
                 altitude,
@@ -806,8 +837,11 @@ class MLATDatabase:
                 last_seen,
                 capabilities_json,
                 receiver_label,
-                registry_sequence,
+                registry_sequence if registry_sequence <= 0x7FFF_FFFF_FFFF_FFFF else 0,
+                str(registry_sequence),
+                str(registry_updated_at),
                 owner_lock_args,
+                owner_lock,
                 registry_out_point,
                 metadata_hash,
                 updated_at,
@@ -835,11 +869,23 @@ class MLATDatabase:
                 last_seen=row["last_seen"],
                 capabilities=row["capabilities"],
                 updated_at=row["updated_at"],
+                receiver_identity=(
+                    row["receiver_identity"] or None if "receiver_identity" in row.keys() else None
+                ),
+                data_source=(row["data_source"] if "data_source" in row.keys() else "runtime"),
                 receiver_label=row["receiver_label"] if "receiver_label" in row.keys() else "",
                 registry_sequence=(
-                    row["registry_sequence"] if "registry_sequence" in row.keys() else 0
+                    int(row["registry_sequence_u64"])
+                    if "registry_sequence_u64" in row.keys()
+                    else row["registry_sequence"] if "registry_sequence" in row.keys() else 0
+                ),
+                registry_updated_at=(
+                    int(row["registry_updated_at_u64"])
+                    if "registry_updated_at_u64" in row.keys()
+                    else 0
                 ),
                 owner_lock_args=row["owner_lock_args"] if "owner_lock_args" in row.keys() else "",
+                owner_lock=row["owner_lock"] if "owner_lock" in row.keys() else "",
                 registry_out_point=(
                     row["registry_out_point"] if "registry_out_point" in row.keys() else ""
                 ),
@@ -848,13 +894,41 @@ class MLATDatabase:
             for row in rows
         ]
 
+    def delete_receivers(self, receiver_ids: set[str]) -> int:
+        """Remove receivers that are no longer in the verified MLAT pool."""
+        if not receiver_ids:
+            return 0
+        cursor = self.conn.cursor()
+        placeholders = ", ".join("?" for _ in receiver_ids)
+        cursor.execute(
+            f"DELETE FROM receivers WHERE receiver_id IN ({placeholders})",
+            tuple(sorted(receiver_ids)),
+        )
+        self.conn.commit()
+        return cursor.rowcount
+
+    def delete_registry_receivers_except(self, receiver_ids: set[str]) -> int:
+        """Remove Registry receivers not present in the latest verified discovery."""
+        cursor = self.conn.cursor()
+        if receiver_ids:
+            placeholders = ", ".join("?" for _ in receiver_ids)
+            cursor.execute(
+                f"DELETE FROM receivers WHERE data_source = 'ckb_registry' "
+                f"AND receiver_id NOT IN ({placeholders})",
+                tuple(sorted(receiver_ids)),
+            )
+        else:
+            cursor.execute("DELETE FROM receivers WHERE data_source = 'ckb_registry'")
+        self.conn.commit()
+        return cursor.rowcount
+
     def touch_receiver(self, receiver_id: str, last_seen: float) -> bool:
         """Update receiver freshness after an observation is ingested."""
         cursor = self.conn.cursor()
         cursor.execute(
             """
             UPDATE receivers
-            SET last_seen = ?, status = 'online', updated_at = ?
+            SET last_seen = ?, updated_at = ?
             WHERE receiver_id = ?
             """,
             (last_seen, datetime.now().isoformat(), receiver_id),

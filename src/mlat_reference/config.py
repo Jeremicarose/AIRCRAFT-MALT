@@ -65,6 +65,11 @@ def _validate_runtime_settings(
         violations.append("FOURDSKY_TRANSPORT=auto")
     if config.simulate_if_unavailable:
         violations.append("SIMULATE_IF_UNAVAILABLE=true")
+    if config.receiver_registry_type_hash:
+        if config.receiver_registry_hash_type not in {"data1", "type"}:
+            violations.append("RECEIVER_REGISTRY_HASH_TYPE is not data1 or type")
+        elif config.receiver_registry_hash_type != "data1":
+            violations.append("RECEIVER_REGISTRY_HASH_TYPE=type permits mutable contract code")
 
     if violations:
         joined = ", ".join(violations)
@@ -89,6 +94,8 @@ def load_runtime_settings(
         ckb_rpc_url=os.getenv("CKB_RPC_URL", "https://testnet.ckb.dev/rpc"),
         ckb_indexer_url=os.getenv("CKB_INDEXER_URL", "https://testnet.ckb.dev/indexer"),
         receiver_registry_type_hash=os.getenv("RECEIVER_REGISTRY_TYPE_HASH", ""),
+        receiver_registry_hash_type=os.getenv("RECEIVER_REGISTRY_HASH_TYPE", "type"),
+        allow_mutable_registry_code=env_bool("ALLOW_MUTABLE_REGISTRY_CODE", False),
         api_key=fourdsky_api_key,
         fourdskyendpoint=fourdsky_endpoint,
         fourdsky_transport=os.getenv("FOURDSKY_TRANSPORT", "auto"),
@@ -104,6 +111,7 @@ def load_runtime_settings(
         max_record_age_seconds=int(os.getenv("CKB_MAX_RECORD_AGE_SECONDS", "86400")),
         hybrid_simulation_min_receivers=int(os.getenv("CKB_HYBRID_SIMULATION_MIN_RECEIVERS", "4")),
         demo_scenario=os.getenv("DEMO_SCENARIO", "default"),
+        registry_refresh_seconds=max(5, int(os.getenv("CKB_REGISTRY_REFRESH_SECONDS", "30"))),
     )
     db_path = os.getenv("DATABASE_PATH", db_path_default)
     demo_enabled = env_bool("DEMO_MODE", False)

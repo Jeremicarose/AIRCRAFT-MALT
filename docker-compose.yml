@@ -35,9 +35,8 @@ services:
 
   mlat-frontend:
     build:
-      context: ./reference/mlat/frontend
-      args:
-        NEXT_PUBLIC_API_BASE_URL: http://localhost:5000
+      context: .
+      dockerfile: reference/mlat/frontend/Dockerfile
     depends_on:
       mlat-api:
         condition: service_healthy

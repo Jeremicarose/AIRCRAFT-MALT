@@ -192,6 +192,11 @@ class ProductionMLATSystem(BaseMLATRuntime[ReceiverPosition, SignalObservation])
             "max_api_latency_ms": (max(self.api_latencies_ms) if self.api_latencies_ms else 0.0),
             "discovery_latency_ms": self.network_client.discovery_latency_ms,
             "registry_discovery_live": self.network_client.registry_discovery_live,
+            "registry_last_refresh_at": self.network_client.last_registry_refresh_at,
+            "registry_refresh_error": self.network_client.registry_refresh_error,
+            "registry_quarantined_identity_count": len(
+                self.network_client.peer_discovery.quarantined_identities
+            ),
             "process_rss_mb": get_process_rss_mb(),
             "failed_solves": self.stats["failed_solves"],
             "rejected_groups": self.rejected_groups,
@@ -265,6 +270,8 @@ class ProductionMLATSystem(BaseMLATRuntime[ReceiverPosition, SignalObservation])
         registry_metadata = info.metadata or {}
         self.database.store_receiver(
             receiver_id=receiver_id,
+            receiver_identity=info.receiver_identity,
+            data_source=info.data_source,
             latitude=info.latitude,
             longitude=info.longitude,
             altitude=info.altitude,
@@ -273,7 +280,13 @@ class ProductionMLATSystem(BaseMLATRuntime[ReceiverPosition, SignalObservation])
             capabilities=info.capabilities,
             receiver_label=info.receiver_id,
             registry_sequence=int(registry_metadata.get("sequence", 0)),
+            registry_updated_at=info.registry_updated_at or 0,
             owner_lock_args=info.ckb_address,
+            owner_lock=json.dumps(
+                registry_metadata.get("owner_lock") or {},
+                separators=(",", ":"),
+                sort_keys=True,
+            ),
             registry_out_point=json.dumps(
                 registry_metadata.get("out_point") or {},
                 separators=(",", ":"),
@@ -281,6 +294,30 @@ class ProductionMLATSystem(BaseMLATRuntime[ReceiverPosition, SignalObservation])
             ),
             metadata_hash=registry_metadata.get("metadata_hash") or "",
         )
+
+    def on_receivers_removed(self, receiver_ids: set[str]):
+        removed = self.database.delete_receivers(receiver_ids)
+        for receiver_id in receiver_ids:
+            self.receiver_clock_status.pop(receiver_id, None)
+            self.receiver_heartbeat_persisted_at.pop(receiver_id, None)
+        logger.warning(
+            "Removed %d receiver(s) from MLAT after Registry discovery excluded: %s",
+            removed,
+            ", ".join(sorted(receiver_ids)),
+        )
+
+    def on_receiver_cache_synchronized(self, receiver_ids: set[str]):
+        active_registry_ids = {
+            receiver_id
+            for receiver_id in receiver_ids
+            if self.network_client.active_receivers[receiver_id].data_source == "ckb_registry"
+        }
+        removed = self.database.delete_registry_receivers_except(active_registry_ids)
+        if removed:
+            logger.warning(
+                "Removed %d stale Registry receiver row(s) from the MLAT inventory",
+                removed,
+            )
 
     def on_signal_received(self, signal: RawSignal):
         self.stats["total_signals"] += 1
@@ -329,6 +366,12 @@ class ProductionMLATSystem(BaseMLATRuntime[ReceiverPosition, SignalObservation])
         # Start processing loops
         processing_task = asyncio.create_task(self._processing_loop())
         stats_task = asyncio.create_task(self._statistics_loop())
+        stream_monitor_task = asyncio.create_task(self.network_client.monitor_streaming())
+        registry_refresh_task = (
+            asyncio.create_task(self._registry_refresh_loop())
+            if self.config.receiver_registry_type_hash
+            else None
+        )
         logger.info("✅ System running")
 
         # Feed tasks must be monitored too. Otherwise a transport crash leaves
@@ -337,11 +380,39 @@ class ProductionMLATSystem(BaseMLATRuntime[ReceiverPosition, SignalObservation])
             await asyncio.gather(
                 processing_task,
                 stats_task,
-                *self.network_client.stream_tasks,
+                stream_monitor_task,
+                *([registry_refresh_task] if registry_refresh_task else []),
             )
         except asyncio.CancelledError:
             if self.is_running:
                 raise
+
+    async def _registry_refresh_loop(self):
+        """Keep MLAT eligibility synchronized with current Registry state."""
+        interval = max(5, self.config.registry_refresh_seconds)
+        while self.is_running:
+            await asyncio.sleep(interval)
+            if not self.is_running:
+                return
+            previous_receiver_ids = set(self.network_client.active_receivers)
+            try:
+                changed = await self.network_client.refresh_registry_receivers()
+                self._cache_receiver_positions()
+                if changed:
+                    await self.network_client.restart_streaming()
+                    logger.info("Applied refreshed Registry receiver state to MLAT")
+            except asyncio.CancelledError:
+                raise
+            except Exception:
+                self._cache_receiver_positions()
+                if set(self.network_client.active_receivers) != previous_receiver_ids:
+                    await self.network_client.restart_streaming()
+                if self.config.strict_production_mode:
+                    raise
+                logger.warning(
+                    "Registry refresh failed; Registry-backed receivers were removed until discovery recovers",
+                    exc_info=True,
+                )
 
     async def _processing_loop(self):
         """Main processing loop - correlate and solve"""
@@ -449,6 +520,8 @@ class ProductionMLATSystem(BaseMLATRuntime[ReceiverPosition, SignalObservation])
 
         while self.is_running:
             await asyncio.sleep(self.stats_interval_seconds)
+            if not self.is_running:
+                return
 
             # Calculate statistics
             runtime = time.time() - self.stats["start_time"]

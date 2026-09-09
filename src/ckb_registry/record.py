@@ -10,6 +10,8 @@ import re
 from typing import Any, Dict, List, Optional
 
 REGISTRY_SCHEMA_VERSION = 2
+U64_MAX = (1 << 64) - 1
+DEFAULT_MAX_RECORD_BYTES = 16 * 1024
 _IDENTITY_RE = re.compile(r"^0x[0-9a-fA-F]{64}$")
 _RECEIVER_ID_RE = re.compile(r"^[A-Z0-9][A-Z0-9_-]{0,63}$")
 _CAPABILITY_RE = re.compile(r"^[a-z0-9][a-z0-9_-]{0,31}$")
@@ -31,11 +33,91 @@ _ALLOWED_FIELDS = {
 }
 
 
-def normalize_identity_id(value: str) -> str:
+class _JsonInteger(int):
+    """Integer that retains its original JSON spelling for strict u64 checks."""
+
+    raw: str
+
+    def __new__(cls, value: str) -> "_JsonInteger":
+        instance = super().__new__(cls, value)
+        instance.raw = value
+        return instance
+
+
+def normalize_receiver_identity(value: str) -> str:
     """Validate and normalize a 32-byte receiver Type ID argument."""
     if not isinstance(value, str) or not _IDENTITY_RE.fullmatch(value):
-        raise ValueError("identity_id must be 0x-prefixed 32-byte hex")
+        raise ValueError("receiver_identity must be 0x-prefixed 32-byte hex")
     return value.lower()
+
+
+# Kept as an import-compatible alias for the frozen testnet evidence tools.
+normalize_identity_id = normalize_receiver_identity
+
+
+def _validate_u64(value: Any, field: str, *, positive: bool = False) -> None:
+    lower_bound = 1 if positive else 0
+    if (
+        isinstance(value, bool)
+        or not isinstance(value, int)
+        or (isinstance(value, _JsonInteger) and value.raw.startswith("-"))
+        or not lower_bound <= value <= U64_MAX
+    ):
+        qualifier = "positive " if positive else ""
+        raise ValueError(f"{field} must be a {qualifier}u64 integer")
+
+
+def _reject_duplicate_fields(pairs: List[tuple[str, Any]]) -> Dict[str, Any]:
+    result: Dict[str, Any] = {}
+    for key, value in pairs:
+        if key in result:
+            raise ValueError(f"receiver record contains duplicate field: {key}")
+        result[key] = value
+    return result
+
+
+def _json_coordinate(value: Any) -> Any:
+    if isinstance(value, _JsonInteger) and value.raw == "-0":
+        return -0.0
+    return value
+
+
+def decode_registry_v2_record(
+    payload: bytes | str,
+    *,
+    max_bytes: int = DEFAULT_MAX_RECORD_BYTES,
+) -> "ReceiverRegistryRecord":
+    """Decode one bounded V2 JSON payload without JSON duplicate-key ambiguity."""
+    if isinstance(payload, bytes):
+        if len(payload) > max_bytes:
+            raise ValueError("receiver record exceeds the configured byte limit")
+        try:
+            text = payload.decode("utf-8")
+        except UnicodeDecodeError as exc:
+            raise ValueError("receiver record must be UTF-8 JSON") from exc
+    elif isinstance(payload, str):
+        if len(payload.encode("utf-8")) > max_bytes:
+            raise ValueError("receiver record exceeds the configured byte limit")
+        text = payload
+    else:
+        raise ValueError("receiver record must be bytes or text")
+
+    if "\\" in text:
+        raise ValueError("receiver record JSON strings must not use escape sequences")
+
+    def reject_constant(value: str) -> None:
+        raise ValueError(f"receiver record contains non-finite number: {value}")
+
+    try:
+        decoded = json.loads(
+            text,
+            object_pairs_hook=_reject_duplicate_fields,
+            parse_int=_JsonInteger,
+            parse_constant=reject_constant,
+        )
+    except json.JSONDecodeError as exc:
+        raise ValueError("receiver record must be valid JSON") from exc
+    return ReceiverRegistryRecord.from_dict(decoded)
 
 
 def calculate_type_id(
@@ -46,12 +128,24 @@ def calculate_type_id(
     output_index: int = 0,
 ) -> str:
     """Calculate CKB's Type-ID-style argument for a registry creation output."""
-    tx_hash = normalize_identity_id(first_input_tx_hash)
-    if not 0 <= first_input_index <= 0xFFFF_FFFF:
+    tx_hash = normalize_receiver_identity(first_input_tx_hash)
+    if (
+        isinstance(first_input_index, bool)
+        or not isinstance(first_input_index, int)
+        or not 0 <= first_input_index <= 0xFFFF_FFFF
+    ):
         raise ValueError("first_input_index must fit u32")
-    if not 0 <= first_input_since <= 0xFFFF_FFFF_FFFF_FFFF:
+    if (
+        isinstance(first_input_since, bool)
+        or not isinstance(first_input_since, int)
+        or not 0 <= first_input_since <= U64_MAX
+    ):
         raise ValueError("first_input_since must fit u64")
-    if not 0 <= output_index <= 0xFFFF_FFFF_FFFF_FFFF:
+    if (
+        isinstance(output_index, bool)
+        or not isinstance(output_index, int)
+        or not 0 <= output_index <= U64_MAX
+    ):
         raise ValueError("output_index must fit u64")
 
     cell_input = (
@@ -84,7 +178,11 @@ class ReceiverRegistryRecord:
     schema_version: int = REGISTRY_SCHEMA_VERSION
 
     def validate(self) -> None:
-        if self.schema_version != REGISTRY_SCHEMA_VERSION:
+        if (
+            isinstance(self.schema_version, bool)
+            or not isinstance(self.schema_version, int)
+            or self.schema_version != REGISTRY_SCHEMA_VERSION
+        ):
             raise ValueError("schema_version must be 2")
         if not isinstance(self.receiver_id, str) or not _RECEIVER_ID_RE.fullmatch(self.receiver_id):
             raise ValueError("receiver_id must be 1-64 uppercase ASCII identifier characters")
@@ -104,7 +202,12 @@ class ReceiverRegistryRecord:
         if not -500.0 <= float(self.altitude) <= 20_000.0:
             raise ValueError("altitude out of bounds")
 
-        if self.status not in {"online", "offline", "degraded", "revoked"}:
+        if not isinstance(self.status, str) or self.status not in {
+            "online",
+            "offline",
+            "degraded",
+            "revoked",
+        }:
             raise ValueError("unsupported receiver status")
         if not isinstance(self.capabilities, list) or not 1 <= len(self.capabilities) <= 8:
             raise ValueError("capabilities must contain 1-8 values")
@@ -118,18 +221,8 @@ class ReceiverRegistryRecord:
         if "mode-s" not in self.capabilities:
             raise ValueError("capabilities must include mode-s")
 
-        if (
-            isinstance(self.sequence, bool)
-            or not isinstance(self.sequence, int)
-            or self.sequence < 0
-        ):
-            raise ValueError("sequence must be a non-negative integer")
-        if (
-            isinstance(self.updated_at, bool)
-            or not isinstance(self.updated_at, int)
-            or self.updated_at <= 0
-        ):
-            raise ValueError("updated_at must be a positive integer")
+        _validate_u64(self.sequence, "sequence")
+        _validate_u64(self.updated_at, "updated_at", positive=True)
 
         self._validate_optional_text(self.stream_endpoint, "stream_endpoint", 256)
         self._validate_optional_text(self.stream_protocol, "stream_protocol", 32)
@@ -143,7 +236,10 @@ class ReceiverRegistryRecord:
             raise ValueError("unsupported stream_format")
         if self.stream_endpoint is not None and self.stream_protocol is None:
             raise ValueError("stream_endpoint requires stream_protocol")
-        if self.metadata_hash is not None and not _METADATA_HASH_RE.fullmatch(self.metadata_hash):
+        if self.metadata_hash is not None and (
+            not isinstance(self.metadata_hash, str)
+            or not _METADATA_HASH_RE.fullmatch(self.metadata_hash)
+        ):
             raise ValueError("metadata_hash must be 0x-prefixed 32-byte hex")
         if self.status == "revoked" and any(
             value is not None
@@ -155,7 +251,12 @@ class ReceiverRegistryRecord:
     def _validate_optional_text(value: Optional[str], field: str, max_bytes: int) -> None:
         if value is None:
             return
-        if not isinstance(value, str) or not value or len(value.encode("utf-8")) > max_bytes:
+        if (
+            not isinstance(value, str)
+            or not value
+            or any(character in {'"', "\\"} or ord(character) < 0x20 for character in value)
+            or len(value.encode("utf-8")) > max_bytes
+        ):
             raise ValueError(f"{field} must contain 1-{max_bytes} UTF-8 bytes")
 
     def validate_creation(self) -> None:
@@ -202,7 +303,12 @@ class ReceiverRegistryRecord:
         return payload
 
     def to_cell_data_hex(self) -> str:
-        payload = json.dumps(self.to_payload_dict(), separators=(",", ":"), sort_keys=True)
+        payload = json.dumps(
+            self.to_payload_dict(),
+            ensure_ascii=False,
+            separators=(",", ":"),
+            sort_keys=True,
+        )
         return "0x" + payload.encode("utf-8").hex()
 
     @classmethod
@@ -215,9 +321,9 @@ class ReceiverRegistryRecord:
         record = cls(
             schema_version=data["schema_version"],
             receiver_id=data["receiver_id"],
-            latitude=data["latitude"],
-            longitude=data["longitude"],
-            altitude=data["altitude"],
+            latitude=_json_coordinate(data["latitude"]),
+            longitude=_json_coordinate(data["longitude"]),
+            altitude=_json_coordinate(data["altitude"]),
             status=data["status"],
             capabilities=data["capabilities"],
             sequence=data["sequence"],

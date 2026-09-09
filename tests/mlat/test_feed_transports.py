@@ -1,8 +1,14 @@
 import asyncio
 import time
 
+import pytest
+
 from ckb_registry.discovery import ReceiverInfo
-from mlat_reference.ingest.feed_transports import JsonFeedParsingMixin, SimulationFeedTransport
+from mlat_reference.ingest.feed_transports import (
+    JsonFeedParsingMixin,
+    SimulationFeedTransport,
+    WebSocketJsonFeedTransport,
+)
 
 
 def _receiver(receiver_id: str, latitude: float, longitude: float) -> ReceiverInfo:
@@ -77,3 +83,40 @@ def test_json_feed_preserves_precision_and_clock_qualification():
             "message": "8D4840D6202CC371C32CE0576098",
         }
     ]
+
+
+def test_json_feed_rejects_identity_claim_that_differs_from_connection_binding():
+    records = JsonFeedParsingMixin().normalize_feed_records(
+        {
+            "receiver_id": "RECEIVER_B",
+            "message": "8D4840D6202CC371C32CE0576098",
+        },
+        default_receiver_id="RECEIVER_A",
+        allowed_receiver_ids={"RECEIVER_A"},
+    )
+
+    assert records == []
+
+
+def test_websocket_transport_rejects_shared_endpoint_for_multiple_identities():
+    first = _receiver("RECEIVER_A", 40.7, -74.0)
+    first.stream_endpoint = "wss://feeds.example/live"
+    first.stream_protocol = "websocket-json"
+    second = _receiver("RECEIVER_B", 41.0, -73.5)
+    second.stream_endpoint = first.stream_endpoint
+    second.stream_protocol = "websocket-json"
+    transport = WebSocketJsonFeedTransport(
+        {"RECEIVER_A": first, "RECEIVER_B": second},
+        endpoint="",
+        auth_headers={},
+        subscribe_message=None,
+    )
+
+    async def unused_callback(*args, **kwargs):
+        raise AssertionError("No shared-endpoint task should be created")
+
+    async def create_tasks():
+        with pytest.raises(RuntimeError, match="one receiver identity"):
+            transport.create_tasks(unused_callback)
+
+    asyncio.run(create_tasks())

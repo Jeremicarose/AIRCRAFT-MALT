@@ -26,6 +26,18 @@ The transaction tests cover:
 - terminal revocation and resurrection rejection
 - duplicate registry-output rejection
 
+Registry cell data is limited to 16 KiB. It must use strict UTF-8 JSON number
+syntax and must not contain JSON escape sequences inside strings. These rules
+avoid different decoded values between the contract's `no_std` JSON parser and
+off-chain JSON runtimes. Python and TypeScript enforce the same wire rules.
+
+The shared conformance adapter can be run directly with:
+
+```bash
+cargo run --locked --example conformance -- \
+  ../../tests/registry/fixtures/registry_v2_conformance.json
+```
+
 Build only the deployable binary with:
 
 ```bash

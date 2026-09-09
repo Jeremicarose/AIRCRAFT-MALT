@@ -1,7 +1,15 @@
 import hashlib
 import json
+import urllib.error
 
-from tools.registry.verify_registry_v2_evidence import verify_bundle
+import pytest
+
+from ckb_registry.record import calculate_type_id
+from tools.registry.verify_registry_v2_evidence import (
+    calculate_transaction_hash,
+    rpc,
+    verify_bundle,
+)
 
 
 def write_json(path, value):
@@ -18,7 +26,7 @@ def write_checksums(bundle):
     (bundle / "checksums.sha256").write_text("\n".join(lines) + "\n")
 
 
-def transaction_response(tx_hash, parent_hash, sequence, owner, identity, code_hash, status):
+def transaction_response(parent_hash, sequence, owner, identity, code_hash, status):
     record = {
         "schema_version": 2,
         "receiver_id": "RECV_TEST",
@@ -32,19 +40,27 @@ def transaction_response(tx_hash, parent_hash, sequence, owner, identity, code_h
     }
     return {
         "transaction": {
-            "hash": tx_hash,
+            "hash": "",
+            "version": "0x0",
+            "cell_deps": [],
+            "header_deps": [],
             "inputs": [
                 {
+                    "since": "0x0",
                     "previous_output": {
                         "tx_hash": parent_hash,
                         "index": "0x0",
-                    }
+                    },
                 }
             ],
             "outputs": [
                 {
-                    "capacity": "0x1",
-                    "lock": {"args": owner},
+                    "capacity": "0x174876e800",
+                    "lock": {
+                        "args": owner,
+                        "code_hash": "0x" + "cc" * 32,
+                        "hash_type": "type",
+                    },
                     "type": {
                         "args": identity,
                         "code_hash": code_hash,
@@ -66,42 +82,49 @@ def build_bundle(tmp_path):
     ckb_digest = hashlib.blake2b(
         binary.read_bytes(), digest_size=32, person=b"ckb-default-hash"
     ).hexdigest()
-    hashes = {
-        name: "0x" + f"{index:02x}" * 32
-        for index, name in enumerate(
-            ("deployment", "create", "update", "transfer", "revoke"), start=1
-        )
+    deployment_transaction = {
+        "hash": "",
+        "version": "0x0",
+        "cell_deps": [],
+        "header_deps": [],
+        "inputs": [],
+        "outputs": [],
+        "outputs_data": [],
     }
-    identity = "0x" + "aa" * 32
+    deployment_transaction["hash"] = calculate_transaction_hash(deployment_transaction)
+    hashes = {"deployment": deployment_transaction["hash"]}
+    identity = calculate_type_id(
+        first_input_tx_hash=hashes["deployment"],
+        first_input_index=0,
+        first_input_since=0,
+        output_index=0,
+    )
     code_hash = "0x" + "bb" * 32
     owner_a = "0x" + "11" * 20
     owner_b = "0x" + "22" * 20
-    write_json(
-        bundle / "manifest.json",
-        {
-            "status": "complete",
-            "contract": {
-                "binary_sha256": hashlib.sha256(binary.read_bytes()).hexdigest(),
-                "binary_ckb_data_hash": "0x" + ckb_digest,
-                "type_script_hash_for_registry_code_hash": code_hash,
-            },
-            "receiver": {
-                "identity_id": identity,
-                "label": "RECV_TEST",
-                "owner_a": {"lock_arg": owner_a},
-                "owner_b": {"lock_arg": owner_b},
-            },
-            "lifecycle_funding": {"out_point": {"tx_hash": hashes["deployment"], "index": "0x0"}},
-            "accepted_transactions": hashes,
-            "rejected_attacks": [],
-            "rpc_url": "https://testnet.invalid/rpc",
-            "private_keys_included": False,
-            "source": {
-                "contract_source_commit": "1" * 40,
-                "lifecycle_tooling_commit": "2" * 40,
-            },
+    manifest = {
+        "status": "complete",
+        "contract": {
+            "binary_sha256": hashlib.sha256(binary.read_bytes()).hexdigest(),
+            "binary_ckb_data_hash": "0x" + ckb_digest,
+            "type_script_hash_for_registry_code_hash": code_hash,
         },
-    )
+        "receiver": {
+            "identity_id": identity,
+            "label": "RECV_TEST",
+            "owner_a": {"lock_arg": owner_a},
+            "owner_b": {"lock_arg": owner_b},
+        },
+        "lifecycle_funding": {"out_point": {"tx_hash": hashes["deployment"], "index": "0x0"}},
+        "accepted_transactions": hashes,
+        "rejected_attacks": [],
+        "rpc_url": "https://testnet.invalid/rpc",
+        "private_keys_included": False,
+        "source": {
+            "contract_source_commit": "1" * 40,
+            "lifecycle_tooling_commit": "2" * 40,
+        },
+    }
     write_json(bundle / "ci" / "local.json", {"pass": True})
     write_json(
         bundle / "ci" / "github.json",
@@ -116,23 +139,22 @@ def build_bundle(tmp_path):
     )
     write_json(
         bundle / "rpc" / "deployment-transaction.json",
-        {"transaction": {"hash": hashes["deployment"]}, "tx_status": {"status": "committed"}},
+        {"transaction": deployment_transaction, "tx_status": {"status": "committed"}},
     )
     stages = ("create", "update", "transfer", "revoke")
-    parents = (hashes["deployment"], hashes["create"], hashes["update"], hashes["transfer"])
     owners = (owner_a, owner_a, owner_b, owner_b)
     statuses = ("online", "online", "online", "revoked")
-    for sequence, (stage, parent, owner, status) in enumerate(
-        zip(stages, parents, owners, statuses)
-    ):
-        response = transaction_response(
-            hashes[stage], parent, sequence, owner, identity, code_hash, status
-        )
+    parent = hashes["deployment"]
+    for sequence, (stage, owner, status) in enumerate(zip(stages, owners, statuses)):
+        response = transaction_response(parent, sequence, owner, identity, code_hash, status)
+        transaction = response["transaction"]
+        hashes[stage] = calculate_transaction_hash(transaction)
+        transaction["hash"] = hashes[stage]
+        parent = hashes[stage]
         write_json(
             bundle / "rpc" / f"{stage}-transaction.json",
             response,
         )
-        transaction = response["transaction"]
         write_json(
             bundle / "discovery" / f"{stage}-indexer.json",
             {
@@ -161,6 +183,7 @@ def build_bundle(tmp_path):
                 }
             ]
         write_json(bundle / "discovery" / f"{stage}-adapter.json", adapter)
+    write_json(bundle / "manifest.json", manifest)
     for stage, count in (("create", 1), ("update", 1), ("transfer", 1), ("revoke", 0)):
         write_json(
             bundle / "api" / f"{stage}-receivers.json",
@@ -173,6 +196,16 @@ def build_bundle(tmp_path):
 def test_verifier_accepts_complete_consistent_bundle(tmp_path):
     report = verify_bundle(build_bundle(tmp_path))
     assert report["pass"] is True
+
+
+def test_rpc_translates_connection_failures(monkeypatch):
+    def fail_request(*args, **kwargs):
+        raise urllib.error.URLError("certificate verify failed")
+
+    monkeypatch.setattr("urllib.request.urlopen", fail_request)
+
+    with pytest.raises(RuntimeError, match="CKB RPC request.*certificate verify failed"):
+        rpc("https://testnet.invalid/rpc", "get_transaction", ["0x" + "11" * 32])
 
 
 def test_verifier_rejects_identity_mutation(tmp_path):

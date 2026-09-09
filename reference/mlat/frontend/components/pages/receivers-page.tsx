@@ -1,96 +1,348 @@
 'use client';
 
+import { type DiscoveredReceiver, type RegistryHistoryEvent } from '@aircraft-malt/registry-v2';
+import { ccc } from '@ckb-ccc/connector-react';
 import { createColumnHelper, type ColumnDef } from '@tanstack/react-table';
-import { Link2, Map, RadioTower, ShieldCheck, Waves } from 'lucide-react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { ArrowUpRight, Check, CircleAlert, Download, RadioTower, RefreshCw, UserRound } from 'lucide-react';
 import Link from 'next/link';
-import { useEffect, useMemo, useState } from 'react';
-import LazyAirspaceMap from '@/components/lazy-airspace-map';
-import { ActivityRail, FactGrid, Inspector, SignalMarquee, Timeline, WorkspaceHeader, WorkspacePanel, WorkspaceSplit } from '@/components/operations-ui';
-import { buttonVariants } from '@/components/ui/button';
+import { useRouter } from 'next/navigation';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { ReceiverInspector } from '@/components/receiver-inspector';
+import { SignalMarquee, Timeline, WorkspaceHeader, WorkspacePanel, WorkspaceSplit } from '@/components/operations-ui';
+import { RegistryActionPanel } from '@/components/registry-action-panel';
+import { SystemFlow } from '@/components/system-flow';
+import { Button, buttonVariants } from '@/components/ui/button';
 import { DataGrid } from '@/components/ui/data-grid';
+import { DataNotice } from '@/components/ui/data-notice';
 import { SearchField } from '@/components/ui/search-field';
+import { Skeleton } from '@/components/ui/skeleton';
 import { StatusChip } from '@/components/ui/status-chip';
-import { formatCoordinate, formatDateTime, latestPositions, number, relativeTime, toneFromFreshness, truncateMiddle } from '@/lib/format';
+import { WalletControl } from '@/components/wallet-control';
+import { fetchJson, PUBLIC_POSITIONS_PATH } from '@/lib/api';
+import { formatDateTime, number, titleCase, truncateMiddle } from '@/lib/format';
 import { useOperatorStore } from '@/lib/operator-store';
-import type { ModeData, Position, Receiver, ReceiversResponse, StatusTone } from '@/lib/types';
+import { createRegistrySdk, discoveredReceiverToUi, downloadJson, explorerTransactionUrl, registryDirectoryExport, receiverExport, withRegistryTimeout } from '@/lib/registry';
+import { mlatStatusPresentation, receiverDockState, reconcileReceivers, registryStatusPresentation, summarizeReceiverDirectory, type UnifiedReceiver } from '@/lib/receiver-state';
+import type { ModeData, PositionsResponse, ReceiversResponse, RegistryEvidenceData, StatusTone } from '@/lib/types';
+import { cn } from '@/lib/utils';
 
-const columnHelper = createColumnHelper<Receiver>();
+type DirectoryView = 'all' | 'mine' | 'active' | 'revoked';
 
-function receiverTone(receiver: Receiver): StatusTone {
-  if (String(receiver.status).toLowerCase() !== 'online') return 'failure';
-  return toneFromFreshness(receiver.last_seen == null ? null : Math.max(0, Date.now() / 1000 - receiver.last_seen), 90, 300);
+const columnHelper = createColumnHelper<UnifiedReceiver>();
+
+function ownerAddress(receiver: DiscoveredReceiver, client: ccc.Client): string {
+  return ccc.Address.fromScript(receiver.provenance.ownerLock, client).toString();
 }
 
-export function ReceiversPage({ receiverData, aircraftData, selectedReceiverId, modeData }: { receiverData: ReceiversResponse | null; aircraftData: Position[]; selectedReceiverId?: string | null; modeData: ModeData | null }) {
-  const receivers = receiverData?.receivers ?? [];
-  const [selectedId, setSelectedId] = useState(selectedReceiverId ?? receivers[0]?.receiver_id ?? null);
-  const [search, setSearch] = useState('');
+function ownsReceiver(receiver: DiscoveredReceiver, locks: ccc.Script[]): boolean {
+  const owner = ccc.Script.from(receiver.provenance.ownerLock);
+  return locks.some((lock) => lock.eq(owner));
+}
+
+function lifecycleTone(event: RegistryHistoryEvent): StatusTone {
+  if (event.action === 'revoke') return 'failure';
+  if (event.action === 'transfer') return 'selection';
+  return 'trust';
+}
+
+function recordStatusTone(status: string | null): StatusTone {
+  if (status === 'online') return 'healthy';
+  if (status === 'degraded') return 'attention';
+  if (status === 'revoked') return 'failure';
+  return 'neutral';
+}
+
+function DirectoryLoading() {
+  return <div className="space-y-px bg-line" aria-label="Loading the CKB testnet receiver directory"><Skeleton className="h-12 rounded-none" /><Skeleton className="h-12 rounded-none" /><Skeleton className="h-12 rounded-none" /></div>;
+}
+
+function RegistryHistory({ history, loading, error }: { history?: RegistryHistoryEvent[]; loading: boolean; error?: Error | null }) {
+  if (loading) return <div className="space-y-3 p-4" aria-label="Loading receiver lifecycle"><Skeleton className="h-12" /><Skeleton className="h-12" /><Skeleton className="h-12" /></div>;
+  if (error) return <div className="p-4"><DataNotice title="Lifecycle history could not be loaded" detail="The current record is still available. Try again after the CKB indexer catches up." /></div>;
+  if (!history?.length) return <div className="p-5 text-center text-xs leading-5 text-ink-quiet">No committed lifecycle events were found for this identity.</div>;
+  return (
+    <Timeline items={history.map((event) => ({
+      title: `${titleCase(event.action)} · sequence ${event.record.sequence.toString()}`,
+      detail: <span>{formatDateTime(event.record.updated_at)} · owner {truncateMiddle(event.ownerLock.args, 8, 6)} <a href={explorerTransactionUrl(event.transactionHash)} target="_blank" rel="noreferrer" className="ml-1 inline-flex items-center gap-1 font-semibold text-trust-cyan hover:underline">Verify<ArrowUpRight className="size-3" /></a></span>,
+      meta: `Block ${event.blockNumber.toString()}`,
+      tone: lifecycleTone(event),
+    }))} />
+  );
+}
+
+export function ReceiversPage({
+  receiverData,
+  selectedReceiverId,
+  modeData,
+  registryEvidence,
+  positionsData,
+  perspective = 'receivers',
+}: {
+  receiverData: ReceiversResponse | null;
+  selectedReceiverId?: string | null;
+  modeData: ModeData | null;
+  registryEvidence: RegistryEvidenceData | null;
+  positionsData?: PositionsResponse;
+  perspective?: 'receivers' | 'registry';
+}) {
+  const router = useRouter();
+  const queryClient = useQueryClient();
+  const { client, signerInfo, open } = ccc.useCcc();
+  const sdk = useMemo(() => createRegistrySdk(client), [client]);
+  const storedSelectedId = useOperatorStore((state) => state.selectedReceiverId);
+  const storeHydrated = useOperatorStore((state) => state.hasHydrated);
   const setStoreSelectedReceiverId = useOperatorStore((state) => state.setSelectedReceiverId);
   const setDock = useOperatorStore((state) => state.setDock);
   const setInvestigationContext = useOperatorStore((state) => state.setInvestigationContext);
+  const [selectedId, setSelectedId] = useState<string | null>(selectedReceiverId ?? null);
+  const [search, setSearch] = useState('');
+  const [view, setView] = useState<DirectoryView>('active');
+  const [walletLocks, setWalletLocks] = useState<ccc.Script[]>([]);
+  const basePath = perspective === 'registry' ? '/app/registry' : '/app/receivers';
 
-  const filtered = useMemo(() => receivers.filter((receiver) => `${receiver.receiver_id} ${receiver.receiver_label ?? ''} ${receiver.identity_id ?? ''} ${(receiver.capabilities ?? []).join(' ')}`.toLowerCase().includes(search.trim().toLowerCase())), [receivers, search]);
-  const selected = filtered.find((receiver) => receiver.receiver_id === selectedId) ?? receivers.find((receiver) => receiver.receiver_id === selectedId) ?? filtered[0] ?? null;
-  const relatedAircraft = selected ? aircraftData.filter((position) => position.correlation?.receiver_ids?.includes(selected.receiver_id)) : [];
-  const airPicture = latestPositions(relatedAircraft);
-  const onlineCount = receivers.filter((receiver) => receiverTone(receiver) === 'healthy').length;
-  const trustedCount = receivers.filter((receiver) => receiver.registry?.metadata_hash || receiver.identity_id).length;
-
-  const columns = useMemo<ColumnDef<Receiver, any>[]>(() => [
-    columnHelper.accessor('receiver_id', { header: 'Receiver', size: 180, cell: (info) => <span className="font-mono font-semibold text-ink">{info.getValue()}</span> }),
-    columnHelper.display({ id: 'status', header: 'Status', size: 120, cell: ({ row }) => { const tone = receiverTone(row.original); return <StatusChip label={tone === 'healthy' ? 'Online' : tone === 'attention' ? 'Stale' : 'Offline'} tone={tone} />; } }),
-    columnHelper.display({ id: 'trust', header: 'Trust', size: 110, cell: ({ row }) => <StatusChip label={row.original.registry?.metadata_hash || row.original.identity_id ? 'Verified' : 'Pending'} tone={row.original.registry?.metadata_hash || row.original.identity_id ? 'trust' : 'attention'} /> }),
-    columnHelper.display({ id: 'coverage', header: 'Coverage', size: 100, cell: ({ row }) => number(latestPositions(aircraftData.filter((position) => position.correlation?.receiver_ids?.includes(row.original.receiver_id))).length) }),
-    columnHelper.display({ id: 'updated', header: 'Last seen', size: 110, cell: ({ row }) => row.original.last_seen ? relativeTime(row.original.last_seen) : 'n/a' }),
-  ], [aircraftData]);
+  const directoryQuery = useQuery({
+    queryKey: ['registry-v2-directory', sdk.discovery.contractCodeHash],
+    queryFn: () => withRegistryTimeout(
+      sdk.discovery.discover({ includeInactive: true, includeRevoked: true }),
+      'CKB testnet registry discovery',
+    ),
+    staleTime: 15_000,
+    retry: false,
+    refetchInterval: (query) => query.state.status === 'success' ? 30_000 : false,
+  });
+  const discovered = directoryQuery.data?.receivers ?? [];
+  const registryReceivers = useMemo(() => discovered.map(discoveredReceiverToUi), [discovered]);
+  const positionsQuery = useQuery({
+    queryKey: ['positions', 'receiver-directory'],
+    queryFn: () => fetchJson<PositionsResponse>(PUBLIC_POSITIONS_PATH),
+    initialData: positionsData,
+    enabled: perspective !== 'registry',
+    refetchInterval: 15_000,
+  });
+  const unifiedReceivers = useMemo(() => reconcileReceivers({
+    registryReceivers,
+    runtimeReceivers: receiverData?.receivers ?? [],
+    positions: positionsQuery.data?.positions ?? [],
+    conflictIdentities: directoryQuery.data?.quarantinedIdentities ?? [],
+    runtimeInventoryAvailable: receiverData !== null,
+  }), [directoryQuery.data?.quarantinedIdentities, positionsQuery.data?.positions, receiverData, registryReceivers]);
+  const directoryReceivers = useMemo(
+    () => perspective === 'registry'
+      ? unifiedReceivers.filter((receiver) => receiver.identity !== null)
+      : unifiedReceivers,
+    [perspective, unifiedReceivers],
+  );
 
   useEffect(() => {
-    if (!selected?.receiver_id) return;
-    setStoreSelectedReceiverId(selected.receiver_id);
-    setInvestigationContext({ focus: selected.receiver_id, query: search, timeRange: 'fleet' });
-    setDock({
-      entityType: 'receiver',
-      title: selected.receiver_id,
-      subtitle: 'Pinned from the receiver fleet workspace.',
-      statusLabel: String(selected.status || 'Unknown'),
-      statusTone: receiverTone(selected),
-      facts: [
-        { label: 'Coordinates', value: formatCoordinate(selected.latitude, selected.longitude) },
-        { label: 'Identity', value: selected.identity_id ?? 'Pending', mono: true, tone: selected.identity_id ? 'trust' : 'attention' },
-        { label: 'Metadata hash', value: truncateMiddle(selected.registry?.metadata_hash, 10, 8), mono: true, tone: selected.registry?.metadata_hash ? 'trust' : 'attention' },
-        { label: 'Coverage', value: `${number(airPicture.length)} aircraft` },
-      ],
-      timeline: [
-        { title: 'Availability', detail: receiverTone(selected) === 'healthy' ? 'Receiver heartbeat is current.' : 'Receiver heartbeat is stale or absent.', tone: receiverTone(selected) },
-        { title: 'Registry trust', detail: selected.registry?.metadata_hash ? 'Receiver metadata is anchored in Registry V2.' : 'Registry metadata is not yet attached.', tone: selected.registry?.metadata_hash ? 'trust' : 'attention' },
-        { title: 'Capabilities', detail: selected.capabilities?.length ? selected.capabilities.join(', ') : 'No capability metadata published.', tone: selected.capabilities?.length ? 'selection' : 'attention' },
-      ],
-      evidence: [
-        { title: 'Owner lock args', detail: selected.registry?.owner_lock_args ?? 'Unavailable', state: 'Registry', tone: selected.registry?.owner_lock_args ? 'trust' : 'attention' },
-      ],
-      actions: [
-        { label: 'Open live map', href: '/app/localization', tone: 'primary' },
-        { label: 'Open environment', href: '/app/environment', tone: 'secondary' },
-      ],
-    });
-    return () => setDock(null);
-  }, [airPicture.length, search, selected, setDock, setInvestigationContext, setStoreSelectedReceiverId]);
+    let active = true;
+    if (!signerInfo) {
+      setWalletLocks([]);
+      return;
+    }
+    signerInfo.signer.getAddressObjs()
+      .then((addresses) => { if (active) setWalletLocks(addresses.map(({ script }) => script)); })
+      .catch(() => { if (active) setWalletLocks([]); });
+    return () => { active = false; };
+  }, [signerInfo]);
 
-  const activityRail = [
-    { title: 'Online fleet', detail: `${onlineCount} receivers currently report healthy heartbeats.`, meta: `${receivers.length} total`, tone: onlineCount >= 4 ? 'healthy' : 'attention' as StatusTone },
-    { title: 'Trust posture', detail: `${trustedCount} receivers expose registry or identity metadata.`, meta: `${receivers.length - trustedCount} pending`, tone: trustedCount ? 'trust' : 'attention' as StatusTone },
-    { title: 'Search scope', detail: search ? `Filtering fleet by “${search}”.` : 'Showing the complete fleet inventory.', meta: search ? 'Filtered' : 'All', tone: search ? 'selection' : 'neutral' as StatusTone },
+  useEffect(() => {
+    if (!directoryReceivers.length || selectedId) return;
+    const candidate = selectedReceiverId
+      ?? (storeHydrated ? storedSelectedId : null)
+      ?? directoryReceivers[0]?.key
+      ?? null;
+    if (candidate && directoryReceivers.some((receiver) => receiver.key === candidate)) setSelectedId(candidate);
+  }, [directoryReceivers, selectedId, selectedReceiverId, storeHydrated, storedSelectedId]);
+
+  const selectReceiver = useCallback((receiverIdentity: string) => {
+    setSelectedId(receiverIdentity);
+    setStoreSelectedReceiverId(receiverIdentity);
+    router.replace(`${basePath}?receiver=${encodeURIComponent(receiverIdentity)}`, { scroll: false });
+  }, [basePath, router, setStoreSelectedReceiverId]);
+
+  const ownedIdentities = useMemo(() => new Set(discovered.filter((receiver) => ownsReceiver(receiver, walletLocks)).map((receiver) => receiver.receiver_identity)), [discovered, walletLocks]);
+  const filtered = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    return directoryReceivers.filter((receiver) => {
+      if (view === 'mine' && !ownedIdentities.has(receiver.identity ?? '')) return false;
+      if (view === 'active' && receiver.registryStatus !== 'active') return false;
+      if (view === 'revoked' && receiver.registryStatus !== 'revoked') return false;
+      return `${receiver.label} ${receiver.identity ?? ''} ${receiver.capabilities.join(' ')}`.toLowerCase().includes(query);
+    });
+  }, [directoryReceivers, ownedIdentities, search, view]);
+  const selectedUi = directoryReceivers.find((receiver) => receiver.key === selectedId) ?? filtered[0] ?? null;
+  const selected = discovered.find((receiver) => receiver.receiver_identity === selectedUi?.identity);
+  const selectedOwned = Boolean(selected && ownsReceiver(selected, walletLocks));
+
+  useEffect(() => {
+    if (!filtered.length || filtered.some((receiver) => receiver.key === selectedId)) return;
+    selectReceiver(filtered[0]!.key);
+  }, [filtered, selectReceiver, selectedId]);
+
+  const historyQuery = useQuery({
+    queryKey: ['registry-v2-history', selected?.receiver_identity],
+    queryFn: () => withRegistryTimeout(
+      sdk.history.discover(selected!.receiver_identity),
+      'CKB testnet lifecycle history',
+    ),
+    enabled: Boolean(selected),
+    staleTime: 30_000,
+    retry: false,
+  });
+
+  const columns = useMemo<ColumnDef<UnifiedReceiver, any>[]>(() => {
+    const receiverColumn = columnHelper.display({ id: 'receiver', header: 'Receiver', size: 220, cell: ({ row }) => <div className="min-w-0"><span className="block truncate font-semibold text-ink">{row.original.label}</span><span className="block truncate font-mono text-[10px] text-ink-quiet">{row.original.identity ? truncateMiddle(row.original.identity, 10, 8) : 'No Registry identity'}</span></div> });
+    const ownerColumn = columnHelper.display({ id: 'owner', header: 'Owner', size: 130, cell: ({ row }) => ownedIdentities.has(row.original.identity ?? '') ? <span className="inline-flex items-center gap-1.5 font-semibold text-trust-cyan"><UserRound className="size-3.5" />You</span> : <span className="font-mono text-[11px] text-ink-secondary">{row.original.ownerLockArgs ? truncateMiddle(row.original.ownerLockArgs, 7, 5) : 'Not available'}</span> });
+    if (perspective === 'registry') {
+      return [
+        receiverColumn,
+        columnHelper.display({ id: 'state', header: 'Current state', size: 120, cell: ({ row }) => <StatusChip label={titleCase(row.original.registryRecordStatus ?? 'unknown')} tone={recordStatusTone(row.original.registryRecordStatus)} /> }),
+        ownerColumn,
+        columnHelper.display({ id: 'sequence', header: 'Sequence', size: 90, cell: ({ row }) => number(row.original.registry?.registry?.sequence) }),
+        columnHelper.display({ id: 'updated', header: 'Registry updated', size: 170, cell: ({ row }) => row.original.lastRegistryUpdateAt ? formatDateTime(row.original.lastRegistryUpdateAt) : 'Not available' }),
+      ];
+    }
+    return [
+      receiverColumn,
+      columnHelper.display({ id: 'registry', header: 'Registry', size: 125, cell: ({ row }) => <StatusChip {...registryStatusPresentation(row.original.registryStatus)} /> }),
+      columnHelper.display({ id: 'mlat', header: 'MLAT', size: 115, cell: ({ row }) => <StatusChip {...mlatStatusPresentation(row.original.mlatStatus)} /> }),
+      ownerColumn,
+      columnHelper.display({ id: 'activity', header: 'Last observation', size: 170, cell: ({ row }) => row.original.lastObservationAt ? formatDateTime(row.original.lastObservationAt) : 'Not available' }),
+    ];
+  }, [ownedIdentities, perspective]);
+
+  useEffect(() => {
+    if (!storeHydrated || !selectedUi) return;
+    setStoreSelectedReceiverId(selectedUi.key);
+    setInvestigationContext({ focus: selectedUi.key, query: search, timeRange: perspective === 'registry' ? 'lifecycle' : 'recent' });
+    const dock = receiverDockState(selectedUi, { includeRegistryAction: perspective !== 'registry' });
+    if (historyQuery.data?.length) {
+      dock.timeline = [
+        ...(dock.timeline ?? []),
+        ...historyQuery.data.slice(-4).map((event) => ({
+          title: `Registry ${titleCase(event.action)}`,
+          detail: `Sequence ${event.record.sequence.toString()} at ${formatDateTime(event.record.updated_at)}.`,
+          tone: lifecycleTone(event),
+        })),
+      ];
+    }
+    if (selected) {
+      dock.evidence = [
+        ...(dock.evidence ?? []),
+        { title: 'Current Registry cell', detail: selected.provenance.outPoint.txHash, state: 'Committed', tone: 'trust' },
+      ];
+    }
+    setDock(dock);
+    return () => setDock(null);
+  }, [historyQuery.data, perspective, search, selected, selectedUi, setDock, setInvestigationContext, setStoreSelectedReceiverId, storeHydrated]);
+
+  const refreshAfterTransaction = async (receiverIdentity: string) => {
+    await queryClient.invalidateQueries({ queryKey: ['registry-v2-directory'] });
+    await directoryQuery.refetch();
+    await queryClient.invalidateQueries({ queryKey: ['registry-v2-history', receiverIdentity] });
+    selectReceiver(receiverIdentity);
+  };
+
+  const exportAll = () => downloadJson('ckb-testnet-receiver-directory.json', registryDirectoryExport(discovered));
+  const exportSelected = () => {
+    if (!selected) return;
+    downloadJson(`${selected.record.receiver_id.toLowerCase()}-registry.json`, receiverExport(selected, historyQuery.data));
+  };
+
+  const discoveryFailures = directoryQuery.data?.failures ?? [];
+  const replayMode = Boolean(modeData?.demo_mode || modeData?.simulation_mode || modeData?.synthetic_feed_mode);
+  const summary = summarizeReceiverDirectory(unifiedReceivers);
+  const registryConnected = directoryQuery.isSuccess;
+  const selectedInspector = selectedUi ? {
+    ...selectedUi,
+    ownerLockArgs: selected ? ownerAddress(selected, client) : selectedUi.ownerLockArgs,
+  } : null;
+  const runtimeReceiverCount = receiverData?.receivers.length ?? 0;
+  const aircraftCount = new Set((positionsQuery.data?.positions ?? []).map((position) => position.aircraft_id)).size;
+  const flowNodes = [
+    { id: 'receiver', label: 'Receivers', detail: `${summary.registryIdentities} registered identities`, tone: summary.registryIdentities ? 'trust' as const : 'attention' as const, href: '/app/receivers' },
+    { id: 'registry', label: 'Registry', detail: directoryQuery.error ? 'CKB refresh failed' : directoryQuery.isLoading ? 'Querying CKB testnet' : 'Connected to CKB testnet', tone: directoryQuery.error ? 'failure' as const : registryConnected ? 'trust' as const : 'attention' as const, href: '/app/registry' },
+    { id: 'discovery', label: 'Discovery', detail: directoryQuery.error ? 'Using last MLAT inventory' : `${summary.mlatEligible} eligible identities`, tone: directoryQuery.error ? 'attention' as const : summary.mlatEligible ? 'healthy' as const : 'attention' as const, href: '/app/receivers' },
+    { id: 'mlat', label: 'MLAT', detail: replayMode ? `${runtimeReceiverCount} replay or hybrid receivers` : `${runtimeReceiverCount} receivers in pool`, tone: replayMode ? 'replay' as const : runtimeReceiverCount ? 'healthy' as const : 'attention' as const, href: '/app/pipeline' },
+    { id: 'aircraft', label: 'Aircraft', detail: `${aircraftCount} localized in five minutes`, tone: aircraftCount ? 'healthy' as const : 'attention' as const, href: '/app/aircraft' },
   ];
 
   return (
     <div className="space-y-4">
-      <WorkspaceHeader eyebrow="Investigate" title="Fleet health and trust operations" description="Receivers are organized as an operational workspace for availability, trust, and geographic contribution instead of a passive inventory list." status={<StatusChip label={`${onlineCount}/${receivers.length} healthy`} tone={onlineCount >= 4 ? 'healthy' : 'attention'} />} actions={<Link href="/app/localization" className={buttonVariants({ variant: 'secondary' })}><Map className="size-4" />Open live map</Link>} rail={<SignalMarquee items={[{ label: 'Healthy', value: `${onlineCount}/${receivers.length}`, tone: onlineCount >= 4 ? 'healthy' : 'attention' }, { label: 'Trusted', value: number(trustedCount), tone: trustedCount ? 'trust' : 'attention' }, { label: 'Coverage', value: number(airPicture.length), tone: airPicture.length ? 'selection' : 'neutral' }, { label: 'Mode', value: modeData?.synthetic_feed_mode ? 'Replay' : 'Live', tone: modeData?.synthetic_feed_mode ? 'replay' : 'healthy' }]} />} />
+      <WorkspaceHeader
+        title={perspective === 'registry' ? 'Receiver Registry' : 'Receivers'}
+        description={perspective === 'registry'
+          ? 'Discover current owner-authorized records, manage identities you own, and verify lifecycle history.'
+          : 'See which registered receivers MLAT can use, which receivers are contributing now, and why any receiver is unavailable or excluded.'}
+        status={<StatusChip label={directoryQuery.error ? 'Indexer unavailable' : directoryQuery.isLoading ? 'Querying CKB testnet' : 'CKB testnet directory'} tone={directoryQuery.error ? 'failure' : 'trust'} />}
+        actions={<>
+          <Button variant="secondary" onClick={() => void directoryQuery.refetch()} disabled={directoryQuery.isFetching}><RefreshCw className={cn('size-4', directoryQuery.isFetching && 'animate-spin')} />Refresh directory</Button>
+          <Button variant="secondary" onClick={exportAll} disabled={!discovered.length}><Download className="size-4" />Export JSON</Button>
+        </>}
+        rail={<SignalMarquee items={perspective === 'registry' ? [
+          { label: 'Registry identities', value: directoryQuery.isLoading && !summary.registryIdentities ? 'Loading' : number(summary.registryIdentities), tone: summary.registryIdentities ? 'trust' : 'attention' },
+          { label: 'Active', value: number(summary.active), tone: summary.active ? 'trust' : 'neutral' },
+          { label: 'Revoked', value: number(summary.revoked), tone: summary.revoked ? 'failure' : 'neutral' },
+          { label: 'Owned by wallet', value: signerInfo ? number(ownedIdentities.size) : 'Connect wallet', tone: ownedIdentities.size ? 'trust' : 'neutral' },
+          { label: 'Network', value: 'Pudge testnet', tone: 'selection' },
+        ] : [
+          { label: 'Registry identities', value: directoryQuery.isLoading && !summary.registryIdentities ? 'Loading' : number(summary.registryIdentities), tone: summary.registryIdentities ? 'trust' : 'attention' },
+          { label: 'Active', value: number(summary.active), tone: summary.active ? 'trust' : 'neutral' },
+          { label: 'Unavailable', value: receiverData ? number(summary.unavailable) : 'Unknown', tone: !receiverData || summary.unavailable ? 'attention' : 'healthy' },
+          { label: 'MLAT eligible', value: number(summary.mlatEligible), tone: summary.mlatEligible ? 'healthy' : 'attention' },
+          { label: 'Contributing', value: number(summary.contributing), tone: summary.contributing ? 'healthy' : 'neutral' },
+        ]} />}
+      />
+
+      {perspective !== 'registry' ? <WorkspacePanel title="Registry to aircraft flow" detail="Each stage uses current Registry, MLAT inventory, and recent localization state." tone={directoryQuery.error ? 'attention' : 'trust'}>
+        <SystemFlow nodes={flowNodes} ariaLabel="Receiver Registry to MLAT aircraft flow" />
+      </WorkspacePanel> : null}
+
+      {directoryQuery.error ? <DataNotice title={perspective === 'registry' ? 'The Registry directory could not be refreshed' : 'Registry refresh failed; Registry receivers are unavailable'} detail={perspective === 'registry' ? 'The CKB testnet indexer did not return a fresh directory. No replay or MLAT receiver is substituted for an on-chain identity.' : 'The CKB testnet indexer did not return a complete directory. Registry-backed receivers are removed from the active MLAT pool until discovery succeeds again. Earlier aircraft evidence remains visible.'} onRetry={() => void directoryQuery.refetch()} /> : null}
+      {discoveryFailures.length ? <DataNotice title={`${discoveryFailures.length} registry ${discoveryFailures.length === 1 ? 'cell was' : 'cells were'} quarantined`} detail="The SDK rejected malformed, duplicate, or incomplete data instead of presenting it as a valid receiver." /> : null}
 
       <WorkspaceSplit
-        secondaryWidth="340px"
-        primary={<div className="space-y-4"><WorkspacePanel title="Receiver fleet" detail={`${filtered.length} receivers in the current view`} tone="selection" action={<SearchField value={search} onValueChange={setSearch} placeholder="Search receiver, label, or identity" label="Search receivers" rootClassName="w-[240px]" />}><DataGrid data={filtered} columns={columns} getRowId={(row) => row.receiver_id} onRowClick={(row) => setSelectedId(row.receiver_id)} isRowSelected={(row) => row.receiver_id === selectedId} keyboardColumnLabel={(row) => row.receiver_id} emptyLabel="No receivers match this view." ariaLabel="Receiver fleet" height={Math.min(420, Math.max(184, filtered.length * 46))} /></WorkspacePanel><WorkspacePanel title="Coverage and supporting traffic" detail="Aircraft recently associated with the selected receiver." tone="trust"><LazyAirspaceMap aircraft={airPicture} receivers={receivers} selectedReceiverId={selected?.receiver_id} onSelectReceiver={setSelectedId} showReceiverLinks={false} showUncertainty={false} coveragePositions={relatedAircraft} className="map-coverage" /></WorkspacePanel><WorkspacePanel title="Receiver posture timeline" detail="Current availability and trust state across the visible fleet." tone="selection"><Timeline items={filtered.slice(0, 8).map((receiver) => ({ title: receiver.receiver_id, detail: `${receiver.status || 'Unknown'} · ${receiver.identity_id ? 'Identity published' : 'Identity pending'}`, tone: receiver.registry?.metadata_hash ? 'trust' : receiverTone(receiver), meta: receiver.last_seen ? relativeTime(receiver.last_seen) : 'n/a' }))} /></WorkspacePanel></div>}
-        secondary={<div className="space-y-4"><WorkspacePanel title="Fleet signals" detail="Operational summary for the current view." tone={onlineCount >= 4 ? 'healthy' : 'attention'}><ActivityRail items={activityRail} /></WorkspacePanel><Inspector title={selected?.receiver_id ?? 'No receiver selected'} subtitle={selected ? formatDateTime(selected.last_seen ?? selected.updated_at) : 'Select a receiver to inspect'} status={selected ? <StatusChip label={selected.registry?.metadata_hash ? 'Trusted' : 'Pending trust'} tone={selected.registry?.metadata_hash ? 'trust' : 'attention'} /> : <StatusChip label="Waiting" />} className="self-start xl:sticky xl:top-20">{selected ? <><FactGrid items={[{ label: 'Coordinates', value: formatCoordinate(selected.latitude, selected.longitude) }, { label: 'Identity', value: selected.identity_id ?? 'Pending', mono: true }, { label: 'Registry seq', value: number(selected.registry?.sequence) }, { label: 'Coverage', value: `${number(airPicture.length)} aircraft` }]} /><div className="border-b border-line p-4"><div className="mb-3 flex items-center gap-2"><ShieldCheck className="size-4 text-trust-cyan" /><p className="text-xs font-semibold text-ink">Registry evidence</p></div><div className="space-y-2 text-xs leading-5 text-ink-quiet"><p>{selected.registry?.metadata_hash ? 'Metadata hash is attached to this receiver record.' : 'Metadata hash has not been published for this receiver.'}</p><p className="font-mono text-[11px] text-ink-secondary">{selected.registry?.metadata_hash ?? 'metadata-hash-unavailable'}</p></div></div><div className="p-4"><div className="grid grid-cols-3 gap-2 text-center text-xs"><div className="rounded-md border border-line bg-graphite-raised/45 px-2 py-3"><Waves className="mx-auto size-3.5 text-healthy" /><strong className="mt-1 block text-ink">{String(selected.status || 'n/a')}</strong><span className="text-[10px] text-ink-quiet">status</span></div><div className="rounded-md border border-line bg-graphite-raised/45 px-2 py-3"><Link2 className="mx-auto size-3.5 text-signal-blue" /><strong className="mt-1 block text-ink">{number(selected.capabilities?.length)}</strong><span className="text-[10px] text-ink-quiet">caps</span></div><div className="rounded-md border border-line bg-graphite-raised/45 px-2 py-3"><RadioTower className="mx-auto size-3.5 text-series-teal" /><strong className="mt-1 block text-ink">{number(airPicture.length)}</strong><span className="text-[10px] text-ink-quiet">aircraft</span></div></div></div></> : <div className="p-6 text-center text-xs text-ink-quiet">Select a receiver to inspect trust and availability evidence.</div>}</Inspector></div>}
+        secondaryWidth="390px"
+        primary={<div className="space-y-4">
+          <WorkspacePanel
+            title={perspective === 'registry' ? 'Registry directory' : 'Receiver inventory'}
+            detail={directoryQuery.isLoading && !directoryReceivers.length ? 'Querying Registry V2 cells on CKB testnet' : `${filtered.length} of ${directoryReceivers.length} receivers in this view`}
+          >
+            <div className="flex flex-col gap-3 border-b border-line p-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex max-w-full overflow-x-auto rounded-md border border-line bg-graphite-raised p-0.5" role="group" aria-label="Directory view">{([
+                ['active', 'Active'], ['mine', 'My receivers'], ['revoked', 'Revoked'], ['all', 'All states'],
+              ] as const).map(([value, label]) => <button key={value} type="button" aria-pressed={view === value} onClick={() => setView(value)} className={cn('h-8 whitespace-nowrap rounded px-2.5 text-xs font-medium text-ink-quiet outline-none hover:text-ink focus-visible:ring-2 focus-visible:ring-signal-blue', view === value && 'bg-graphite-hover text-ink')}>{label}</button>)}</div>
+              <SearchField value={search} onValueChange={setSearch} placeholder="Search label, Type ID, or capability" label="Search receiver directory" rootClassName="w-full sm:w-[310px]" />
+            </div>
+            {directoryQuery.isLoading && !directoryReceivers.length ? <DirectoryLoading /> : view === 'mine' && !signerInfo ? (
+              <div className="flex min-h-44 flex-col items-center justify-center px-6 text-center"><UserRound className="mb-3 size-5 text-ink-quiet" /><p className="text-sm font-semibold text-ink">Connect a testnet wallet to find your receivers</p><p className="mt-1 max-w-md text-xs leading-5 text-ink-quiet">Ownership is matched against the complete CKB lock script from your wallet. No address is sent to the MLAT backend.</p><Button className="mt-4" size="sm" variant="primary" onClick={open}>Connect testnet wallet</Button></div>
+            ) : (
+              <DataGrid data={filtered} columns={columns} getRowId={(row) => row.key} onRowClick={(row) => selectReceiver(row.key)} isRowSelected={(row) => row.key === selectedUi?.key} keyboardColumnLabel={(row) => row.label} emptyLabel={search ? 'No receivers match this search and view.' : view === 'mine' ? 'This wallet does not own a current Registry V2 receiver.' : 'No receiver identities or MLAT receivers are available.'} ariaLabel="Receiver identity and MLAT status directory" height={Math.min(460, Math.max(184, filtered.length * 48))} />
+            )}
+          </WorkspacePanel>
+
+          {perspective === 'registry' ? <RegistryActionPanel sdk={sdk} signer={signerInfo?.signer} selected={selected} ownsSelected={selectedOwned} onCommitted={refreshAfterTransaction} /> : (
+            <WorkspacePanel title="Registry events and MLAT behavior" detail="Registry lifecycle changes have specific operational effects.">
+              <Timeline items={[
+                { title: 'Receiver registered', detail: 'The identity becomes available to Registry discovery. MLAT still applies status and capability checks.', tone: 'trust' },
+                { title: 'Receiver updated', detail: 'Discovery refreshes metadata while the canonical Type ID stays unchanged.', tone: 'selection' },
+                { title: 'Receiver transferred', detail: 'Ownership changes, but MLAT and historical aircraft links keep the same canonical identity.', tone: 'trust' },
+                { title: 'Receiver revoked', detail: 'Discovery excludes the identity from the active MLAT pool. Historical Registry and aircraft evidence remains inspectable.', tone: 'failure' },
+              ]} />
+            </WorkspacePanel>
+          )}
+        </div>}
+        secondary={<ReceiverInspector
+          receiver={selectedInspector}
+          perspective={perspective}
+          lifecycle={perspective === 'registry' && selected ? <RegistryHistory history={historyQuery.data} loading={historyQuery.isLoading} error={historyQuery.error} /> : undefined}
+          actions={selected ? <><Button size="sm" variant="secondary" onClick={exportSelected}><Download className="size-3.5" />Export record</Button><a href={explorerTransactionUrl(selected.provenance.outPoint.txHash)} target="_blank" rel="noreferrer" className={buttonVariants({ variant: 'secondary', size: 'sm' })}>Verify transaction<ArrowUpRight className="size-3.5" /></a></> : selectedUi ? <Link href={`/app/localization?receiver=${encodeURIComponent(selectedUi.key)}`} className={buttonVariants({ variant: 'secondary', size: 'sm' })}>Open live map<ArrowUpRight className="size-3.5" /></Link> : undefined}
+          className="self-start xl:sticky xl:top-20"
+        />}
       />
+
+      {perspective === 'registry' ? (registryEvidence ? <WorkspacePanel title="Verified testnet lifecycle" detail="Saved evidence anchors the Registry V2 contract deployment used by this directory." tone="trust"><div className="flex flex-col gap-3 p-4 text-xs sm:flex-row sm:items-center"><Check className="size-4 shrink-0 text-healthy" /><p className="flex-1 leading-5 text-ink-secondary">The saved testnet lifecycle completed create, update, transfer, and permanent revoke on {registryEvidence.network}. It is technical evidence, not evidence that an external operator completed a pilot.</p><a href={explorerTransactionUrl(registryEvidence.contract.deployment_transaction)} target="_blank" rel="noreferrer" className={buttonVariants({ variant: 'secondary', size: 'sm' })}>Verify contract deployment<ArrowUpRight className="size-3.5" /></a></div></WorkspacePanel> : <div className="flex items-start gap-3 rounded-md border border-attention/35 bg-attention/[0.06] p-4 text-xs leading-5 text-ink-secondary"><CircleAlert className="mt-0.5 size-4 shrink-0 text-attention" />Saved testnet lifecycle evidence is unavailable. Registry discovery remains independent, but this deployment should not be published without its checksum-verifiable evidence bundle.</div>) : null}
     </div>
   );
 }

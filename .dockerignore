@@ -1,0 +1,15 @@
+.git
+.env
+.env.*
+!.env.example
+**/node_modules
+**/.next
+**/.next-*
+**/__pycache__
+**/.pytest_cache
+**/.mypy_cache
+artifacts
+data
+logs
+target
+sdk/typescript/dist

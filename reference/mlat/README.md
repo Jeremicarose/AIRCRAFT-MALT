@@ -50,6 +50,11 @@ npm ci
 npm run dev
 ```
 
+Open `http://localhost:3000/app/registry` for the complete Pudge testnet
+Registry V2 journey. Public discovery works without a wallet. Create, update,
+transfer, and revoke open the CCC wallet for explicit approval; the application
+never accepts a private key or seed phrase.
+
 Or run the complete stack:
 
 ```bash

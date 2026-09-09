@@ -7,7 +7,7 @@ CKB network client so production and demo behavior are explicit.
 
 from __future__ import annotations
 
-from typing import Any, Awaitable, Callable, Dict, List, Optional
+from typing import Any, Awaitable, Callable, Dict, List, Optional, Set
 import asyncio
 import contextlib
 from datetime import datetime
@@ -20,6 +20,7 @@ import time
 
 from mlat_reference.demo import scenario_aircraft_states
 from ckb_registry.discovery import ReceiverInfo
+from ckb_registry.record import normalize_receiver_identity
 
 logger = logging.getLogger(__name__)
 MessageCallback = Callable[..., Awaitable[None]]
@@ -44,6 +45,7 @@ class JsonFeedParsingMixin:
         raw_payload: str,
         callback: MessageCallback,
         default_receiver_id: Optional[str] = None,
+        allowed_receiver_ids: Optional[Set[str]] = None,
     ):
         try:
             payload = json.loads(raw_payload)
@@ -54,6 +56,7 @@ class JsonFeedParsingMixin:
         for record in self.normalize_feed_records(
             payload,
             default_receiver_id=default_receiver_id,
+            allowed_receiver_ids=allowed_receiver_ids,
         ):
             await callback(
                 record["receiver_id"],
@@ -69,6 +72,7 @@ class JsonFeedParsingMixin:
         self,
         payload: Any,
         default_receiver_id: Optional[str] = None,
+        allowed_receiver_ids: Optional[Set[str]] = None,
     ) -> List[Dict[str, Any]]:
         if isinstance(payload, list):
             records: List[Dict[str, Any]] = []
@@ -77,6 +81,7 @@ class JsonFeedParsingMixin:
                     self.normalize_feed_records(
                         item,
                         default_receiver_id=default_receiver_id,
+                        allowed_receiver_ids=allowed_receiver_ids,
                     )
                 )
             return records
@@ -88,22 +93,28 @@ class JsonFeedParsingMixin:
             return self.normalize_feed_records(
                 payload["records"],
                 default_receiver_id=default_receiver_id,
+                allowed_receiver_ids=allowed_receiver_ids,
             )
 
         if "data" in payload and isinstance(payload["data"], (dict, list)):
             nested = self.normalize_feed_records(
                 payload["data"],
                 default_receiver_id=default_receiver_id,
+                allowed_receiver_ids=allowed_receiver_ids,
             )
             if nested:
                 return nested
 
-        receiver_id = (
+        claimed_receiver_id = (
             payload.get("receiver_id")
             or payload.get("receiver")
             or payload.get("sensor_id")
             or payload.get("source")
-            or default_receiver_id
+        )
+        receiver_id = self._bound_receiver_id(
+            claimed_receiver_id,
+            default_receiver_id=default_receiver_id,
+            allowed_receiver_ids=allowed_receiver_ids,
         )
 
         message_value = payload.get("message")
@@ -151,6 +162,43 @@ class JsonFeedParsingMixin:
                 "message": str(message),
             }
         ]
+
+    @staticmethod
+    def _bound_receiver_id(
+        claimed_receiver_id: Any,
+        *,
+        default_receiver_id: Optional[str],
+        allowed_receiver_ids: Optional[Set[str]],
+    ) -> Optional[str]:
+        claimed = str(claimed_receiver_id) if claimed_receiver_id else None
+        if claimed and claimed.startswith("0x"):
+            try:
+                claimed = normalize_receiver_identity(claimed)
+            except ValueError:
+                return None
+
+        bound = default_receiver_id
+        if bound and bound.startswith("0x"):
+            try:
+                bound = normalize_receiver_identity(bound)
+            except ValueError:
+                return None
+
+        if bound is not None and claimed is not None and claimed != bound:
+            logger.warning(
+                "Dropping feed payload claiming %s on connection bound to %s",
+                claimed,
+                bound,
+            )
+            return None
+
+        receiver_id = bound or claimed
+        if receiver_id is None:
+            return None
+        if allowed_receiver_ids is not None and receiver_id not in allowed_receiver_ids:
+            logger.warning("Dropping feed payload for unassigned receiver %s", receiver_id)
+            return None
+        return receiver_id
 
     @staticmethod
     def parse_timestamp_ns(value: Any) -> Optional[int]:
@@ -227,13 +275,20 @@ class WebSocketJsonFeedTransport(BaseFeedTransport, JsonFeedParsingMixin):
             endpoint_to_receivers.setdefault(endpoint, []).append(receiver_id)
 
         for endpoint, receiver_ids in endpoint_to_receivers.items():
-            default_receiver_id = receiver_ids[0] if len(receiver_ids) == 1 else None
+            if len(receiver_ids) != 1:
+                joined = ", ".join(sorted(receiver_ids))
+                raise RuntimeError(
+                    "Each WebSocket connection must bind to one receiver identity; "
+                    f"endpoint {endpoint} is assigned to: {joined}"
+                )
+            default_receiver_id = receiver_ids[0]
             tasks.append(
                 asyncio.create_task(
                     self._stream_via_websocket(
                         endpoint=endpoint,
                         callback=callback,
                         default_receiver_id=default_receiver_id,
+                        allowed_receiver_ids=set(receiver_ids),
                     )
                 )
             )
@@ -245,6 +300,7 @@ class WebSocketJsonFeedTransport(BaseFeedTransport, JsonFeedParsingMixin):
         endpoint: str,
         callback: MessageCallback,
         default_receiver_id: Optional[str] = None,
+        allowed_receiver_ids: Optional[Set[str]] = None,
     ):
         try:
             import websockets
@@ -267,6 +323,7 @@ class WebSocketJsonFeedTransport(BaseFeedTransport, JsonFeedParsingMixin):
                             raw_payload,
                             callback,
                             default_receiver_id=default_receiver_id,
+                            allowed_receiver_ids=allowed_receiver_ids,
                         )
 
             except asyncio.CancelledError:
@@ -302,7 +359,11 @@ class CommandJsonlFeedTransport(BaseFeedTransport, JsonFeedParsingMixin):
                     line = await process.stdout.readline()
                     if not line:
                         break
-                    await self.dispatch_feed_payload(line.decode("utf-8"), callback)
+                    await self.dispatch_feed_payload(
+                        line.decode("utf-8"),
+                        callback,
+                        allowed_receiver_ids=set(self.receivers),
+                    )
 
                 if process.stderr is not None:
                     stderr_output = await process.stderr.read()

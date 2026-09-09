@@ -4,8 +4,8 @@ import Providers from '@/components/providers';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: { default: 'MLAT Airspace Console', template: '%s | MLAT Airspace Console' },
-  description: 'Aircraft tracking infrastructure with cryptographic proof.',
+  title: { default: 'CKB Receiver Registry', template: '%s | CKB Receiver Registry' },
+  description: 'Manage stable receiver identities and verify owner-authorized lifecycle history on CKB testnet.',
 };
 
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {

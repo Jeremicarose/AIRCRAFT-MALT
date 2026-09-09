@@ -1,10 +1,11 @@
 import asyncio
 from types import SimpleNamespace
-from unittest.mock import AsyncMock, Mock
+from unittest.mock import AsyncMock, Mock, patch
 
 from mlat_reference.correlation.correlator import CorrelatedSignalGroup, RawSignal
 from mlat_reference.ingest.client import NetworkConfig
 from mlat_reference.runtime import ProductionMLATSystem
+from ckb_registry.discovery import ReceiverInfo
 from test_solver import build_known_position_observations
 
 
@@ -102,6 +103,85 @@ def test_clock_qualification_rejects_unnamed_source(tmp_path):
     assert system._signal_clock_is_qualified(signal) is False
 
 
+def test_registry_refresh_removes_receiver_from_solver_and_inventory(tmp_path):
+    identity = "0x" + "a1" * 32
+    system = ProductionMLATSystem(
+        NetworkConfig(fourdsky_transport="command-jsonl"),
+        db_path=str(tmp_path / "mlat.db"),
+    )
+    system.database.connect()
+    receiver = ReceiverInfo(
+        receiver_id="RECEIVER_A",
+        receiver_identity=identity,
+        data_source="ckb_registry",
+        latitude=1.0,
+        longitude=36.0,
+        altitude=1_700.0,
+        status="online",
+        last_seen=1_700_000_000.0,
+        capabilities=["mode-s", "mlat"],
+        ckb_address="0xowner",
+        lock_hash="0xlock",
+    )
+    system.network_client.active_receivers[identity] = receiver
+    system._cache_receiver_positions()
+    assert system.database.get_receivers()[0].receiver_identity == identity
+
+    system.network_client.active_receivers.clear()
+    system._cache_receiver_positions()
+
+    assert identity not in system.receiver_positions
+    assert system.database.get_receivers() == []
+    before = system.stats["total_signals"]
+    asyncio.run(
+        system.handle_incoming_signal(
+            identity,
+            1_700_000_001.0,
+            "8DABCDEF",
+            timestamp_ns=1_700_000_001_000_000_000,
+            clock_synchronized=True,
+            clock_source="gps",
+            clock_uncertainty_ns=1.0,
+        )
+    )
+    assert system.stats["total_signals"] == before
+    system.database.close()
+
+
+def test_initial_discovery_removes_stale_registry_rows_but_keeps_simulation(tmp_path):
+    system = ProductionMLATSystem(
+        NetworkConfig(fourdsky_transport="command-jsonl"),
+        db_path=str(tmp_path / "mlat.db"),
+    )
+    system.database.connect()
+    system.database.store_receiver(
+        receiver_id="0x" + "d1" * 32,
+        receiver_identity="0x" + "d1" * 32,
+        data_source="ckb_registry",
+        latitude=1.0,
+        longitude=36.0,
+        altitude=1_700.0,
+        status="online",
+        last_seen=1_700_000_000.0,
+        capabilities=["mode-s", "mlat"],
+    )
+    system.database.store_receiver(
+        receiver_id="simulation:RECEIVER_B",
+        data_source="simulation",
+        latitude=2.0,
+        longitude=37.0,
+        altitude=1_700.0,
+        status="online",
+        last_seen=1_700_000_000.0,
+        capabilities=["mode-s", "mlat"],
+    )
+
+    system._cache_receiver_positions()
+
+    assert [row.receiver_id for row in system.database.get_receivers()] == ["simulation:RECEIVER_B"]
+    system.database.close()
+
+
 def test_production_shutdown_is_idempotent(tmp_path):
     system = ProductionMLATSystem(
         NetworkConfig(fourdsky_transport="simulation"),
@@ -118,3 +198,22 @@ def test_production_shutdown_is_idempotent(tmp_path):
 
     system.network_client.shutdown.assert_awaited_once()
     system.database.close.assert_called_once()
+
+
+def test_statistics_loop_does_not_query_database_after_shutdown(tmp_path):
+    system = ProductionMLATSystem(
+        NetworkConfig(fourdsky_transport="simulation"),
+        db_path=str(tmp_path / "mlat.db"),
+    )
+    system.is_running = True
+    system.database.get_active_aircraft = Mock(
+        side_effect=AssertionError("statistics queried the database after shutdown")
+    )
+
+    async def stop_during_sleep(_seconds):
+        system.is_running = False
+
+    with patch("mlat_reference.runtime.asyncio.sleep", side_effect=stop_during_sleep):
+        asyncio.run(system._statistics_loop())
+
+    system.database.get_active_aircraft.assert_not_called()

@@ -46,10 +46,17 @@ class BaseMLATRuntime(Generic[ReceiverPositionT, ObservationT]):
         self._cache_receiver_positions()
 
     def _cache_receiver_positions(self):
+        active_receiver_ids = set(self.network_client.active_receivers)
+        removed_receiver_ids = set(self.receiver_positions) - active_receiver_ids
+        for receiver_id in removed_receiver_ids:
+            self.receiver_positions.pop(receiver_id, None)
+        if removed_receiver_ids:
+            self.on_receivers_removed(removed_receiver_ids)
         for receiver_id, info in self.network_client.active_receivers.items():
             receiver_position = self.build_receiver_position(receiver_id, info)
             self.receiver_positions[receiver_id] = receiver_position
             self.on_receiver_cached(receiver_id, info)
+        self.on_receiver_cache_synchronized(active_receiver_ids)
 
     def build_receiver_position(
         self,
@@ -71,6 +78,12 @@ class BaseMLATRuntime(Generic[ReceiverPositionT, ObservationT]):
     def on_signal_received(self, signal: RawSignal):
         """Hook for subclasses that track runtime counters."""
 
+    def on_receivers_removed(self, receiver_ids: set[str]):
+        """Hook for subclasses to remove receivers excluded by refreshed discovery."""
+
+    def on_receiver_cache_synchronized(self, receiver_ids: set[str]):
+        """Hook for subclasses to reconcile persisted inventory after discovery."""
+
     async def handle_incoming_signal(
         self,
         receiver_id: str,
@@ -83,6 +96,10 @@ class BaseMLATRuntime(Generic[ReceiverPositionT, ObservationT]):
         clock_uncertainty_ns: Optional[float] = None,
     ):
         """Create a raw signal and feed it into the correlator."""
+        if receiver_id not in self.receiver_positions:
+            # A live feed can still emit briefly after a Registry refresh.
+            # Unknown or excluded identities must not reach correlation.
+            return
         signal = RawSignal(
             receiver_id=receiver_id,
             timestamp=timestamp,

@@ -14,7 +14,7 @@ SRC = ROOT / "src"
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
-from ckb_registry.record import normalize_identity_id
+from ckb_registry.record import normalize_receiver_identity
 
 
 def parse_args() -> argparse.Namespace:
@@ -44,7 +44,7 @@ def replace_line(text: str, key: str, value: str) -> str:
 
 def main() -> None:
     args = parse_args()
-    type_hash = normalize_identity_id(args.type_hash)
+    type_hash = normalize_receiver_identity(args.type_hash)
     env_path = Path(args.env_file)
     if not env_path.exists():
         raise SystemExit(f"Env file not found: {env_path}")

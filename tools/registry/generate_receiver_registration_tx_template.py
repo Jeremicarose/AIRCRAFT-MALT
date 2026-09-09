@@ -17,7 +17,7 @@ SRC = ROOT / "src"
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
-from ckb_registry.record import normalize_identity_id
+from ckb_registry.record import normalize_receiver_identity
 
 
 def parse_args() -> argparse.Namespace:
@@ -26,6 +26,12 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--lock-arg", required=True, help="Owner lock arg for the receiver cell")
     parser.add_argument("--type-hash", required=True, help="Deployed receiver-registry type hash")
+    parser.add_argument(
+        "--hash-type",
+        choices=("data1", "type"),
+        default="data1",
+        help="Registry script hash type; data1 is required for new immutable deployments",
+    )
     parser.add_argument("--data-hex-file", default="deploy/receiver-registry-record.hex")
     parser.add_argument("--capacity", default="1000", help="Cell capacity in CKB")
     parser.add_argument("--output", default="deploy/receiver-registration-tx-template.json")
@@ -47,7 +53,7 @@ def ckb_to_shannons(value: str) -> int:
 
 def main() -> None:
     args = parse_args()
-    contract_code_hash = normalize_identity_id(args.type_hash)
+    contract_code_hash = normalize_receiver_identity(args.type_hash)
     data_hex = Path(args.data_hex_file).read_text().strip()
     output_path = Path(args.output)
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -67,7 +73,7 @@ def main() -> None:
                 },
                 "type": {
                     "code_hash": contract_code_hash,
-                    "hash_type": "type",
+                    "hash_type": args.hash_type,
                     "args": "0x",
                 },
             }

@@ -1,13 +1,14 @@
 import { AppShell } from '@/components/app-shell';
 import LiveMapPage from '@/components/pages/live-map-page';
-import { fetchJsonSafe, fetchShellSnapshot } from '@/lib/api';
+import { fetchJsonSafe, fetchJsonState, fetchShellSnapshot, PUBLIC_POSITIONS_PATH } from '@/lib/api';
 import type { PositionsResponse, ReceiversResponse } from '@/lib/types';
 
-export default async function LiveMapRoute() {
-  const [snapshot, positionsData, receiversData] = await Promise.all([
+export default async function LiveMapRoute({ searchParams }: { searchParams: Promise<{ aircraft?: string; receiver?: string }> }) {
+  const { aircraft, receiver } = await searchParams;
+  const [snapshot, positionsState, receiversData] = await Promise.all([
     fetchShellSnapshot(),
-    fetchJsonSafe<PositionsResponse>('/api/positions/recent?seconds=600&limit=250', { positions: [] }),
+    fetchJsonState<PositionsResponse>(PUBLIC_POSITIONS_PATH, { positions: [] }),
     fetchJsonSafe<ReceiversResponse>('/api/receivers', { receivers: [] }),
   ]);
-  return <AppShell pageKey="localization" title="Live map" description="Track aircraft and inspect the receiver geometry behind each solve." snapshot={snapshot}><LiveMapPage initialModeData={snapshot.modeData} initialHealthData={snapshot.healthData} initialPositionsData={positionsData} initialReceiversData={receiversData} /></AppShell>;
+  return <AppShell pageKey="localization" title="Live map" description="Select aircraft or receivers and keep their evidence in context." snapshot={snapshot}><LiveMapPage initialModeData={snapshot.modeData} initialHealthData={snapshot.healthData} initialPositionsData={positionsState.data} initialPositionsError={positionsState.error} initialReceiversData={receiversData} initialSelectedAircraftId={aircraft} initialSelectedReceiverId={receiver} /></AppShell>;
 }

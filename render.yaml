@@ -46,3 +46,17 @@ services:
         value: "120"
       - key: STATS_INTERVAL_SECONDS
         value: "60"
+
+  - type: web
+    name: registry-v2-mlat-console
+    runtime: docker
+    plan: free
+    dockerContext: .
+    dockerfilePath: ./reference/mlat/frontend/Dockerfile
+    healthCheckPath: /healthz
+    envVars:
+      - key: MLAT_API_INTERNAL_URL
+        fromService:
+          type: web
+          name: registry-v2-mlat-reference
+          property: hostport

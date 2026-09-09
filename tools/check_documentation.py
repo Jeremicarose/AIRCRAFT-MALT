@@ -12,17 +12,14 @@ from urllib.parse import unquote
 ROOT = Path(__file__).resolve().parents[1]
 LINK_RE = re.compile(r"(?<!!)\[[^\]]+\]\(([^)]+)\)")
 SKIP_PREFIXES = ("http://", "https://", "mailto:", "#")
+SKIP_DIRECTORY_NAMES = {".git", ".next", "node_modules", "target"}
 SKIP_TREES = {
-    Path(".git"),
     Path(".pytest_cache"),
     Path("ckb-cli"),
-    Path("contracts/registry-v2/target"),
     Path("data"),
     Path("deploy"),
     Path("evidence/registry-v2-testnet-2026-07-30-final"),
     Path("evidence/mlat-reference/reproducible-benchmark-v2/source"),
-    Path("reference/mlat/frontend/.next"),
-    Path("reference/mlat/frontend/node_modules"),
 }
 
 
@@ -30,7 +27,9 @@ def markdown_files() -> list[Path]:
     files = []
     for path in ROOT.rglob("*.md"):
         relative = path.relative_to(ROOT)
-        if any(relative == tree or tree in relative.parents for tree in SKIP_TREES):
+        if any(part in SKIP_DIRECTORY_NAMES for part in relative.parts) or any(
+            relative == tree or tree in relative.parents for tree in SKIP_TREES
+        ):
             continue
         files.append(path)
     return sorted(files)

@@ -6,7 +6,7 @@ Config file format:
 {
   "receivers": [
     {
-      "receiver_id": "0x1111111111111111111111111111111111111111111111111111111111111111",
+      "receiver_identity": "0x1111111111111111111111111111111111111111111111111111111111111111",
       "sensor_id": "raw-nyc",
       "host": "127.0.0.1",
       "port": 30005,
@@ -20,7 +20,7 @@ Config file format:
       }
     },
     {
-      "receiver_id": "0x2222222222222222222222222222222222222222222222222222222222222222",
+      "receiver_identity": "0x2222222222222222222222222222222222222222222222222222222222222222",
       "sensor_id": "raw-bos",
       "host": "127.0.0.1",
       "port": 30006
@@ -92,7 +92,7 @@ def _log_event(event: str, receiver: dict, **details) -> None:
         json.dumps(
             {
                 "event": event,
-                "receiver_id": receiver["receiver_id"],
+                "receiver_identity": receiver["receiver_identity"],
                 "endpoint": f'{receiver["host"]}:{receiver["port"]}',
                 **details,
             },
@@ -144,7 +144,7 @@ async def stream_one_receiver(
                         frame_type,
                         payload,
                         sensor_id=receiver["sensor_id"],
-                        receiver_id=receiver["receiver_id"],
+                        receiver_id=receiver["receiver_identity"],
                         receiver_map={},
                         received_at=time.time(),
                         clock=receiver.get("clock"),

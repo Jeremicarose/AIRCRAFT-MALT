@@ -156,8 +156,8 @@ def lock_script(lock_arg: str) -> dict[str, str]:
     return {"code_hash": SIGHASH_CODE_HASH, "hash_type": "type", "args": lock_arg}
 
 
-def type_script(contract_code_hash: str, identity_id: str) -> dict[str, str]:
-    return {"code_hash": contract_code_hash, "hash_type": "type", "args": identity_id}
+def type_script(contract_code_hash: str, receiver_identity: str) -> dict[str, str]:
+    return {"code_hash": contract_code_hash, "hash_type": "type", "args": receiver_identity}
 
 
 def output(
@@ -327,8 +327,7 @@ async def discovery_snapshot(
             ckb_rpc_url=rpc_url,
             ckb_indexer_url=indexer_url,
             receiver_registry_type_hash=contract_code_hash,
-            simulate_if_unavailable=False,
-            strict_production_mode=True,
+            receiver_registry_hash_type="type",
         )
     )
     await discovery.initialize()
@@ -369,7 +368,9 @@ def capture_api_response(
             for peer in peers:
                 metadata = peer.get("metadata") or {}
                 database.store_receiver(
-                    receiver_id=peer["identity_id"],
+                    receiver_id=peer["receiver_identity"],
+                    receiver_identity=peer["receiver_identity"],
+                    data_source="ckb_registry",
                     receiver_label=peer["receiver_id"],
                     latitude=peer["latitude"],
                     longitude=peer["longitude"],
@@ -454,7 +455,7 @@ def lifecycle_transition(
     input_capacity: int,
     next_record: ReceiverRegistryRecord,
     next_lock_arg: str,
-    identity_id: str,
+    receiver_identity: str,
     contract_code_hash: str,
     contract_tx_hash: str,
     contract_index: int,
@@ -474,7 +475,7 @@ def lifecycle_transition(
             output(
                 next_capacity,
                 next_lock_arg,
-                type_script(contract_code_hash, identity_id),
+                type_script(contract_code_hash, receiver_identity),
             )
         ],
         outputs_data=[next_record.to_cell_data_hex()],
@@ -539,14 +540,14 @@ def main() -> None:
     funding_capacity = int(funding["occupied_capacity"])
     sighash_dep = deployment_info["cell_tx"]["cell_deps"][0]
     base_timestamp = int(time.time())
-    identity_id = calculate_type_id(
+    receiver_identity = calculate_type_id(
         first_input_tx_hash=deployment_tx_hash,
         first_input_index=funding_index,
         output_index=0,
     )
 
     creation = record(args.receiver_label, 0, base_timestamp)
-    creation_type = type_script(contract_code_hash, identity_id)
+    creation_type = type_script(contract_code_hash, receiver_identity)
     change_capacity = funding_capacity - REGISTRY_CAPACITY - FEE_SHANNONS
     if change_capacity < 61 * 100_000_000:
         raise SystemExit("Lifecycle funding cell cannot support registry output and change")
@@ -690,7 +691,7 @@ def main() -> None:
         input_capacity=REGISTRY_CAPACITY,
         next_record=next_record,
         next_lock_arg=owner_a["lock_arg"],
-        identity_id=identity_id,
+        receiver_identity=receiver_identity,
         contract_code_hash=contract_code_hash,
         contract_tx_hash=deployment_tx_hash,
         contract_index=contract_index,
@@ -716,7 +717,7 @@ def main() -> None:
         input_capacity=update_capacity,
         next_record=record(args.receiver_label, 2, base_timestamp + 2),
         next_lock_arg=owner_b["lock_arg"],
-        identity_id=identity_id,
+        receiver_identity=receiver_identity,
         contract_code_hash=contract_code_hash,
         contract_tx_hash=deployment_tx_hash,
         contract_index=contract_index,
@@ -841,7 +842,7 @@ def main() -> None:
             "data_hash": funding["data_hash"],
         },
         "receiver": {
-            "identity_id": identity_id,
+            "receiver_identity": receiver_identity,
             "label": args.receiver_label,
             "owner_a": owner_a,
             "owner_b": owner_b,

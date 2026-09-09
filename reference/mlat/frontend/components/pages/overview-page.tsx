@@ -7,12 +7,15 @@ import { useEffect, useMemo } from 'react';
 import { ActivityFeed } from '@/components/activity-feed';
 import LazyAirspaceMap from '@/components/lazy-airspace-map';
 import { ActivityRail, ConfidenceGauge, FactGrid, Inspector, IssueList, SignalMarquee, Timeline, WorkspaceHeader, WorkspacePanel, WorkspaceSplit } from '@/components/operations-ui';
+import { SystemFlow } from '@/components/system-flow';
 import { buttonVariants } from '@/components/ui/button';
+import { DataNotice } from '@/components/ui/data-notice';
 import { StatStrip, type StatItem } from '@/components/ui/stat-strip';
 import { StatusChip } from '@/components/ui/status-chip';
-import { fetchJson } from '@/lib/api';
+import { fetchJson, PUBLIC_POSITIONS_PATH } from '@/lib/api';
 import { formatAltitude, formatCoordinate, formatDistanceMeters, latestPositions, number, percent, toneFromFreshness, toneFromScore } from '@/lib/format';
 import { useOperatorStore } from '@/lib/operator-store';
+import { receiverIdentity } from '@/lib/receiver-state';
 import type { JsonValue, PipelineData, PositionsResponse, ReadinessData, ReceiversResponse, ShellSnapshot, StatusTone } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
@@ -21,11 +24,12 @@ interface OverviewPageProps {
   readiness: ReadinessData | null;
   benchmark: Record<string, JsonValue> | null;
   positionsData: PositionsResponse;
+  positionsError: string | null;
   initialPipeline: PipelineData | null;
 }
 
-export function OverviewPage({ snapshot, readiness, benchmark, positionsData, initialPipeline }: OverviewPageProps) {
-  const positionsQuery = useQuery({ queryKey: ['positions', 'overview'], queryFn: () => fetchJson<PositionsResponse>('/api/positions/recent?seconds=600&limit=250'), initialData: positionsData, refetchInterval: 10_000 });
+export function OverviewPage({ snapshot, readiness, benchmark, positionsData, positionsError, initialPipeline }: OverviewPageProps) {
+  const positionsQuery = useQuery({ queryKey: ['positions', 'overview'], queryFn: () => fetchJson<PositionsResponse>(PUBLIC_POSITIONS_PATH), initialData: positionsData, refetchInterval: 10_000 });
   const receiversQuery = useQuery({ queryKey: ['receivers', 'overview'], queryFn: () => fetchJson<ReceiversResponse>('/api/receivers'), initialData: snapshot.receiverData ?? { receivers: [] }, refetchInterval: 15_000 });
   const pipelineQuery = useQuery({ queryKey: ['pipeline', 'overview'], queryFn: () => fetchJson<PipelineData>('/api/pipeline'), initialData: initialPipeline ?? undefined, refetchInterval: 15_000 });
   const aircraft = useMemo(() => latestPositions(positionsQuery.data.positions ?? []), [positionsQuery.data.positions]);
@@ -43,6 +47,7 @@ export function OverviewPage({ snapshot, readiness, benchmark, positionsData, in
   const signalAge = health?.freshness?.last_signal_age_s;
   const storeAge = health?.freshness?.last_store_age_s;
   const activeReceivers = Number(readiness?.dimensions?.reliability?.active_receivers ?? receivers.length);
+  const registeredRuntimeReceivers = receivers.filter((receiver) => receiverIdentity(receiver) !== null).length;
   const systemTone: StatusTone = !mode ? 'failure' : isReplay ? 'replay' : readiness?.ready ? 'healthy' : 'attention';
   const systemLabel = !mode ? 'System unavailable' : isReplay ? 'Replay operations' : readiness?.ready ? 'System operational' : 'Attention required';
   const blockers = pipeline?.blockers ?? [];
@@ -66,8 +71,8 @@ export function OverviewPage({ snapshot, readiness, benchmark, positionsData, in
   ];
 
   const liveRail: Array<{ title: string; detail: string; meta: string; tone: StatusTone; href: string }> = [
-    { title: 'Air picture', detail: `${aircraft.length} aircraft in the current ten-minute window.`, meta: storeAge == null ? 'Awaiting solve' : `${Math.round(storeAge)}s`, tone: aircraft.length ? 'healthy' : 'attention', href: '/app/localization' },
-    { title: 'Receiver fleet', detail: `${activeReceivers} active receivers contribute to current localization.`, meta: `${receivers.length} visible`, tone: activeReceivers >= 4 ? 'healthy' : 'failure', href: '/app/receivers' },
+    { title: 'Air picture', detail: `${aircraft.length} aircraft in the current five-minute window.`, meta: storeAge == null ? 'Awaiting solve' : `${Math.round(storeAge)}s`, tone: aircraft.length ? 'healthy' : 'attention', href: '/app/localization' },
+    { title: 'Receiver fleet', detail: `${activeReceivers} receivers are available in the current MLAT pool.`, meta: `${receivers.length} visible`, tone: activeReceivers >= 4 ? 'healthy' : 'failure', href: '/app/receivers' },
     { title: 'Evidence posture', detail: evidenceReady ? 'Output is benchmarkable and ready for review.' : 'Evidence gates remain constrained.', meta: evidenceReady ? 'Ready' : 'Pending', tone: evidenceReady ? 'trust' : 'attention', href: '/app/pipeline' },
   ];
 
@@ -106,6 +111,7 @@ export function OverviewPage({ snapshot, readiness, benchmark, positionsData, in
 
   return (
     <div className="space-y-4">
+      {(positionsQuery.error instanceof Error || (positionsError && !positionsQuery.isFetchedAfterMount)) ? <DataNotice title="Aircraft positions are unavailable" detail={positionsQuery.error instanceof Error ? positionsQuery.error.message : positionsError ?? 'The latest position request failed.'} onRetry={() => void positionsQuery.refetch()} /> : null}
       <WorkspaceHeader
         eyebrow="Operate"
         title="Operational landing page"
@@ -114,6 +120,16 @@ export function OverviewPage({ snapshot, readiness, benchmark, positionsData, in
         actions={<Link href={alerts.length ? '/app/pipeline' : '/app/localization'} className={buttonVariants({ variant: alerts.length ? 'primary' : 'secondary' })}>{alerts.length ? 'Investigate issue' : 'Open live map'}<ArrowRight className="size-4" /></Link>}
         rail={<SignalMarquee items={[{ label: 'Tracked aircraft', value: number(aircraft.length), tone: aircraft.length ? 'healthy' : 'attention' }, { label: 'Active receivers', value: `${number(activeReceivers)}/${number(receivers.length)}`, tone: activeReceivers >= 4 ? 'healthy' : 'failure' }, { label: 'Evidence posture', value: evidenceReady ? 'Ready' : 'Constrained', tone: evidenceReady ? 'trust' : 'attention' }, { label: 'Pipeline blockers', value: number(blockers.length), tone: blockers.length ? 'failure' : 'healthy' }]} />}
       />
+
+      <WorkspacePanel title="Receiver to aircraft flow" detail="Follow the current operating state from canonical identity to localization result." tone={systemTone}>
+        <SystemFlow ariaLabel="Receiver Registry discovery MLAT aircraft flow" nodes={[
+          { id: 'receiver', label: 'Receivers', detail: `${receivers.length} in current inventory`, tone: receivers.length ? 'selection' : 'attention', href: '/app/receivers' },
+          { id: 'registry', label: 'Registry', detail: mode?.registry_discovery_live ? 'CKB discovery connected' : mode?.receiver_registry_type_hash ? 'Refresh unavailable' : 'Not configured', tone: mode?.registry_discovery_live ? 'trust' : 'failure', href: '/app/registry' },
+          { id: 'discovery', label: 'Discovery', detail: `${registeredRuntimeReceivers} canonical identities in MLAT`, tone: mode?.registry_discovery_live ? (registeredRuntimeReceivers ? 'healthy' : 'attention') : isReplay ? 'replay' : 'attention', href: '/app/receivers' },
+          { id: 'mlat', label: 'MLAT', detail: pipeline?.pipeline_operational ? 'Processing observations' : 'Waiting on upstream stages', tone: isReplay ? 'replay' : pipeline?.pipeline_operational ? 'healthy' : 'attention', href: '/app/pipeline' },
+          { id: 'aircraft', label: 'Aircraft', detail: `${aircraft.length} localized in five minutes`, tone: aircraft.length ? 'healthy' : 'attention', href: '/app/aircraft' },
+        ]} />
+      </WorkspacePanel>
 
       <StatStrip items={summaryStats} />
 

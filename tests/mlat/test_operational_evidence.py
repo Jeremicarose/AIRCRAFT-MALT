@@ -140,7 +140,7 @@ def test_raw_observation_clocks_must_match_pinned_config():
     records = _raw_records()
     receivers = [
         {
-            "receiver_id": record["receiver_id"],
+            "receiver_identity": record["receiver_id"],
             "clock": {
                 "source": record["clock_source"],
                 "uncertainty_ns": record["clock_uncertainty_ns"],
@@ -222,7 +222,7 @@ def test_evidence_verifier_resolves_position_from_raw_arrival_times():
     ]
     receiver_rows = [
         {
-            "identity_id": receiver.receiver_id,
+            "receiver_identity": receiver.receiver_id,
             "latitude": receiver.latitude,
             "longitude": receiver.longitude,
             "altitude": receiver.altitude,

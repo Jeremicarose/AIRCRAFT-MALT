@@ -9,8 +9,20 @@ import json
 from pathlib import Path, PurePosixPath
 import re
 import ssl
+import sys
 from typing import Any
+import urllib.error
 import urllib.request
+
+ROOT = Path(__file__).resolve().parents[2]
+SRC = ROOT / "src"
+if str(SRC) not in sys.path:
+    sys.path.insert(0, str(SRC))
+
+from ckb_registry.record import (
+    calculate_type_id,
+    decode_registry_v2_record,
+)
 
 ACCEPTED_STAGES = ("deployment", "create", "update", "transfer", "revoke")
 LIFECYCLE_STAGES = ("create", "update", "transfer", "revoke")
@@ -41,6 +53,145 @@ def ckb_hash(path: Path) -> str:
     return (
         "0x"
         + hashlib.blake2b(path.read_bytes(), digest_size=32, person=b"ckb-default-hash").hexdigest()
+    )
+
+
+def _number(value: Any, field: str) -> int:
+    try:
+        result = int(value, 0) if isinstance(value, str) else int(value)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"{field} is not an integer") from exc
+    if result < 0:
+        raise ValueError(f"{field} must be non-negative")
+    return result
+
+
+def _hex_bytes(value: Any, field: str, length: int | None = None) -> bytes:
+    if not isinstance(value, str) or not value.startswith("0x") or len(value) % 2:
+        raise ValueError(f"{field} must be 0x-prefixed hexadecimal")
+    try:
+        result = bytes.fromhex(value[2:])
+    except ValueError as exc:
+        raise ValueError(f"{field} must be hexadecimal") from exc
+    if length is not None and len(result) != length:
+        raise ValueError(f"{field} must contain {length} bytes")
+    return result
+
+
+def _u32(value: int) -> bytes:
+    return value.to_bytes(4, "little")
+
+
+def _u64(value: int) -> bytes:
+    return value.to_bytes(8, "little")
+
+
+def _fixvec(items: list[bytes]) -> bytes:
+    return _u32(len(items)) + b"".join(items)
+
+
+def _dynvec(items: list[bytes]) -> bytes:
+    if not items:
+        return _u32(4)
+    header_size = 4 + 4 * len(items)
+    offsets: list[bytes] = []
+    offset = header_size
+    for item in items:
+        offsets.append(_u32(offset))
+        offset += len(item)
+    return _u32(offset) + b"".join(offsets) + b"".join(items)
+
+
+def _molecule_bytes(value: Any, field: str) -> bytes:
+    raw = _hex_bytes(value, field)
+    return _u32(len(raw)) + raw
+
+
+def _script_bytes(script: dict[str, Any], field: str) -> bytes:
+    hash_types = {"data": 0, "type": 1, "data1": 2, "data2": 4}
+    hash_type = script.get("hash_type")
+    if hash_type not in hash_types:
+        raise ValueError(f"{field}.hash_type is invalid")
+    return _dynvec(
+        [
+            _hex_bytes(script.get("code_hash"), f"{field}.code_hash", 32),
+            bytes([hash_types[hash_type]]),
+            _molecule_bytes(script.get("args"), f"{field}.args"),
+        ]
+    )
+
+
+def raw_transaction_bytes(transaction: dict[str, Any]) -> bytes:
+    dep_types = {"code": 0, "dep_group": 1}
+    cell_deps = []
+    for index, dep in enumerate(transaction.get("cell_deps", [])):
+        out_point = dep.get("out_point") or {}
+        dep_type = dep_types.get(dep.get("dep_type"))
+        if dep_type is None:
+            raise ValueError(f"cell_deps[{index}].dep_type is invalid")
+        cell_deps.append(
+            _hex_bytes(out_point.get("tx_hash"), f"cell_deps[{index}].tx_hash", 32)
+            + _number(out_point.get("index"), f"cell_deps[{index}].index").to_bytes(4, "little")
+            + bytes([dep_type])
+        )
+
+    inputs = []
+    for index, item in enumerate(transaction.get("inputs", [])):
+        out_point = item.get("previous_output") or {}
+        inputs.append(
+            _u64(_number(item.get("since", 0), f"inputs[{index}].since"))
+            + _hex_bytes(out_point.get("tx_hash"), f"inputs[{index}].tx_hash", 32)
+            + _number(out_point.get("index"), f"inputs[{index}].index").to_bytes(4, "little")
+        )
+
+    outputs = []
+    for index, output in enumerate(transaction.get("outputs", [])):
+        type_script = output.get("type")
+        outputs.append(
+            _dynvec(
+                [
+                    _u64(_number(output.get("capacity"), f"outputs[{index}].capacity")),
+                    _script_bytes(output.get("lock") or {}, f"outputs[{index}].lock"),
+                    (
+                        b""
+                        if type_script is None
+                        else _script_bytes(type_script, f"outputs[{index}].type")
+                    ),
+                ]
+            )
+        )
+
+    raw = _dynvec(
+        [
+            _u32(_number(transaction.get("version", 0), "version")),
+            _fixvec(cell_deps),
+            _fixvec(
+                [
+                    _hex_bytes(value, f"header_deps[{index}]", 32)
+                    for index, value in enumerate(transaction.get("header_deps", []))
+                ]
+            ),
+            _fixvec(inputs),
+            _dynvec(outputs),
+            _dynvec(
+                [
+                    _molecule_bytes(value, f"outputs_data[{index}]")
+                    for index, value in enumerate(transaction.get("outputs_data", []))
+                ]
+            ),
+        ]
+    )
+    return raw
+
+
+def calculate_transaction_hash(transaction: dict[str, Any]) -> str:
+    return (
+        "0x"
+        + hashlib.blake2b(
+            raw_transaction_bytes(transaction),
+            digest_size=32,
+            person=b"ckb-default-hash",
+        ).hexdigest()
     )
 
 
@@ -115,8 +266,19 @@ def rpc(url: str, method: str, params: list[Any]) -> Any:
             ssl_context = ssl.create_default_context(cafile=certifi.where())
         except ImportError:
             ssl_context = ssl.create_default_context()
-    with urllib.request.urlopen(request, timeout=30, context=ssl_context) as response:
-        body = json.loads(response.read().decode())
+    try:
+        with urllib.request.urlopen(request, timeout=30, context=ssl_context) as response:
+            body = json.loads(response.read().decode())
+    except urllib.error.URLError as exc:
+        reason = str(exc.reason)
+        hint = (
+            " Check this machine's CA certificate store."
+            if isinstance(exc.reason, ssl.SSLCertVerificationError)
+            else ""
+        )
+        raise RuntimeError(
+            f"CKB RPC request to {url} failed while calling {method}: {reason}.{hint}"
+        ) from None
     if body.get("error") is not None:
         raise RuntimeError(json.dumps(body["error"], sort_keys=True))
     return body["result"]
@@ -145,7 +307,7 @@ def transaction_view(response: dict[str, Any]) -> dict[str, Any]:
 def record_from_transaction(response: dict[str, Any]) -> dict[str, Any]:
     transaction = transaction_view(response)
     data_hex = transaction["outputs_data"][0]
-    return json.loads(bytes.fromhex(data_hex[2:]).decode())
+    return decode_registry_v2_record(bytes.fromhex(data_hex[2:])).to_payload_dict()
 
 
 def first_output(response: dict[str, Any]) -> dict[str, Any]:
@@ -165,6 +327,15 @@ def verify_bundle(bundle: Path, *, live: bool = False) -> dict[str, Any]:
     if not manifest_path.is_file():
         return {"pass": False, "checks": verification.checks}
     manifest = load_json(manifest_path)
+    receiver_manifest = manifest.get("receiver") or {}
+    expected_receiver_identity = receiver_manifest.get(
+        "receiver_identity", receiver_manifest.get("identity_id")
+    )
+    verification.require(
+        "receiver_identity present",
+        isinstance(expected_receiver_identity, str),
+        str(expected_receiver_identity),
+    )
     verification.require(
         "manifest status complete",
         manifest.get("status") == "complete",
@@ -231,6 +402,19 @@ def verify_bundle(bundle: Path, *, live: bool = False) -> dict[str, Any]:
         )
 
     accepted = manifest["accepted_transactions"]
+    expected_code_hash = manifest["contract"]["type_script_hash_for_registry_code_hash"]
+    expected_hash_type = manifest["contract"].get("registry_script_hash_type", "type")
+    verification.require(
+        "registry script hash type",
+        expected_hash_type in {"data1", "type"},
+        str(expected_hash_type),
+    )
+    if expected_hash_type == "data1":
+        verification.require(
+            "immutable data1 code binding",
+            expected_code_hash == manifest["contract"]["binary_ckb_data_hash"],
+            f"code_hash={expected_code_hash} data_hash={manifest['contract']['binary_ckb_data_hash']}",
+        )
     saved: dict[str, dict[str, Any]] = {}
     for stage in ACCEPTED_STAGES:
         path = bundle / "rpc" / f"{stage}-transaction.json"
@@ -247,6 +431,15 @@ def verify_bundle(bundle: Path, *, live: bool = False) -> dict[str, Any]:
             observed_hash == accepted[stage],
             f"expected={accepted[stage]} observed={observed_hash}",
         )
+        try:
+            calculated_hash = calculate_transaction_hash(transaction_view(response))
+        except (KeyError, OverflowError, TypeError, ValueError) as exc:
+            calculated_hash = f"invalid transaction body: {exc}"
+        verification.require(
+            f"{stage} transaction body hash",
+            calculated_hash == accepted[stage],
+            f"expected={accepted[stage]} calculated={calculated_hash}",
+        )
 
     if all(stage in saved for stage in LIFECYCLE_STAGES):
         create_parent = first_input_out_point(saved["create"])
@@ -256,6 +449,21 @@ def verify_bundle(bundle: Path, *, live: bool = False) -> dict[str, Any]:
             create_parent.get("tx_hash") == expected_funding["tx_hash"]
             and int(create_parent.get("index", "0x0"), 0) == int(expected_funding["index"], 0),
             str(create_parent),
+        )
+        create_input = transaction_view(saved["create"])["inputs"][0]
+        try:
+            calculated_identity = calculate_type_id(
+                first_input_tx_hash=create_parent["tx_hash"],
+                first_input_index=_number(create_parent["index"], "creation input index"),
+                first_input_since=_number(create_input.get("since", 0), "creation input since"),
+                output_index=0,
+            )
+        except (KeyError, TypeError, ValueError) as exc:
+            calculated_identity = f"invalid Type ID input: {exc}"
+        verification.require(
+            "creation Type ID derivation",
+            calculated_identity == expected_receiver_identity,
+            f"manifest={expected_receiver_identity} calculated={calculated_identity}",
         )
         expected_parents = {
             "update": accepted["create"],
@@ -283,25 +491,41 @@ def verify_bundle(bundle: Path, *, live: bool = False) -> dict[str, Any]:
 
         outputs = {stage: first_output(saved[stage]) for stage in LIFECYCLE_STAGES}
         identities = {output["type"]["args"] for output in outputs.values()}
-        code_hashes = {output["type"]["code_hash"] for output in outputs.values()}
+        type_scripts = [outputs[stage]["type"] for stage in LIFECYCLE_STAGES]
         verification.require(
             "immutable Receiver Identity",
-            identities == {manifest["receiver"]["identity_id"]},
+            identities == {expected_receiver_identity},
             str(sorted(identities)),
         )
         verification.require(
-            "registry code hash",
-            code_hashes == {manifest["contract"]["type_script_hash_for_registry_code_hash"]},
-            str(sorted(code_hashes)),
+            "complete registry type script",
+            all(
+                script
+                == {
+                    "args": expected_receiver_identity,
+                    "code_hash": expected_code_hash,
+                    "hash_type": expected_hash_type,
+                }
+                for script in type_scripts
+            ),
+            json.dumps(type_scripts, sort_keys=True),
         )
-        locks = [outputs[stage]["lock"]["args"] for stage in LIFECYCLE_STAGES]
+        locks = [outputs[stage]["lock"] for stage in LIFECYCLE_STAGES]
         expected_locks = [
             manifest["receiver"]["owner_a"]["lock_arg"],
             manifest["receiver"]["owner_a"]["lock_arg"],
             manifest["receiver"]["owner_b"]["lock_arg"],
             manifest["receiver"]["owner_b"]["lock_arg"],
         ]
-        verification.require("ownership transfer lock lineage", locks == expected_locks, str(locks))
+        lock_args = [lock.get("args") for lock in locks]
+        verification.require(
+            "ownership transfer lock lineage",
+            lock_args == expected_locks
+            and locks[0] == locks[1]
+            and locks[2] == locks[3]
+            and locks[0] != locks[2],
+            json.dumps(locks, sort_keys=True),
+        )
 
     for attack in manifest.get("rejected_attacks", []):
         response_path = bundle / "responses" / f"attack-{attack}.json"
@@ -333,9 +557,8 @@ def verify_bundle(bundle: Path, *, live: bool = False) -> dict[str, Any]:
     for sequence, stage in enumerate(LIFECYCLE_STAGES):
         indexer_path = bundle / "discovery" / f"{stage}-indexer.json"
         adapter_path = bundle / "discovery" / f"{stage}-adapter.json"
-        expected_identity = manifest["receiver"]["identity_id"]
+        expected_identity = expected_receiver_identity
         expected_label = manifest["receiver"].get("label")
-        expected_code_hash = manifest["contract"]["type_script_hash_for_registry_code_hash"]
         expected_tx_hash = accepted[stage]
 
         indexer_valid = False
@@ -354,7 +577,7 @@ def verify_bundle(bundle: Path, *, live: bool = False) -> dict[str, Any]:
                     and int(out_point.get("index", "-1"), 0) == 0
                     and type_script.get("args") == expected_identity
                     and type_script.get("code_hash") == expected_code_hash
-                    and type_script.get("hash_type") == "type"
+                    and type_script.get("hash_type") == expected_hash_type
                     and output == first_output(saved[stage])
                     and cell.get("output_data") == transaction.get("outputs_data", [None])[0]
                 )
@@ -378,7 +601,8 @@ def verify_bundle(bundle: Path, *, live: bool = False) -> dict[str, Any]:
                 metadata = receiver.get("metadata", {})
                 out_point = metadata.get("out_point", {})
                 adapter_valid = (
-                    receiver.get("identity_id") == expected_identity
+                    receiver.get("receiver_identity", receiver.get("identity_id"))
+                    == expected_identity
                     and receiver.get("receiver_id") == expected_label
                     and receiver.get("status") != "revoked"
                     and metadata.get("schema_version") == 2
@@ -387,7 +611,9 @@ def verify_bundle(bundle: Path, *, live: bool = False) -> dict[str, Any]:
                     and int(out_point.get("index", "-1"), 0) == 0
                 )
                 adapter_detail += (
-                    f" identity={receiver.get('identity_id')} sequence={metadata.get('sequence')}"
+                    " identity="
+                    f"{receiver.get('receiver_identity', receiver.get('identity_id'))}"
+                    f" sequence={metadata.get('sequence')}"
                 )
         verification.require(f"{stage} adapter discovery", adapter_valid, adapter_detail)
 
@@ -412,6 +638,28 @@ def verify_bundle(bundle: Path, *, live: bool = False) -> dict[str, Any]:
             response = rpc(manifest["rpc_url"], "get_transaction", [tx_hash])
             status = None if response is None else response.get("tx_status", {}).get("status")
             verification.require(f"live {stage} committed", status == "committed", str(status))
+            live_transaction = transaction_view(response or {})
+            verification.require(
+                f"live {stage} transaction body",
+                live_transaction == transaction_view(saved.get(stage, {})),
+                (
+                    "live RPC body matches saved body"
+                    if live_transaction == transaction_view(saved.get(stage, {}))
+                    else "live RPC body differs from saved evidence"
+                ),
+            )
+
+        contract_out_point = manifest["contract"]["out_point"]
+        live_contract = rpc(manifest["rpc_url"], "get_live_cell", [contract_out_point, True])
+        live_contract_hash = (((live_contract or {}).get("cell") or {}).get("data") or {}).get(
+            "hash"
+        )
+        verification.require(
+            "live contract cell and binary",
+            (live_contract or {}).get("status") == "live"
+            and live_contract_hash == manifest["contract"]["binary_ckb_data_hash"],
+            f"status={(live_contract or {}).get('status')} data_hash={live_contract_hash}",
+        )
 
     return {
         "pass": verification.passed,
@@ -423,7 +671,10 @@ def verify_bundle(bundle: Path, *, live: bool = False) -> dict[str, Any]:
 
 def main() -> None:
     args = parse_args()
-    report = verify_bundle(Path(args.bundle).resolve(), live=args.live)
+    try:
+        report = verify_bundle(Path(args.bundle).resolve(), live=args.live)
+    except RuntimeError as exc:
+        raise SystemExit(f"Registry V2 verification could not complete: {exc}") from None
     rendered = json.dumps(report, indent=2, sort_keys=True) + "\n"
     if args.output:
         Path(args.output).write_text(rendered)

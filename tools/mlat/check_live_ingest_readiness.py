@@ -23,7 +23,7 @@ SRC = ROOT / "src"
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
-from ckb_registry.record import normalize_identity_id
+from ckb_registry.record import normalize_receiver_identity
 from ckb_registry.discovery import CKBConfig, CKBPeerDiscovery
 
 SCRIPTS = ROOT / "tools" / "mlat"
@@ -155,12 +155,20 @@ async def _discover_registry_identities(env: dict[str, str]) -> set[str]:
             receiver_registry_type_hash=env.get("RECEIVER_REGISTRY_TYPE_HASH", ""),
             api_timeout=int(env.get("CKB_API_TIMEOUT", "15")),
             ssl_verify=env.get("CKB_SSL_VERIFY", "true").lower() == "true",
-            max_record_age_seconds=int(env.get("CKB_MAX_RECORD_AGE_SECONDS", "86400")),
+            max_record_age_seconds=(
+                int(env["CKB_MAX_RECORD_AGE_SECONDS"])
+                if env.get("CKB_MAX_RECORD_AGE_SECONDS")
+                else None
+            ),
         )
     )
     await discovery.initialize()
     try:
-        return {receiver.identity_id for receiver in await discovery.discover_peers()}
+        return {
+            receiver.receiver_identity
+            for receiver in await discovery.discover_peers()
+            if receiver.receiver_identity is not None
+        }
     finally:
         await discovery.shutdown()
 
@@ -212,7 +220,7 @@ def build_report(
         else ("", "")
     )
     try:
-        normalize_identity_id(registry_type_hash)
+        normalize_receiver_identity(registry_type_hash)
         registry_type_hash_valid = True
     except ValueError:
         registry_type_hash_valid = False
@@ -252,7 +260,7 @@ def build_report(
         reachable = probe_tcp(receiver["host"], receiver["port"])
         receiver_checks.append(
             {
-                "receiver_id": receiver["receiver_id"],
+                "receiver_identity": receiver["receiver_identity"],
                 "sensor_id": receiver["sensor_id"],
                 "endpoint": f'{receiver["host"]}:{receiver["port"]}',
                 "endpoint_reachable": reachable,
@@ -267,7 +275,7 @@ def build_report(
     all_configured_endpoints_reachable = bool(receiver_checks) and all(
         check["endpoint_reachable"] for check in receiver_checks
     )
-    configured_identity_ids = {receiver["receiver_id"] for receiver in receivers}
+    configured_identity_ids = {receiver["receiver_identity"] for receiver in receivers}
     discovered_identity_ids = registry_identity_ids or set()
     missing_registry_identities = sorted(configured_identity_ids - discovered_identity_ids)
     registry_identities_verified = bool(
