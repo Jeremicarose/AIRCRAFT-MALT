@@ -461,6 +461,7 @@ def test_system_mode_exposes_strict_production_configuration(monkeypatch, tmp_pa
         STRICT_PRODUCTION_MODE="true",
         FOURDSKY_TRANSPORT="command-jsonl",
         SIMULATE_IF_UNAVAILABLE="false",
+        RECEIVER_REGISTRY_HASH_TYPE="data1",
     )
     app = module.create_app()
     client = app.test_client()

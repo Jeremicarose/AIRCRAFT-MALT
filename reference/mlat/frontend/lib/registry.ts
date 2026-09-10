@@ -4,6 +4,7 @@ import {
   REGISTRY_V2_PUDGE_2026_07_30,
   RegistryV2Sdk,
   type DiscoveredReceiver,
+  type RegistryDeployment,
   type RegistryHistoryEvent,
   type RegistryV2Record,
 } from '@aircraft-malt/registry-v2';
@@ -12,10 +13,52 @@ import type { Receiver } from '@/lib/types';
 
 export const CKB_TESTNET_EXPLORER = 'https://pudge.explorer.nervos.org';
 
-export const REGISTRY_V2_TESTNET_DEPLOYMENT = REGISTRY_V2_PUDGE_2026_07_30;
+function configuredTestnetDeployment(): RegistryDeployment {
+  const contractCodeHash = process.env.NEXT_PUBLIC_REGISTRY_CODE_HASH?.trim();
+  const contractTransactionHash = process.env.NEXT_PUBLIC_REGISTRY_CONTRACT_TX_HASH?.trim();
+  const contractIndex = process.env.NEXT_PUBLIC_REGISTRY_CONTRACT_INDEX?.trim();
+  const configuredValues = [contractCodeHash, contractTransactionHash, contractIndex];
+
+  if (configuredValues.every((value) => !value)) return REGISTRY_V2_PUDGE_2026_07_30;
+  if (configuredValues.some((value) => !value)) {
+    throw new Error(
+      'Immutable Registry deployment configuration is incomplete; set code hash, contract transaction hash, and contract index together',
+    );
+  }
+  if (!/^0x[0-9a-fA-F]{64}$/.test(contractCodeHash!)) {
+    throw new Error('NEXT_PUBLIC_REGISTRY_CODE_HASH must be 0x-prefixed 32-byte hex');
+  }
+  if (!/^0x[0-9a-fA-F]{64}$/.test(contractTransactionHash!)) {
+    throw new Error('NEXT_PUBLIC_REGISTRY_CONTRACT_TX_HASH must be 0x-prefixed 32-byte hex');
+  }
+  if (!/^(0x[0-9a-fA-F]+|[0-9]+)$/.test(contractIndex!)) {
+    throw new Error('NEXT_PUBLIC_REGISTRY_CONTRACT_INDEX must be a non-negative integer');
+  }
+  const outputIndex = Number(BigInt(contractIndex!));
+  if (!Number.isSafeInteger(outputIndex) || outputIndex < 0) {
+    throw new Error('NEXT_PUBLIC_REGISTRY_CONTRACT_INDEX must be a safe non-negative integer');
+  }
+
+  return {
+    contractCodeHash: contractCodeHash!.toLowerCase(),
+    scriptHashType: 'data1',
+    contractCellDep: {
+      outPoint: {
+        txHash: contractTransactionHash!.toLowerCase(),
+        index: outputIndex,
+      },
+      depType: 'code',
+    },
+  };
+}
+
+export const REGISTRY_V2_TESTNET_DEPLOYMENT = configuredTestnetDeployment();
 
 export function createRegistrySdk(client: ccc.Client): RegistryV2Sdk {
-  return RegistryV2Sdk.testnet(client);
+  if (client.addressPrefix !== 'ckt') {
+    throw new Error(`Registry V2 pilot requires CKB testnet; received ${client.addressPrefix}`);
+  }
+  return new RegistryV2Sdk(client, REGISTRY_V2_TESTNET_DEPLOYMENT);
 }
 
 export async function withRegistryTimeout<T>(

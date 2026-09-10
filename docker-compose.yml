@@ -37,6 +37,10 @@ services:
     build:
       context: .
       dockerfile: reference/mlat/frontend/Dockerfile
+      args:
+        NEXT_PUBLIC_REGISTRY_CODE_HASH: ${NEXT_PUBLIC_REGISTRY_CODE_HASH:-}
+        NEXT_PUBLIC_REGISTRY_CONTRACT_TX_HASH: ${NEXT_PUBLIC_REGISTRY_CONTRACT_TX_HASH:-}
+        NEXT_PUBLIC_REGISTRY_CONTRACT_INDEX: ${NEXT_PUBLIC_REGISTRY_CONTRACT_INDEX:-}
     depends_on:
       mlat-api:
         condition: service_healthy
