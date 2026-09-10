@@ -94,10 +94,10 @@ jobs:
         run: npm ci
       - name: Test frontend receiver-state rules
         run: npm test
-      - name: Type-check MLAT reference frontend
-        run: npm run typecheck
       - name: Build MLAT reference frontend
         run: npm run build
+      - name: Type-check MLAT reference frontend
+        run: npm run typecheck
 
   registry-sdk:
     runs-on: ubuntu-24.04

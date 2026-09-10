@@ -57,8 +57,8 @@ jobs:
         run: |
           npm ci
           npm test
-          npm run typecheck
           npm run build
+          npm run typecheck
       - name: Test TypeScript Registry V2 SDK
         working-directory: sdk/typescript
         run: |
