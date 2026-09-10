@@ -1,0 +1,67 @@
+$ npm test
+cwd: reference/mlat/frontend
+exit_code: 0
+
+STDOUT
+
+> mlat-airspace-console@0.1.0 test
+> node --experimental-transform-types --test test/*.test.mjs
+
+TAP version 13
+# (node:6018) ExperimentalWarning: Transform Types is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: classifies observations inside the freshness window as fresh
+ok 1 - classifies observations inside the freshness window as fresh
+  ---
+  duration_ms: 1.769191
+  type: 'test'
+  ...
+# Subtest: classifies observations outside the freshness window as stale
+ok 2 - classifies observations outside the freshness window as stale
+  ---
+  duration_ms: 0.359182
+  type: 'test'
+  ...
+# Subtest: fails closed for missing, malformed, or non-positive timestamps
+ok 3 - fails closed for missing, malformed, or non-positive timestamps
+  ---
+  duration_ms: 0.328193
+  type: 'test'
+  ...
+# Subtest: rejects observations beyond the allowed future clock skew
+ok 4 - rejects observations beyond the allowed future clock skew
+  ---
+  duration_ms: 0.277887
+  type: 'test'
+  ...
+# (node:6019) ExperimentalWarning: Transform Types is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: matches a replay correlation ID to its namespaced operational receiver
+ok 5 - matches a replay correlation ID to its namespaced operational receiver
+  ---
+  duration_ms: 3.432442
+  type: 'test'
+  ...
+# Subtest: uses only the canonical identity after a receiver is registered
+ok 6 - uses only the canonical identity after a receiver is registered
+  ---
+  duration_ms: 0.401361
+  type: 'test'
+  ...
+# Subtest: prepares static assets beside the nested standalone server
+ok 7 - prepares static assets beside the nested standalone server
+  ---
+  duration_ms: 39.064779
+  type: 'test'
+  ...
+1..7
+# tests 7
+# suites 0
+# pass 7
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 386.410506
+
+STDERR

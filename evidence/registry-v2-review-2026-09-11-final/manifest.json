@@ -1,0 +1,257 @@
+{
+  "conformance": {
+    "corpus": "tests/registry/fixtures/registry_v2_conformance.json",
+    "corpus_sha256": "3ed301fb063cae1fcc858bde3821bcbc05238231c8582af03776d849349622fe",
+    "report": "conformance-report.json",
+    "summary": {
+      "assertion_count": 171,
+      "case_count": 57,
+      "conformant": true,
+      "cross_language_equal": true,
+      "failed_case_count": 0,
+      "implementation_count": 3,
+      "passed_case_count": 57
+    }
+  },
+  "contract_candidate": {
+    "binary": "contract/receiver-registry",
+    "binary_bytes": 67008,
+    "binary_ckb_data_hash": "0x40ebcd7df892234592a97c987faadce70df6bcfb5f7fa24fa78431cc24f3d6fa",
+    "binary_sha256": "087a8b19ca99170d8d1e8c018b749259ce067ad3cb1cc8cef3b4a490ccae0465",
+    "deployment_status": "not_deployed",
+    "future_registry_code_hash": null
+  },
+  "external_dependencies": {
+    "fresh_sdk_testnet_lifecycle": "blocked_external_signer_and_testnet_funds",
+    "independent_security_review": "not_completed"
+  },
+  "generated_at": "2026-09-10T23:35:47.426759Z",
+  "historical_testnet_deployment": {
+    "binary_sha256": "688fdc5f755029fa3c93365663f0bd2d118d4bacb53340234a1cecb171ad4f77",
+    "bundle": "evidence/registry-v2-testnet-2026-07-30-final",
+    "contract_out_point": {
+      "index": "0x0",
+      "tx_hash": "0x070820e96a268635edfd0ecdffc2c2d07061ce2cd79e16a8d159a86d472cc3b3"
+    },
+    "contract_source_commit": "61ab011de58397cb8d6ca3cecb5c659c69e2fc8c",
+    "deployment_tx_hash": "0x070820e96a268635edfd0ecdffc2c2d07061ce2cd79e16a8d159a86d472cc3b3",
+    "registry_code_hash": "0x1efe03c91687a43e8f8fc24d2fbb911e7071761ec4eaba06281cb52d8b505b6c",
+    "status": "immutable_historical_evidence"
+  },
+  "private_keys_included": false,
+  "schema_version": 1,
+  "source": {
+    "commit": "e7cb2af97a3e095e5e07e593d13d5dba968a9bcd",
+    "repository": "https://github.com/Jeremicarose/AIRCRAFT-MALT.git",
+    "review_paths": [
+      ".github/workflows/registry-v2.yml",
+      "contracts/registry-v2/Cargo.lock",
+      "contracts/registry-v2/examples/conformance.rs",
+      "contracts/registry-v2/src/entry.rs",
+      "contracts/registry-v2/src/error.rs",
+      "contracts/registry-v2/src/record.rs",
+      "contracts/registry-v2/tests/lifecycle.rs",
+      "src/ckb_registry/discovery.py",
+      "src/ckb_registry/record.py",
+      "src/mlat_reference/api/rest_api.py",
+      "src/mlat_reference/config.py",
+      "src/mlat_reference/database/database.py",
+      "src/mlat_reference/ingest/client.py",
+      "src/mlat_reference/runtime.py",
+      "sdk/typescript/src/deployments.ts",
+      "sdk/typescript/src/discovery.ts",
+      "sdk/typescript/src/history.ts",
+      "sdk/typescript/src/index.ts",
+      "sdk/typescript/src/lifecycle.ts",
+      "sdk/typescript/src/record.ts",
+      "sdk/typescript/src/strict-json.ts",
+      "sdk/typescript/test/conformance-runner.ts",
+      "sdk/typescript/test/conformance.test.ts",
+      "sdk/typescript/test/deployments.test.ts",
+      "sdk/typescript/test/lifecycle.test.ts",
+      "reference/mlat/frontend/app/app/registry/page.tsx",
+      "reference/mlat/frontend/components/pages/receivers-page.tsx",
+      "reference/mlat/frontend/components/registry-action-panel.tsx",
+      "reference/mlat/frontend/lib/standalone.mjs",
+      "reference/mlat/frontend/lib/receiver-freshness.ts",
+      "reference/mlat/frontend/lib/receiver-reference.ts",
+      "reference/mlat/frontend/lib/receiver-state.ts",
+      "reference/mlat/frontend/lib/registry.ts",
+      "reference/mlat/frontend/lib/routes.ts",
+      "reference/mlat/frontend/package.json",
+      "reference/mlat/frontend/scripts/start-standalone.mjs",
+      "reference/mlat/frontend/test/standalone.test.mjs",
+      "reference/mlat/frontend/test/receiver-freshness.test.mjs",
+      "reference/mlat/frontend/test/receiver-reference.test.mjs",
+      "tests/registry/fixtures/registry_v2_conformance.json",
+      "tests/registry/test_registry_v2_conformance_report.py",
+      "tools/registry/generate_registry_v2_conformance_report.py",
+      "tools/registry/registry_v2_conformance.py"
+    ],
+    "tracked_worktree_clean": true,
+    "tree": "89817cc868cb5275f5c83e5a0b5928cbe5834ab6"
+  },
+  "status": "verified_undeployed_review_candidate",
+  "tool_versions": {
+    "cargo": "cargo 1.95.0 (f2d3ce0bd 2026-03-21)",
+    "node": "v22.22.1",
+    "npm": "10.9.4",
+    "python": "Python 3.13.7",
+    "rustc": "rustc 1.95.0 (59807616e 2026-04-14)\nbinary: rustc\ncommit-hash: 59807616e1fa2540724bfbac14d7976d7e4a3860\ncommit-date: 2026-04-14\nhost: x86_64-apple-darwin\nrelease: 1.95.0\nLLVM version: 22.1.2"
+  },
+  "verification": {
+    "all_passed": true,
+    "checks": [
+      {
+        "command": [
+          "/Users/jeremicarose/Downloads/mlat-system 2/.venv/bin/python3",
+          "-m",
+          "pytest",
+          "-q"
+        ],
+        "cwd": ".",
+        "exit_code": 0,
+        "log": "logs/python-tests.txt",
+        "name": "python-tests"
+      },
+      {
+        "command": [
+          "/Users/jeremicarose/Downloads/mlat-system 2/.venv/bin/python3",
+          "-m",
+          "black",
+          "--check",
+          "src/ckb_registry",
+          "src/mlat_reference",
+          "tools",
+          "tests"
+        ],
+        "cwd": ".",
+        "exit_code": 0,
+        "log": "logs/python-format.txt",
+        "name": "python-format"
+      },
+      {
+        "command": [
+          "/Users/jeremicarose/Downloads/mlat-system 2/.venv/bin/python3",
+          "-m",
+          "flake8",
+          "src/ckb_registry",
+          "src/mlat_reference",
+          "tools",
+          "tests"
+        ],
+        "cwd": ".",
+        "exit_code": 0,
+        "log": "logs/python-lint.txt",
+        "name": "python-lint"
+      },
+      {
+        "command": [
+          "/Users/jeremicarose/Downloads/mlat-system 2/.venv/bin/python3",
+          "tools/check_documentation.py"
+        ],
+        "cwd": ".",
+        "exit_code": 0,
+        "log": "logs/documentation.txt",
+        "name": "documentation"
+      },
+      {
+        "command": [
+          "/Users/jeremicarose/Downloads/mlat-system 2/.venv/bin/python3",
+          "tools/registry/verify_registry_v2_evidence.py",
+          "--bundle",
+          "evidence/registry-v2-testnet-2026-07-30-final"
+        ],
+        "cwd": ".",
+        "exit_code": 0,
+        "log": "logs/historical-testnet-evidence.txt",
+        "name": "historical-testnet-evidence"
+      },
+      {
+        "command": [
+          "/Users/jeremicarose/Downloads/mlat-system 2/.venv/bin/python3",
+          "tools/mlat/run_reproducible_benchmark.py",
+          "--verify-only"
+        ],
+        "cwd": ".",
+        "exit_code": 0,
+        "log": "logs/deterministic-mlat-evidence.txt",
+        "name": "deterministic-mlat-evidence"
+      },
+      {
+        "command": [
+          "make",
+          "test"
+        ],
+        "cwd": "contracts/registry-v2",
+        "exit_code": 0,
+        "log": "logs/contract-tests.txt",
+        "name": "contract-tests"
+      },
+      {
+        "command": [
+          "make",
+          "check"
+        ],
+        "cwd": "contracts/registry-v2",
+        "exit_code": 0,
+        "log": "logs/contract-target-check.txt",
+        "name": "contract-target-check"
+      },
+      {
+        "command": [
+          "npm",
+          "test"
+        ],
+        "cwd": "sdk/typescript",
+        "exit_code": 0,
+        "log": "logs/typescript-sdk-tests.txt",
+        "name": "typescript-sdk-tests"
+      },
+      {
+        "command": [
+          "npm",
+          "test"
+        ],
+        "cwd": "reference/mlat/frontend",
+        "exit_code": 0,
+        "log": "logs/frontend-tests.txt",
+        "name": "frontend-tests"
+      },
+      {
+        "command": [
+          "npm",
+          "run",
+          "typecheck"
+        ],
+        "cwd": "reference/mlat/frontend",
+        "exit_code": 0,
+        "log": "logs/frontend-typecheck.txt",
+        "name": "frontend-typecheck"
+      },
+      {
+        "command": [
+          "npm",
+          "run",
+          "build"
+        ],
+        "cwd": "reference/mlat/frontend",
+        "exit_code": 0,
+        "log": "logs/frontend-build.txt",
+        "name": "frontend-build"
+      },
+      {
+        "command": [
+          "/Users/jeremicarose/Downloads/mlat-system 2/.venv/bin/python3",
+          "tools/registry/generate_registry_v2_conformance_report.py",
+          "--output",
+          "/Users/jeremicarose/Downloads/mlat-system 2/evidence/registry-v2-review-2026-09-11-final/conformance-report.json"
+        ],
+        "cwd": ".",
+        "exit_code": 0,
+        "log": "logs/cross-language-conformance.txt",
+        "name": "cross-language-conformance"
+      }
+    ]
+  }
+}

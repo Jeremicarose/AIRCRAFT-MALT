@@ -1,0 +1,445 @@
+$ npm test
+cwd: sdk/typescript
+exit_code: 0
+
+STDOUT
+
+> @aircraft-malt/registry-v2@0.1.0 test
+> npm run build && node --test dist/test/*.test.js
+
+
+> @aircraft-malt/registry-v2@0.1.0 build
+> tsc -p tsconfig.json
+
+TAP version 13
+# (node:5990) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+# (Use `node --trace-deprecation ...` to show where the warning was created)
+# Subtest: all languages consume conformance corpus version 2
+ok 1 - all languages consume conformance corpus version 2
+  ---
+  duration_ms: 3.690341
+  type: 'test'
+  ...
+# Subtest: record: valid_creation_with_stream
+ok 2 - record: valid_creation_with_stream
+  ---
+  duration_ms: 4.18024
+  type: 'test'
+  ...
+# Subtest: record: valid_u64_minimums
+ok 3 - record: valid_u64_minimums
+  ---
+  duration_ms: 1.305017
+  type: 'test'
+  ...
+# Subtest: record: valid_integer_coordinates
+ok 4 - record: valid_integer_coordinates
+  ---
+  duration_ms: 1.369674
+  type: 'test'
+  ...
+# Subtest: record: valid_negative_zero_coordinate
+ok 5 - record: valid_negative_zero_coordinate
+  ---
+  duration_ms: 0.621795
+  type: 'test'
+  ...
+# Subtest: record: valid_revoked_tombstone
+ok 6 - record: valid_revoked_tombstone
+  ---
+  duration_ms: 0.477987
+  type: 'test'
+  ...
+# Subtest: record: reject_v1_record
+ok 7 - record: reject_v1_record
+  ---
+  duration_ms: 0.358968
+  type: 'test'
+  ...
+# Subtest: record: reject_unknown_field
+ok 8 - record: reject_unknown_field
+  ---
+  duration_ms: 0.255963
+  type: 'test'
+  ...
+# Subtest: record: reject_numeric_string
+ok 9 - record: reject_numeric_string
+  ---
+  duration_ms: 0.607475
+  type: 'test'
+  ...
+# Subtest: record: reject_boolean_coordinate
+ok 10 - record: reject_boolean_coordinate
+  ---
+  duration_ms: 0.759019
+  type: 'test'
+  ...
+# Subtest: record: reject_revoked_stream
+ok 11 - record: reject_revoked_stream
+  ---
+  duration_ms: 0.457091
+  type: 'test'
+  ...
+# Subtest: record: reject_negative_sequence
+ok 12 - record: reject_negative_sequence
+  ---
+  duration_ms: 0.24069
+  type: 'test'
+  ...
+# Subtest: record: reject_negative_zero_sequence
+ok 13 - record: reject_negative_zero_sequence
+  ---
+  duration_ms: 0.215115
+  type: 'test'
+  ...
+# Subtest: record: reject_zero_updated_at
+ok 14 - record: reject_zero_updated_at
+  ---
+  duration_ms: 0.609077
+  type: 'test'
+  ...
+# Subtest: record: valid_u64_maximums
+ok 15 - record: valid_u64_maximums
+  ---
+  duration_ms: 0.3177
+  type: 'test'
+  ...
+# Subtest: record: reject_sequence_above_u64
+ok 16 - record: reject_sequence_above_u64
+  ---
+  duration_ms: 0.247411
+  type: 'test'
+  ...
+# Subtest: record: reject_updated_at_above_u64
+ok 17 - record: reject_updated_at_above_u64
+  ---
+  duration_ms: 0.21931
+  type: 'test'
+  ...
+# Subtest: record: reject_boolean_sequence
+ok 18 - record: reject_boolean_sequence
+  ---
+  duration_ms: 0.217965
+  type: 'test'
+  ...
+# Subtest: record: reject_float_sequence
+ok 19 - record: reject_float_sequence
+  ---
+  duration_ms: 0.216061
+  type: 'test'
+  ...
+# Subtest: record: reject_v2_schema_mismatch
+ok 20 - record: reject_v2_schema_mismatch
+  ---
+  duration_ms: 0.252141
+  type: 'test'
+  ...
+# Subtest: record: reject_invalid_status
+ok 21 - record: reject_invalid_status
+  ---
+  duration_ms: 0.191246
+  type: 'test'
+  ...
+# Subtest: record: reject_invalid_coordinates
+ok 22 - record: reject_invalid_coordinates
+  ---
+  duration_ms: 0.186288
+  type: 'test'
+  ...
+# Subtest: record: reject_malformed_metadata_hash
+ok 23 - record: reject_malformed_metadata_hash
+  ---
+  duration_ms: 0.222796
+  type: 'test'
+  ...
+# Subtest: record: reject_malformed_metadata_type
+ok 24 - record: reject_malformed_metadata_type
+  ---
+  duration_ms: 1.582206
+  type: 'test'
+  ...
+# Subtest: record: reject_missing_required_field
+ok 25 - record: reject_missing_required_field
+  ---
+  duration_ms: 0.433971
+  type: 'test'
+  ...
+# Subtest: record: reject_empty_stream_endpoint
+ok 26 - record: reject_empty_stream_endpoint
+  ---
+  duration_ms: 0.330424
+  type: 'test'
+  ...
+# Subtest: record: reject_escaped_stream_endpoint
+ok 27 - record: reject_escaped_stream_endpoint
+  ---
+  duration_ms: 0.343132
+  type: 'test'
+  ...
+# Subtest: record: reject_leading_plus_coordinate
+ok 28 - record: reject_leading_plus_coordinate
+  ---
+  duration_ms: 0.196633
+  type: 'test'
+  ...
+# Subtest: record: reject_leading_zero_coordinate
+ok 29 - record: reject_leading_zero_coordinate
+  ---
+  duration_ms: 0.201371
+  type: 'test'
+  ...
+# Subtest: record: reject_duplicate_json_field
+ok 30 - record: reject_duplicate_json_field
+  ---
+  duration_ms: 0.195346
+  type: 'test'
+  ...
+# Subtest: identity: valid_32_byte_identity
+ok 31 - identity: valid_32_byte_identity
+  ---
+  duration_ms: 0.189551
+  type: 'test'
+  ...
+# Subtest: identity: valid_uppercase_identity
+ok 32 - identity: valid_uppercase_identity
+  ---
+  duration_ms: 0.093037
+  type: 'test'
+  ...
+# Subtest: identity: reject_31_byte_identity
+ok 33 - identity: reject_31_byte_identity
+  ---
+  duration_ms: 0.104556
+  type: 'test'
+  ...
+# Subtest: identity: reject_non_hex_identity
+ok 34 - identity: reject_non_hex_identity
+  ---
+  duration_ms: 0.095247
+  type: 'test'
+  ...
+# Subtest: identity: reject_trailing_newline_identity
+ok 35 - identity: reject_trailing_newline_identity
+  ---
+  duration_ms: 0.204183
+  type: 'test'
+  ...
+# Subtest: type id: first_input_index_one_output_zero
+ok 36 - type id: first_input_index_one_output_zero
+  ---
+  duration_ms: 4.976416
+  type: 'test'
+  ...
+# Subtest: creation: valid_create_with_canonical_type_id
+ok 37 - creation: valid_create_with_canonical_type_id
+  ---
+  duration_ms: 3.667797
+  type: 'test'
+  ...
+# Subtest: creation: reject_wrong_canonical_type_id_args
+ok 38 - creation: reject_wrong_canonical_type_id_args
+  ---
+  duration_ms: 2.827552
+  type: 'test'
+  ...
+# Subtest: creation: reject_v1_empty_type_id_args
+ok 39 - creation: reject_v1_empty_type_id_args
+  ---
+  duration_ms: 0.4152
+  type: 'test'
+  ...
+# Subtest: transition: normal_successor
+ok 40 - transition: normal_successor
+  ---
+  duration_ms: 0.409352
+  type: 'test'
+  ...
+# Subtest: transition: ownership_transfer_record
+ok 41 - transition: ownership_transfer_record
+  ---
+  duration_ms: 0.204877
+  type: 'test'
+  ...
+# Subtest: transition: permanent_revocation
+ok 42 - transition: permanent_revocation
+  ---
+  duration_ms: 1.145463
+  type: 'test'
+  ...
+# Subtest: transition: reject_sequence_reuse
+ok 43 - transition: reject_sequence_reuse
+  ---
+  duration_ms: 0.359807
+  type: 'test'
+  ...
+# Subtest: transition: reject_sequence_jump
+ok 44 - transition: reject_sequence_jump
+  ---
+  duration_ms: 0.488203
+  type: 'test'
+  ...
+# Subtest: transition: reject_label_mutation
+ok 45 - transition: reject_label_mutation
+  ---
+  duration_ms: 0.416186
+  type: 'test'
+  ...
+# Subtest: transition: reject_updated_at_rollback
+ok 46 - transition: reject_updated_at_rollback
+  ---
+  duration_ms: 0.33957
+  type: 'test'
+  ...
+# Subtest: transition: reject_resurrection
+ok 47 - transition: reject_resurrection
+  ---
+  duration_ms: 0.347775
+  type: 'test'
+  ...
+# Subtest: transition: reject_sequence_overflow
+ok 48 - transition: reject_sequence_overflow
+  ---
+  duration_ms: 0.254457
+  type: 'test'
+  ...
+# Subtest: transition: reject_changed_canonical_type_id
+ok 49 - transition: reject_changed_canonical_type_id
+  ---
+  duration_ms: 0.214258
+  type: 'test'
+  ...
+# Subtest: script: valid_registry_v2_script
+ok 50 - script: valid_registry_v2_script
+  ---
+  duration_ms: 1.797042
+  type: 'test'
+  ...
+# Subtest: script: reject_wrong_registry_script_identity
+ok 51 - script: reject_wrong_registry_script_identity
+  ---
+  duration_ms: 0.56166
+  type: 'test'
+  ...
+# Subtest: script: reject_wrong_hash_type
+ok 52 - script: reject_wrong_hash_type
+  ---
+  duration_ms: 0.540193
+  type: 'test'
+  ...
+# Subtest: script: reject_malformed_type_id_args
+ok 53 - script: reject_malformed_type_id_args
+  ---
+  duration_ms: 0.376843
+  type: 'test'
+  ...
+# Subtest: discovery: same_label_different_identities
+ok 54 - discovery: same_label_different_identities
+  ---
+  duration_ms: 23.625876
+  type: 'test'
+  ...
+# Subtest: discovery: duplicate_live_identity_fails_closed
+ok 55 - discovery: duplicate_live_identity_fails_closed
+  ---
+  duration_ms: 2.2102
+  type: 'test'
+  ...
+# Subtest: discovery: malformed_duplicate_identity_fails_closed
+ok 56 - discovery: malformed_duplicate_identity_fails_closed
+  ---
+  duration_ms: 8.944204
+  type: 'test'
+  ...
+# Subtest: discovery: revoked_tombstone_is_historical_only
+ok 57 - discovery: revoked_tombstone_is_historical_only
+  ---
+  duration_ms: 0.456067
+  type: 'test'
+  ...
+# Subtest: discovery: future_updated_at_is_rejected
+ok 58 - discovery: future_updated_at_is_rejected
+  ---
+  duration_ms: 0.317138
+  type: 'test'
+  ...
+# Subtest: discovery follows a changing cursor after short pages
+ok 59 - discovery follows a changing cursor after short pages
+  ---
+  duration_ms: 2.004578
+  type: 'test'
+  ...
+# Subtest: discovery fails closed when pagination does not finish
+ok 60 - discovery fails closed when pagination does not finish
+  ---
+  duration_ms: 0.920765
+  type: 'test'
+  ...
+# (node:5991) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+# (Use `node --trace-deprecation ...` to show where the warning was created)
+# Subtest: historical Pudge deployment matches the signed evidence manifest
+ok 61 - historical Pudge deployment matches the signed evidence manifest
+  ---
+  duration_ms: 1.720327
+  type: 'test'
+  ...
+# Subtest: testnet factory rejects a mainnet client and uses the documented Pudge deployment
+ok 62 - testnet factory rejects a mainnet client and uses the documented Pudge deployment
+  ---
+  duration_ms: 1.12349
+  type: 'test'
+  ...
+# Subtest: writable testnet factory derives an immutable data1 deployment
+ok 63 - writable testnet factory derives an immutable data1 deployment
+  ---
+  duration_ms: 1.569168
+  type: 'test'
+  ...
+# Subtest: lifecycle writes reject every mutable type-hash deployment
+ok 64 - lifecycle writes reject every mutable type-hash deployment
+  ---
+  duration_ms: 0.845704
+  type: 'test'
+  ...
+# Subtest: deployment verification detects a mismatched contract binary
+ok 65 - deployment verification detects a mismatched contract binary
+  ---
+  duration_ms: 4.661088
+  type: 'test'
+  ...
+# (node:5992) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+# (Use `node --trace-deprecation ...` to show where the warning was created)
+# Subtest: CCC signer lifecycle prepares create, update, transfer, and revoke transactions
+ok 66 - CCC signer lifecycle prepares create, update, transfer, and revoke transactions
+  ---
+  duration_ms: 28.686427
+  type: 'test'
+  ...
+# Subtest: documented journey creates, discovers, updates, transfers, revokes, and verifies
+ok 67 - documented journey creates, discovers, updates, transfers, revokes, and verifies
+  ---
+  duration_ms: 14.179824
+  type: 'test'
+  ...
+# Subtest: history reads and validates the real create, update, transfer, and revoke chain
+ok 68 - history reads and validates the real create, update, transfer, and revoke chain
+  ---
+  duration_ms: 7.207572
+  type: 'test'
+  ...
+# Subtest: package manifest remains ready for a public provenance-backed release
+ok 69 - package manifest remains ready for a public provenance-backed release
+  ---
+  duration_ms: 11.592867
+  type: 'test'
+  ...
+1..69
+# tests 69
+# suites 0
+# pass 69
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 1299.143446
+
+STDERR

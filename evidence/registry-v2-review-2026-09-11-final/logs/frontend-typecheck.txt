@@ -1,0 +1,11 @@
+$ npm run typecheck
+cwd: reference/mlat/frontend
+exit_code: 0
+
+STDOUT
+
+> mlat-airspace-console@0.1.0 typecheck
+> tsc --noEmit
+
+
+STDERR
