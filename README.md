@@ -17,8 +17,11 @@ Registry V2 currently provides:
 - exact sequence progression and immutable receiver labels
 - terminal revocation tombstones; burn and resurrection are rejected
 - Python record validation and paginated CKB indexer discovery
+- a narrow TypeScript SDK for strict encoding/decoding, discovery, and
+  CKB-CCC signer lifecycle transactions
+- one shared conformance corpus exercised by Rust, Python, and TypeScript
 - transaction generation, lifecycle, and evidence verification tools
-- 14 Rust tests, including 10 CKB-VM transaction tests
+- 16 Rust tests, including 11 CKB-VM transaction tests
 - a signed CKB testnet lifecycle and rejected-attack evidence package
 - strict physical-trial launch and evidence tooling that fails closed without
   four active identities, qualified clocks, reachable feeds, and raw capture
@@ -28,9 +31,14 @@ record vocabulary is receiver-specific and it requires the `mode-s` capability.
 Generalizing the schema requires a new reviewed contract version and deployment;
 it cannot be claimed from the present binary.
 
-The contract has not received an independent security audit. The repository also
-does not yet contain an open-source license, so it is not legally ready for
-third-party use or redistribution.
+The contract has not received an independent security audit. The repository is
+open source under the MIT License, but testnet status and the absence of an audit
+must be considered before any third-party deployment.
+
+The signed July testnet lifecycle is historical evidence for its pinned binary.
+The current contract source adds stricter parsing and bounded cell-data loading,
+so it is an undeployed review candidate with different binary hashes. The
+repository does not claim that the historical deployment runs the current code.
 
 See [Project Status](docs/PROJECT_STATUS.md) for the complete status matrix and
 [Repository Audit](docs/audit/REPOSITORY_AUDIT.md) for cleanup decisions and
@@ -43,9 +51,10 @@ readiness scores. The exact old-to-new path decisions are in the
 CKB transaction
   -> Registry V2 type script
   -> live registry cell
-  -> Python record validation and indexer discovery
+  -> Python or TypeScript validation and paginated indexer discovery
+  -> canonical 32-byte receiver identity
   -> consuming infrastructure adapter
-  -> MLAT reference runtime (flagship integration)
+  -> MLAT reference runtime (example consumer)
 ```
 
 The contract and Python registry modules are the reusable implementation. MLAT
@@ -59,6 +68,7 @@ See [Architecture](ARCHITECTURE.md) and [Domain Context](CONTEXT.md).
 ```text
 contracts/registry-v2/          Registry V2 Rust contract and CKB-VM tests
 src/ckb_registry/               Python record and discovery implementation
+sdk/typescript/                 TypeScript Registry V2 SDK using CCC signers
 tools/registry/                 Build, deployment, lifecycle, and evidence tools
 tests/registry/                 Off-chain registry and tooling tests
 evidence/registry-v2-*/         Immutable signed testnet evidence
@@ -83,6 +93,24 @@ Python dependencies are hash-locked for Python 3.12.11:
 python3 -m pip install --require-hashes -r requirements-dev.lock
 python3 -m pytest -q tests/registry
 ```
+
+Verify the TypeScript implementation against the same protocol vectors:
+
+```bash
+cd sdk/typescript
+npm ci
+npm test
+```
+
+Generate the machine-readable three-way comparison. This runs the Rust, Python,
+and TypeScript adapters over every shared corpus case and fails if any result
+differs:
+
+```bash
+PYTHONPATH=src python3 tools/registry/generate_registry_v2_conformance_report.py
+```
+
+The report is written to `artifacts/registry-v2/conformance-report.json`.
 
 Build and execute the contract in CKB-VM:
 
@@ -131,6 +159,11 @@ The discovery module never returns simulated receivers. Simulation is owned by
 the MLAT reference adapter and cannot be mistaken for CKB discovery.
 
 See the [Registry Integration Guide](docs/registry/INTEGRATION.md).
+TypeScript developers should start with the
+[Registry V2 SDK guide](sdk/typescript/README.md). The package is currently a
+workspace package, not a published npm release. The repository-only first-use
+review and resolved developer-experience gaps are in the
+[SDK Developer Journey Review](docs/registry/SDK_DEVELOPER_JOURNEY_REVIEW.md).
 
 ## Run The MLAT Reference
 
@@ -183,5 +216,5 @@ but is not live receiver or real-world accuracy evidence. See the
 
 ## License
 
-No license has been selected. Until a `LICENSE` file is added by the copyright
-holder, the code is not open source and external reuse is not authorized.
+This project is licensed under the [MIT License](LICENSE). Third-party
+dependencies and tools retain their own licenses.

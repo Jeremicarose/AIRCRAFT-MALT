@@ -4,8 +4,8 @@
 
 The repository contains one primary product and one reference implementation:
 
-1. **CKB Registry V2**: contract, Python record/discovery modules, lifecycle
-   tools, tests, and signed testnet evidence.
+1. **CKB Registry V2**: contract, Python record/discovery modules, TypeScript
+   SDK, lifecycle tools, tests, and signed testnet evidence.
 2. **MLAT reference**: aviation ingest, correlation, localization, persistence,
    API, frontend, and benchmark tooling consuming Registry V2.
 
@@ -27,7 +27,7 @@ CKB transaction -----> Registry V2 type script
 Live Registry Cell -----> CKB indexer
                               |
                               v
-                    ckb_registry.discovery
+              Python or TypeScript discovery
                               |
                               v
                     consuming adapter/runtime
@@ -60,6 +60,11 @@ canonical JSON plus Type-ID calculation.
 interfaces. It paginates live cells, extracts identity from type arguments,
 validates records, preserves provenance, and quarantines duplicate identities.
 It does not sign, broadcast, or simulate.
+
+`sdk/typescript` mirrors the same validation and discovery rules. Its lifecycle
+builder uses CKB-CCC `Signer` objects for create, update, transfer, and revoke.
+The SDK never accepts a raw private key. Rust, Python, and TypeScript all read
+the canonical vectors in `tests/registry/fixtures/registry_v2_conformance.json`.
 
 ### Registry Tools
 
@@ -147,7 +152,8 @@ kept separately so they cannot be mistaken for live accuracy evidence.
 - V2 is receiver- and Mode-S-specific despite the broader infrastructure goal.
 - JSON parsing and floating-point coordinates increase contract cycles and schema
   complexity compared with a Molecule-native generic record.
-- No independently maintained SDK or write adapter exists.
+- The TypeScript SDK is implemented and tested in the workspace, but is not yet
+  published as an independently versioned npm package.
 - Registry contract correctness has no independent audit.
 - MLAT live operation depends on four or more physically synchronized receivers.
 - The API/database module remains large and should be split only along tested

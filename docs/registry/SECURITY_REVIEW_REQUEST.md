@@ -14,8 +14,10 @@ The historical testnet deployment has separate, immutable provenance. Its
 contract source is commit `61ab011de58397cb8d6ca3cecb5c659c69e2fc8c` and its
 lifecycle tooling is commit `adbdbd1a5a2afebad4067649dc3af57a682e545a`, as
 recorded in `evidence/registry-v2-testnet-2026-07-30-final/manifest.json`. The
-current review tree may contain off-chain fixes that postdate that deployment;
-those fixes do not change the deployed binary.
+current review tree contains both on-chain and off-chain hardening that
+postdates that deployment. The current Rust binary is therefore a new,
+undeployed review candidate. The historical binary and evidence remain
+immutable; they must not be presented as a deployment of the current source.
 
 ## Security objective
 

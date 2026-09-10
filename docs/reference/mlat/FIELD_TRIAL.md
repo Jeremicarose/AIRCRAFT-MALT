@@ -52,9 +52,9 @@ transaction hash and confirm discovery through the application API:
 curl http://127.0.0.1:5057/api/receivers
 ```
 
-The `identity_id` values returned by discovery must exactly match the four or
-more `receiver_id` values in `receiver-clocks.local.json`. Human receiver labels
-are not identities.
+The `receiver_identity` values returned by discovery must exactly match the four
+or more `receiver_identity` values in `receiver-clocks.local.json`. Human
+receiver labels are not identities.
 
 ## 3. Run-Scoped Paths
 

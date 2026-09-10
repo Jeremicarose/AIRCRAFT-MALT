@@ -1,131 +1,83 @@
 # Project Status
 
-Status date: 2026-08-05
+Status date: 2026-09-09
 
-## Completed
+`COMPLETE` means the repository implementation and its local verification are
+complete. It does not mean independently audited, deployed to mainnet, or
+validated by external users.
 
-- Registry V2 lifecycle semantics are implemented in a `no_std` Rust contract.
-- Type-ID identity creation, update continuity, owner-lock transfer, and terminal
-  revocation have CKB-VM transaction coverage.
-- Python record encoding, validation, Type-ID calculation, and indexer discovery
-  are implemented.
-- Registry deployment/lifecycle/evidence tools are implemented.
-- A signed create-update-transfer-revoke lifecycle was committed on CKB testnet.
-- Seven signed attack transactions were rejected and retained with node errors.
-- Deterministic synthetic MLAT benchmark generation is implemented.
-- Strict physical-trial preflight, per-receiver clock evidence validation,
-  run-scoped raw observation capture, and offline position re-solving are
-  implemented.
+## Actual status matrix
 
-## Implemented
+| Area | Status | Evidence | Remaining |
+|---|---|---|---|
+| Registry V2 contract | COMPLETE | 5 Rust host tests and 11 CKB-VM lifecycle/attack tests; current binary is an undeployed review candidate | Deploy and sign a fresh lifecycle after independent review; mainnet is out of scope |
+| Canonical identity path | COMPLETE | `receiver_identity` flows from type args through Python/TypeScript discovery, MLAT persistence/API, config, and UI types | External integrators must preserve the same field |
+| V2 record and lifecycle validation | COMPLETE | Rust/Python/TypeScript enforce strict schema, exact sequence, terminal revoke, and `u64` bounds | No protocol change should occur without a new corpus/version review |
+| Indexer discovery | COMPLETE | Cursor-exhaustive pagination, script binding, provenance, duplicate quarantine, and historical revoked filtering are tested in Python and TypeScript | Live RPC behavior remains an external service dependency |
+| Cross-language corpus | COMPLETE | Corpus version 2 passes 171 Rust/Python/TypeScript assertions across 57 record, identity, Type ID, creation, transition, script, and discovery cases | Add vectors only when protocol scope changes |
+| TypeScript SDK | COMPLETE | 69 tests cover codec, discovery, pagination, Type ID, history, immutable deployment binding and binary preflight, mutable-deployment write rejection, CCC-signer lifecycle assembly, the complete documented journey, and public package metadata | Claim the npm scope and approve the first protected release |
+| Historical CKB testnet lifecycle | COMPLETE | Frozen 2026-07-30 create-update-transfer-revoke and seven rejected attacks pass the offline verifier | Evidence is historical and uses the older tooling |
+| Fresh SDK-driven lifecycle | BLOCKED | The SDK and browser journey are implemented; mutable code deployments fail closed | Requires independent review, an immutable `data1` Pudge deployment, funded wallets, and external signer approvals; no fresh transaction is claimed |
+| MLAT reference software | PARTIAL | Full 161-test Python suite passes; strict live gates and evidence verifier exist | Physical synchronized receiver run and independent reference data are absent |
+| Operator frontend | PARTIAL | The registry-first UI discovers and exports the directory, filters wallet-owned identities, reconstructs selected history, and uses the SDK to prepare create/update/transfer/revoke through a CCC signer and wait for exact indexer visibility; type check and production build pass | Complete a funded wallet-signed browser run and add automated accessibility coverage |
+| Review evidence bundle | PARTIAL | Historical signed evidence and deterministic MLAT evidence verify offline | Current source manifest must be generated after the actualization commits are final |
+| Pilot materials | PARTIAL | Browser workflow, readiness gate, owner/coordinator tasks, feedback form, evidence template, proposal, and recruitment research exist | Consent materials, a maintainer wallet rehearsal, recruitment, and observed sessions remain |
+| Security/release baseline | PARTIAL | CodeQL, dependency review, SBOM, attestations, locked dependencies, MIT license, protected general release, and protected provenance-backed SDK release workflows exist | The npm organization and first package release need maintainer approval; workflows need a public green run; independent audit is absent; one low upstream npm advisory remains |
+| Product demand | MISSING | No customer, partner, participant, revenue, or adoption evidence is claimed | Recruit and run the precommitted product-validation pilot |
 
-- **Contract**: functional receiver-specific Registry V2 binary.
-- **Discovery**: read-only paginated RPC/indexer adapter with provenance and
-  duplicate-identity quarantine.
-- **Tooling**: record generation, transaction templates, deployment config,
-  lifecycle execution, and evidence verification.
-- **MLAT reference backend**: explicit replay/live modes, JSONL and WebSocket
-  ingest, Beast adapters, correlation, robust solving, SQLite persistence,
-  readiness/evidence APIs, access tiers, and optional Socket.IO updates.
-- **MLAT reference frontend**: Next.js operator interface covering overview,
-  localization, aircraft, receivers, pipeline, metrics, and environment.
-- **Infrastructure**: hash-locked Python dependencies, npm lock, Cargo lock,
-  contract and repository CI, Docker images, Compose, and a replay Render
-  blueprint.
-- **Release tooling**: commit-pinned CodeQL and dependency review, SPDX SBOM
-  generation, artifact attestations, a license-gated tag workflow, maintainers,
-  code ownership, conduct rules, and a release checklist.
+## Verification on this tree
 
-Implemented does not mean independently audited, horizontally scalable, or
-field-proven.
+- `python3 -m pytest -q`: 161 passed.
+- `python3 -m black --check src/ckb_registry src/mlat_reference tools tests`:
+  77 files unchanged.
+- `python3 -m flake8 src tools tests`: passed.
+- `make test && make check` in `contracts/registry-v2`: 5 host tests,
+  11 CKB-VM tests, and the RISC-V contract check passed.
+- `npm test && npm run build` in `sdk/typescript`: 69 tests and TypeScript
+  compilation passed.
+- `npm test` in the frontend: 4 receiver-freshness tests passed.
+- `python3 tools/registry/generate_registry_v2_conformance_report.py`: 57
+  shared cases, 171 runtime assertions, and zero failures.
+- `npm run typecheck` and `next build --webpack` in the frontend: passed and
+  generated all 16 routes. Turbopack could not run in the restricted local
+  environment because its CSS worker was denied permission to bind a helper
+  port; the CI environment still uses the normal Next build.
+- `python3 tools/check_documentation.py`: 78 Markdown files passed.
+- `npm audit --audit-level=moderate`: both npm projects passed the configured
+  threshold. The current upstream CKB dependency chain retains the low-severity
+  `elliptic` advisory documented in `SECURITY.md`.
+- `python3 -m pip check`: no broken Python requirements.
 
-## Verified
+These are local results. Public CI results must be checked after the commits are
+pushed.
 
-- 4 host-side Rust record tests pass.
-- 10 CKB-VM transaction/lifecycle tests pass.
-- 122 Python tests pass under the hash-locked development graph, including the
-  Socket.IO realtime API path.
-- The Next.js 16.3.0 production build passes under Node.js 22.23.1 without
-  network font downloads.
-- The locked production frontend graph reports zero npm audit vulnerabilities
-  as checked on 2026-08-05.
-- Offline verification of the signed Registry V2 evidence package passes.
-- The deterministic MLAT benchmark bundle passes its checksum and claim-scope
-  verifier.
-- Operational evidence tests verify that stored positions link to the same raw
-  Mode-S transmission and can be recalculated from bundled receiver geometry
-  and integer arrival timestamps.
+## Claim boundaries
 
-The testnet evidence recorded a passing live RPC verification on 2026-07-30.
-That is historical evidence, not a continuous monitoring claim.
+- The deployed V2 schema is receiver-specific and requires `mode-s`. It is not
+  a general physical-infrastructure protocol.
+- CKB proves the authorized record lifecycle. It does not prove that hardware,
+  coordinates, streams, timing, or participant statements are truthful.
+- The MLAT replay and deterministic benchmark are software evidence, not live
+  receiver accuracy evidence.
+- The testnet contract is unaudited. Nothing in this repository is an
+  air-traffic-control or aviation-safety service.
+- The TypeScript SDK is configured as a public package, but cannot be installed
+  from npm until the maintainer claims the scope and approves its first release.
 
-## Reproducible
+## External blockers
 
-- Python production and development graphs are hash-locked for Python 3.12.11.
-- Rust dependencies and toolchain are pinned.
-- The synthetic MLAT regression bundle is byte-identical across repeated runs
-  in the same defined environment.
-- GitHub Actions are pinned to full commit SHAs and use read-only repository
-  permissions.
-- The deployed Registry V2 binary is retained with SHA-256 and CKB data hash.
+- A fresh SDK lifecycle needs an independently reviewed immutable `data1`
+  deployment, real CKB testnet signer access, and testnet CKB.
+- The first npm release needs ownership of the `aircraft-malt` npm scope and a
+  maintainer-approved `npm-release` environment run.
+- A physical MLAT trial needs at least four receivers on qualified common clocks
+  plus aligned independent aircraft reference data.
+- Product validation needs consenting receiver operators and network
+  coordinators. Recruitment channels are not partners.
+- Security readiness needs an independent contract reviewer and remediation
+  cycle.
+- Release provenance needs a pushed tag so GitHub can execute the attestation
+  workflow against the final commit.
 
-Not fully reproducible:
-
-- Contract binaries differ across host platforms because the current build can
-  embed host-specific paths/toolchain details. The deployed Ubuntu CI artifact
-  is canonical; the macOS binary is evidence only.
-- The frontend container base image is digest-pinned. Updating it still requires
-  a reviewed build and frontend regression run.
-- Ubuntu package installation for the RISC-V GCC toolchain is not snapshot-pinned.
-
-## Operational
-
-- The recorded Registry V2 deployment and lifecycle transactions exist on CKB
-  testnet.
-- The local replay stack can run processor, API, and frontend workflows.
-- Strict live startup fails closed when configured live prerequisites are absent.
-- A read-only testnet discovery query on 2026-08-04 returned zero active
-  receiver identities under the deployed Registry V2 code hash. This is a
-  dated observation, not continuous monitoring.
-
-Not operationally established:
-
-- no maintained production deployment or SLO
-- no public synchronized multi-receiver MLAT window
-- no disaster-recovery exercise
-- no horizontal scale test
-- no release, upgrade, or rollback procedure exercised against users
-
-## Experimental
-
-- Physical live MLAT ingest
-- Physical execution of the multi-receiver Beast and clock-evidence harness
-- External OpenSky accuracy comparison
-- Local simulation performance and 2-second reliability captures
-- API plans, entitlements, and usage metering as product packaging
-- Physical operator validation of the MLAT frontend beyond local replay
-
-## Not Started
-
-- General physical-infrastructure schema without the `mode-s` requirement
-- Independently versioned Python SDK distribution
-- Generic write/signing library
-- Mainnet deployment
-- Independent contract audit
-- First tagged release and independently verified SBOM/provenance artifacts
-- Compatibility policy and semantic versioning guarantees
-
-## Blocked
-
-- **Open-source release**: the copyright holder has not selected a license.
-- **Generic infrastructure claim**: the deployed V2 schema is receiver-specific
-  and requires `mode-s`; changing it requires a new contract version/deployment.
-- **Live MLAT evidence**: software capture and verification are implemented;
-  execution still requires at least four active Registry V2 receivers on a
-  qualified common clock plus an aligned trusted reference dataset.
-- **Security readiness**: requires an independent audit and remediation cycle.
-
-## Future Work
-
-Future work is ordered in [ROADMAP.md](../ROADMAP.md). No roadmap item should be
-described as complete until code, tests, and evidence are merged.
+Remaining work is ordered in [ROADMAP.md](../ROADMAP.md). No external result
+should be marked complete until its evidence is committed or linked.

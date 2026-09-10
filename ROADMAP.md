@@ -3,33 +3,42 @@
 This roadmap lists uncompleted work only. Dates and funding are intentionally not
 promised.
 
-## P0: Release Blockers
+## P0: Technical Release And Review
 
-- Select and add an OSI-approved license with copyright-holder approval.
 - Obtain an independent Registry V2 contract audit and publish the report.
-- Decide whether V2 remains an aviation receiver registry or a new generalized
-  contract will carry the physical-infrastructure product claim.
 - Run and enforce the configured CodeQL, dependency-review, SBOM, and artifact
   attestation workflows on the protected default branch.
-- Publish the first license-gated tagged release and verify its assets from a
+- Produce a fresh create-update-transfer-revoke testnet lifecycle through the
+  TypeScript SDK and an external signer. Bind it to one source commit.
+- Publish the first tagged release and verify its assets from a
   separate checkout.
 
 Exit condition: external users can legally evaluate a reviewed, versioned release
 without relying on undocumented maintainer knowledge.
 
-## P1: Generic Registry Contract
+## P1: Pilot Product Surface
 
-- Specify a domain-neutral infrastructure record and capability model.
-- Prefer a canonical binary schema suitable for deterministic on-chain parsing.
-- Define migration from receiver-specific V2 without reinterpreting old cells.
-- Add adversarial CKB-VM tests, cycle budgets, and compatibility vectors.
-- Deploy under a new code hash and publish a new signed evidence package.
-- Extract and publish a separately versioned read-only SDK.
+- Add browser, responsive, accessibility, and failure-state tests for that flow.
+- Rehearse the participant task and evidence procedure with maintainer-owned
+  identities before recruiting participants.
 
-Exit condition: a non-aviation integration can use the registry without a fake
-`mode-s` capability or MLAT dependencies.
+Exit condition: a receiver operator can complete the testnet workflow without
+understanding CKB transaction assembly or giving the application a raw key.
 
-## P2: Field Validation
+## P2: Product Validation
+
+- Recruit eligible receiver operators and network coordinators without claiming
+  recruitment channels as partners.
+- Run the precommitted operator/coordinator tasks and seven-day follow-up.
+- Publish privacy-safe task outcomes, failures, interventions, and the
+  continue/change/stop decision.
+- Ask whether portability, cross-network identity, owner control, provenance,
+  and lifecycle history add value beyond each participant's current network.
+
+Exit condition: the project has evidence about demand and integration effort,
+including a negative result if the published thresholds fail.
+
+## P3: Optional Physical MLAT Validation
 
 - Operate at least four receivers with a documented common-clock discipline.
 - Capture integer-nanosecond observations and clock uncertainty metadata.
@@ -41,7 +50,7 @@ Exit condition: a non-aviation integration can use the registry without a fake
 Exit condition: a third party can reproduce the published field result from the
 saved inputs and tools.
 
-## P3: Operational Hardening
+## P4: Operational Hardening
 
 - Replace SQLite where multi-node operation is required, or formally scope the
   product to a single node.
@@ -54,6 +63,8 @@ saved inputs and tools.
 ## Deferred
 
 - Mainnet deployment
+- A generic Registry V3 or non-aviation schema until receiver-market evidence
+  justifies broadening the protocol
 - Incentives, payments, reputation, and autonomous agents
 - Commercial plan enforcement beyond the reference implementation
 

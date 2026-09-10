@@ -6,8 +6,43 @@ This project follows a pre-release changelog until the first tagged release.
 
 ### Changed
 
+- Made the 32-byte CKB Type ID explicit as `receiver_identity` across Python
+  discovery, MLAT persistence/API output, receiver configuration, evidence
+  tooling, and frontend types. Human labels no longer act as fallback keys.
+- Made Registry V2 discovery paginate until cursor exhaustion, quarantine
+  duplicate identities before active/revoked filtering, and keep revoked cells
+  historical only.
+- Matched Rust's `u64` bounds and strict JSON rules in Python and TypeScript,
+  including duplicate-key and non-integer rejection.
+- Expanded the shared Registry V2 conformance corpus and made Rust, Python, and
+  TypeScript consume its protocol, identity, script-binding, transition, and
+  discovery cases.
+- Bounded on-chain cell-data loading at 16 KiB before allocation and added a
+  CKB-VM regression for oversized records. This changes the current contract
+  binary; it is an undeployed review candidate, not the historical July binary.
+- Added the workspace `@aircraft-malt/registry-v2` TypeScript SDK with strict
+  codec, Type ID calculation, paginated discovery, provenance, duplicate
+  quarantine, and CKB-CCC signer lifecycle builders.
+- Added the complete SDK journey with protocol-field defaults, address-based
+  transfer, committed-transaction waiting, exact identity lookup, and indexer
+  visibility checks.
+- Made the SDK package public-release ready with provenance metadata, a guarded
+  npm workflow, and a manifest regression test. The reference wallet screen now
+  delegates lifecycle rules and indexer synchronization to the SDK.
+- Marked the historical mutable type-hash deployment discovery-only, required
+  immutable `data1` binding for every lifecycle write, and added a
+  `writableTestnet()` factory for public deployment manifest values.
+- Bound the SDK and reference frontend to one manifest-tested historical Pudge
+  deployment constant and documented the repository-only first-use review.
+- Added source-bound review evidence generation and offline verification, plus
+  CI and release artifacts for the three-language conformance report.
+- Added pilot readiness, operator task, feedback, and privacy-safe evidence
+  templates focused on portable cross-network identity rather than basic
+  registration alone.
+- Licensed the repository under the OSI-approved MIT License and declared the
+  license in the Python, Rust, and frontend package metadata.
 - Repositioned the repository around CKB Registry V2 as the primary deliverable.
-- Isolated the MLAT system as the flagship reference implementation.
+- Isolated the MLAT system as an example Registry V2 consumer.
 - Renamed the contract directory to `contracts/registry-v2`.
 - Extracted reusable Python record/discovery code into `src/ckb_registry`.
 - Namespaced MLAT backend code under `src/mlat_reference`.

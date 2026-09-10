@@ -11,7 +11,7 @@ environment, but its ingest, solver, database, and frontend are not part of the
 on-chain registry interface.
 
 The repository therefore presents Registry V2 as the primary product and MLAT
-as its flagship reference implementation and field-trial harness.
+as an example consumer and field-trial harness.
 
 ## Consequences
 

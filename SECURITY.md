@@ -5,9 +5,10 @@
 Security fixes target the current default branch. No released version is yet
 supported because the project has not published a tagged release.
 
-The canonical testnet evidence package is historical and must not be rewritten.
-A security fix that changes the contract requires a new binary, deployment, and
-evidence package.
+The testnet evidence package is historical and must not be rewritten. The
+current source includes contract hardening that postdates that package and is
+not deployed. A security fix that changes the contract requires a new binary,
+deployment, and evidence package.
 
 ## Reporting A Vulnerability
 
@@ -32,7 +33,7 @@ Registry V2 relies on CKB lock scripts for authorization. The type script checks
 identity and lifecycle continuity; it does not authenticate physical hardware or
 validate real-world metadata.
 
-Guaranteed by the current contract:
+Enforced by the current contract source candidate:
 
 - Type-ID-derived creation identity
 - exact input/output group cardinality
@@ -40,6 +41,8 @@ Guaranteed by the current contract:
 - monotonic exact sequence progression
 - owner-lock authorization through normal CKB transaction validation
 - terminal revocation and no burn
+- bounded 16 KiB cell-data loading before JSON decoding
+- strict JSON spelling shared with the Python and TypeScript implementations
 
 Not guaranteed:
 
@@ -52,8 +55,8 @@ Not guaranteed:
 
 ## Current Security Posture
 
-- No private key or credential pattern was found in tracked project files during
-  the audit refreshed on 2026-08-05.
+- No private-key, common provider-token, or literal secret-assignment pattern
+  was found in tracked project files during the audit refreshed on 2026-09-08.
 - `.env`, databases, deployment scratch files, `ckb-cli`, build targets, Python
   bytecode, Next caches, and `node_modules` are ignored.
 - GitHub Actions use `contents: read` and full commit-SHA action pins.
@@ -66,8 +69,15 @@ Not guaranteed:
 - GitHub workflows define CodeQL scanning, pull-request dependency review,
   SPDX SBOM generation, and GitHub artifact attestations using commit-pinned
   actions.
-- The locked production frontend graph reported zero npm audit vulnerabilities
-  when checked on 2026-08-05; CI dependency review remains the ongoing gate.
+- On 2026-09-09, both locked npm graphs passed `npm audit
+  --audit-level=moderate`: there were no moderate, high, or critical findings.
+  The frontend was upgraded to Next.js 16.3.4, MapLibre 6.8.0, and Sharp
+  0.35.4 to remove newly reported critical and high advisories before this pass.
+  npm reported one low-severity `elliptic` advisory through the latest CKB-CCC,
+  JoyID, and Nervos SDK dependency chain: 4 instances in the Registry SDK and 21
+  in the wallet-enabled frontend. The only automated remedy offered was a
+  breaking downgrade to an old CCC prerelease, so the finding remains an
+  explicit upstream risk rather than an unsafe forced update.
 
 Known risks:
 
@@ -81,7 +91,10 @@ Known risks:
   confirmed after the reorganized branch is pushed.
 - `ckb-cli` is an external operator dependency with no repository-managed binary
   provenance.
-- A repository license and independent security reviewer are absent.
+- An independent security reviewer is absent.
+- The current CKB-CCC dependency chain still includes the low-severity
+  `elliptic` advisory described above. Recheck it on every dependency update and
+  remove the exception when upstream publishes a compatible fix.
 
 ## Deployment Requirements
 

@@ -100,10 +100,14 @@ to be mistaken for MLAT-capable timing. The runtime rejects the group.
 
 ## Field mapping
 
+
+
 - Beast payload bytes -> `message`
 - Beast 48-bit counter plus receiver calibration -> `timestamp_ns`
 - Adapter wall clock -> diagnostic `timestamp` only when uncalibrated
-- Local receiver configuration -> `receiver_id` and clock metadata
+- Local receiver configuration `receiver_identity` -> ingest `receiver_id` and
+  clock metadata. The ingest field name is retained for the MLAT wire format,
+  but its value is always the canonical 32-byte CKB identity.
 - Beast signal byte -> optional `signal_level`
 
 Do not send decoded positions, SBS aircraft-state rows, aggregated track

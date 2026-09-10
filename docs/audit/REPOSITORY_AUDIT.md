@@ -1,6 +1,6 @@
 # Repository Audit And Cleanup Ledger
 
-Audit date: 2026-07-31; refreshed 2026-08-05
+Audit date: 2026-07-31; refreshed 2026-08-17
 
 Scope: all tracked files; untracked frontend/source work; ignored databases,
 deployment scratch, caches, compiler output, dependency trees, and nested
@@ -28,9 +28,10 @@ old proposals, generated replay output, legacy adapters, and conflicting docs.
 Production registry code, reference MLAT code, tools, tests, and evidence now
 have separate locations.
 
-Release readiness is blocked by the absence of a license and independent
-contract audit. Grant readiness is materially improved by the signed testnet
-package, but generic-infrastructure and live-field claims must remain limited.
+The repository is now MIT licensed. Production release readiness remains blocked
+by the independent contract audit and an unexercised public release. Grant
+readiness is materially improved by the signed testnet package, but
+generic-infrastructure and live-field claims must remain limited.
 
 ## Actual Project
 
@@ -68,13 +69,14 @@ correlation, robust solving, SQLite, Flask APIs, and a Next.js operator frontend
 ### Current Maturity
 
 - **Contract**: functional testnet prototype with strong automated lifecycle tests
-- **Registry adapter**: usable read-only implementation, not a released SDK
+- **Registry clients**: strict Python discovery plus a workspace TypeScript SDK;
+  the npm package is tested but not published
 - **Evidence**: unusually strong for a prototype, but self-produced and unaudited
 - **MLAT reference**: integration-complete for replay; live field validation absent
 - **Field-trial harness**: strict launch, raw-input capture, hashed timing
   evidence, and offline re-solving are implemented; no physical run is published
 - **Operations**: single-node local/reference deployment, not production service
-- **Community**: pre-release and unlicensed
+- **Community**: pre-release and MIT licensed
 
 ## Audit Scores
 
@@ -90,17 +92,16 @@ The exact path-by-path transition is maintained in
 | Maintainability | 80/100 | duplicate implementations removed; API/database modules remain large |
 | Reproducibility | 85/100 | locked graphs and deterministic evidence; cross-platform contract bytes differ |
 | Security | 72/100 | good lifecycle tests/evidence and configured scans; no audit or rate limit, and new scans are not yet proven green |
-| Ecosystem readiness | 62/100 | CKB-native evidence is strong; no license, released SDK, or generic schema |
+| Ecosystem readiness | 72/100 | CKB-native evidence, MIT licensing, shared vectors, and the workspace SDK are strong; no published package, external adopter, or generic schema |
 | Grant readiness | 74/100 | signed testnet proof; independent review and field trial still missing |
 
 ## Repository Findings
 
 ### Critical Release Blockers
 
-1. No `LICENSE` exists. The repository is not legally open source.
-2. The stated physical-infrastructure identity exceeds the current schema: Rust
+1. The stated physical-infrastructure identity exceeds the current schema: Rust
    and Python require `mode-s`, and record names are receiver-specific.
-3. Registry V2 has no independent security audit.
+2. Registry V2 has no independent security audit.
 
 ### High-Priority Findings
 
@@ -113,8 +114,10 @@ The exact path-by-path transition is maintained in
 3. Contract binaries are not byte-identical across Ubuntu and macOS builds.
 4. The API/database implementations are 1,500+/1,200+ line modules with broad
    responsibilities and limited migration abstraction.
-5. CodeQL, dependency review, SBOM, and release attestation workflows are now
-   configured but have not yet produced public results for the reorganized tree.
+5. CodeQL, dependency review, SBOM, and release attestation workflows are
+   configured but have not yet produced public results for the current tree.
+6. A fresh SDK-driven testnet lifecycle still requires external signer access;
+   only the older `ckb-cli` lifecycle is signed and committed.
 
 ### Medium-Priority Findings
 
@@ -259,6 +262,7 @@ workspace state where useful.
 
 ### UPDATE REQUIRED (completed)
 
+- `LICENSE`
 - `.env.example`
 - `.github/workflows/registry-v2.yml`
 - `.github/workflows/reproducibility.yml`
@@ -274,7 +278,7 @@ workspace state where useful.
 - `tools/registry/**`
 - `tests/registry/**`
 - `evidence/registry-v2-testnet-2026-07-30-final/**`
-- `src/mlat_reference/**` as the flagship reference implementation
+- `src/mlat_reference/**` as an example Registry V2 consumer
 - `reference/mlat/**` excluding generated dependencies/build caches
 - `tools/mlat/**`
 - `tests/mlat/**`
@@ -284,7 +288,6 @@ workspace state where useful.
 
 ### NEEDS REVIEW
 
-- `LICENSE`: copyright holder must select it; no technical default is safe.
 - `ckb-cli/`: local modified upstream clone; preserve until the owner decides
   whether the modification matters, then delete and document a pinned install.
 - `.env`: local secrets/configuration; never commit.
@@ -347,8 +350,8 @@ This is the implemented target tree (generated/ignored state omitted):
 
 ## Prioritized Implementation Roadmap
 
-1. **License and governance**: select a license and publish supported-version
-   commitments; maintainer, conduct, disclosure, and release policies now exist.
+1. **Release and governance**: the MIT License and governance policies now
+   exist; publish supported-version commitments and exercise the tagged release.
 2. **Independent audit**: review contract and Python mirror; publish findings and
    remediation evidence.
 3. **Resolve product/schema mismatch**: design a domain-neutral successor,

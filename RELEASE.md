@@ -1,8 +1,7 @@
 # Release Process
 
-No release may be published until the copyright holder adds an approved
-`LICENSE`. Registry V2 remains a testnet prototype until an independent contract
-review and remediation cycle are published.
+The repository is MIT licensed. Registry V2 remains a testnet prototype until
+an independent contract review and remediation cycle are published.
 
 ## Preconditions
 
@@ -36,12 +35,35 @@ changing its behavior always creates a new contract version and code hash.
 8. Download the release assets and independently verify checksums and
    attestations.
 
+## TypeScript SDK publication
+
+The SDK has a separate npm release trigger so a general repository tag cannot
+publish it accidentally. Before the first release:
+
+1. Create or confirm the public `aircraft-malt` npm organization and grant the
+   maintainer permission to publish `@aircraft-malt/registry-v2`.
+2. Protect the GitHub `npm-release` environment with required review.
+3. Add a granular npm automation token as the `NPM_TOKEN` environment secret.
+   Enter it directly in GitHub; never put it in a file, command, issue, or log.
+4. Create and push `registry-v2-sdk-v0.1.0`. The tag suffix must exactly match
+   `sdk/typescript/package.json`.
+5. After the first package exists, configure npm trusted publishing for
+   `Jeremicarose/AIRCRAFT-MALT`, workflow `sdk-release.yml`, environment
+   `npm-release`, with direct publishing allowed. Delete `NPM_TOKEN` after the
+   trusted publisher succeeds.
+
+`.github/workflows/sdk-release.yml` tests the package, rejects a mismatched tag,
+and publishes it publicly with provenance. Later releases use short-lived
+GitHub identity tokens and do not need a stored npm write token.
+
 ## Release Assets
 
 The workflow publishes:
 
 - source archive for the tagged commit
 - Registry V2 RISC-V contract binary
+- TypeScript Registry V2 SDK package
+- Rust/Python/TypeScript conformance report
 - deterministic MLAT benchmark package
 - SPDX JSON software bill of materials
 - SHA-256 checksum file

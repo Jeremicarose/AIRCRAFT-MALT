@@ -25,16 +25,16 @@
       "sha256": "268cbcc3336606c858dd6180a76e3cf448031aa30c0322b2e71669f6f2bd78d4"
     },
     "source/pyproject.toml": {
-      "bytes": 1023,
-      "sha256": "14481e1a447c87b8a33af758d8cffd70439f2ab6bf55eb5142bcc35f029d0567"
+      "bytes": 1093,
+      "sha256": "49be8e9e07b572883db2b167e0336f7d03997c51d595469d8f38097fa24ca865"
     },
     "source/python-version.txt": {
       "bytes": 8,
       "sha256": "43fd694bd564dd2215f51a6b23f6a3712834850225e629d7781c81c71076092d"
     },
     "source/reproducibility-workflow.yml": {
-      "bytes": 4345,
-      "sha256": "77a774c52b9964fe0237028373d0b3d7549309d2912e2071d89ee52e01e30164"
+      "bytes": 4992,
+      "sha256": "b5b567d1414b4ab695f0e184e29f100b4f294f5d88d94b985b0dd538a0fa8122"
     },
     "source/requirements-build.in": {
       "bytes": 113,

@@ -1,8 +1,8 @@
 # Contributing
 
-This repository is accepting technical review and patches, but it is not yet a
-legally complete open-source project because no license has been selected. Do not
-assume a right to redistribute the code until a `LICENSE` file is added.
+This repository accepts technical review and patches under the terms of the
+[MIT License](LICENSE). By submitting a contribution, you agree that your
+contribution may be distributed under that license.
 
 Participation is governed by [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md). Current
 review and release ownership is listed in [MAINTAINERS.md](MAINTAINERS.md).
@@ -14,7 +14,7 @@ Required toolchains:
 - Python 3.12.11 (see `.python-version`)
 - Rust 1.95.0 (see `contracts/registry-v2/rust-toolchain.toml`)
 - bare-metal RISC-V GCC for the deployable contract target
-- Node.js 22.23.1 (see `.nvmrc`) for the MLAT reference frontend
+- Node.js 22.23.1 (see `.nvmrc`) for the TypeScript SDK and MLAT reference frontend
 - Docker with Compose for the complete reference stack
 
 Install the exact Python development graph:
@@ -43,6 +43,7 @@ python3 tools/check_documentation.py
 python3 tools/mlat/run_reproducible_benchmark.py --verify-only
 python3 tools/registry/verify_registry_v2_evidence.py \
   --bundle evidence/registry-v2-testnet-2026-07-30-final
+python3 tools/registry/generate_registry_v2_conformance_report.py
 ```
 
 ```bash
@@ -57,6 +58,12 @@ cd reference/mlat/frontend
 npm ci
 npm run typecheck
 npm run build
+```
+
+```bash
+cd sdk/typescript
+npm ci
+npm test
 ```
 
 ## Change Rules

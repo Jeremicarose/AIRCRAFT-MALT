@@ -19,11 +19,19 @@ Root documents are authoritative for repository-wide concerns:
 Domain documentation:
 
 - `docs/registry/`: Registry V2 integration and external review scope
+- [`docs/registry/SDK_DEVELOPER_JOURNEY_REVIEW.md`](registry/SDK_DEVELOPER_JOURNEY_REVIEW.md):
+  first-use SDK findings, fixes, and verification boundaries
 - `docs/reference/mlat/`: MLAT reference ingest, timing, solver, frontend,
   benchmark, and physical field-trial runbook
 - `docs/adr/`: accepted architectural decisions
 - `docs/audit/`: repository audit and cleanup ledger
 - `docs/archive/`: archive policy; obsolete documents are not retained in-tree
+- [`CKB_SPARK_PILOT_PROPOSAL.md`](CKB_SPARK_PILOT_PROPOSAL.md): current
+  product-validation pilot proposal draft
+- [`CKB_SPARK_FORUM_PROPOSAL.md`](CKB_SPARK_FORUM_PROPOSAL.md): superseded
+  SDK-first Spark proposal retained for comparison
+- [`pilot/`](pilot/README.md): participant tasks, technical readiness,
+  feedback capture, and evidence templates for the proposed validation pilot
 
 When code and documentation conflict, code/tests/evidence define current behavior
 and the document must be corrected.
