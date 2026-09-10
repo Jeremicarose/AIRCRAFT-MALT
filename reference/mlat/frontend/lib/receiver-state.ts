@@ -58,7 +58,13 @@ export function receiverIdentity(receiver?: Receiver | null): string | null {
 }
 
 export function receiverOperationalKey(receiver: Receiver): string {
-  return receiverIdentity(receiver) ?? `${receiver.data_source ?? 'runtime'}:${receiver.receiver_id}`;
+  const identity = receiverIdentity(receiver);
+  if (identity) return identity;
+  const source = receiver.data_source ?? 'runtime';
+  const prefix = `${source}:`;
+  return receiver.receiver_id.startsWith(prefix)
+    ? receiver.receiver_id
+    : `${prefix}${receiver.receiver_id}`;
 }
 
 function groupByKey(receivers: Receiver[], registrySource: boolean): Map<string, Receiver[]> {
