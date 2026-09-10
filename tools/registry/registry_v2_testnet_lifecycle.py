@@ -59,6 +59,15 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--rpc-url", default="https://testnet.ckb.dev/rpc")
     parser.add_argument("--indexer-url", default="https://testnet.ckb.dev/indexer")
+    parser.add_argument(
+        "--registry-hash-type",
+        choices=("data1", "type"),
+        default="data1",
+        help=(
+            "Receiver Type Script hash type. New evidence must use immutable data1; "
+            "type is retained only to reproduce historical deployments."
+        ),
+    )
     parser.add_argument("--receiver-label", default="RECV_REGISTRY_V2_EVIDENCE")
     parser.add_argument("--confirmation-timeout", type=int, default=300)
     return parser.parse_args()
@@ -156,8 +165,18 @@ def lock_script(lock_arg: str) -> dict[str, str]:
     return {"code_hash": SIGHASH_CODE_HASH, "hash_type": "type", "args": lock_arg}
 
 
-def type_script(contract_code_hash: str, receiver_identity: str) -> dict[str, str]:
-    return {"code_hash": contract_code_hash, "hash_type": "type", "args": receiver_identity}
+def type_script(
+    contract_code_hash: str,
+    receiver_identity: str,
+    registry_hash_type: str = "data1",
+) -> dict[str, str]:
+    if registry_hash_type not in {"data1", "type"}:
+        raise ValueError("registry_hash_type must be data1 or type")
+    return {
+        "code_hash": contract_code_hash,
+        "hash_type": registry_hash_type,
+        "args": receiver_identity,
+    }
 
 
 def output(
@@ -321,13 +340,15 @@ async def discovery_snapshot(
     rpc_url: str,
     indexer_url: str,
     contract_code_hash: str,
+    registry_hash_type: str,
 ) -> list[dict[str, Any]]:
     discovery = CKBPeerDiscovery(
         CKBConfig(
             ckb_rpc_url=rpc_url,
             ckb_indexer_url=indexer_url,
             receiver_registry_type_hash=contract_code_hash,
-            receiver_registry_hash_type="type",
+            receiver_registry_hash_type=registry_hash_type,
+            allow_mutable_registry_code=registry_hash_type == "type",
         )
     )
     await discovery.initialize()
@@ -413,23 +434,44 @@ def capture_state(
     rpc_url: str,
     indexer_url: str,
     contract_code_hash: str,
+    registry_hash_type: str,
+    receiver_identity: str,
     expected_out_point: dict[str, Any],
     timeout: int,
 ) -> None:
     search_key = {
         "script": {
             "code_hash": contract_code_hash,
-            "hash_type": "type",
-            "args": "0x",
+            "hash_type": registry_hash_type,
+            "args": receiver_identity,
         },
         "script_type": "type",
-        "script_search_mode": "prefix",
+        "script_search_mode": "exact",
         "with_data": True,
     }
     deadline = time.monotonic() + timeout
     cells: dict[str, Any] = {"objects": []}
     while time.monotonic() < deadline:
-        cells = rpc(indexer_url, "get_cells", [search_key, "asc", "0x64"])
+        objects: list[dict[str, Any]] = []
+        cursor: str | None = None
+        seen_cursors: set[str] = set()
+        while True:
+            params: list[Any] = [search_key, "asc", "0x64"]
+            if cursor is not None:
+                params.append(cursor)
+            page = rpc(indexer_url, "get_cells", params)
+            page_objects = page.get("objects") if isinstance(page, dict) else None
+            if not isinstance(page_objects, list):
+                raise RuntimeError("indexer get_cells response has no objects array")
+            objects.extend(page_objects)
+            if not page_objects:
+                cells = {"objects": objects, "last_cursor": page.get("last_cursor")}
+                break
+            next_cursor = page.get("last_cursor")
+            if not isinstance(next_cursor, str) or not next_cursor or next_cursor in seen_cursors:
+                raise RuntimeError("indexer returned an invalid cursor after a non-empty page")
+            seen_cursors.add(next_cursor)
+            cursor = next_cursor
         if any(item.get("out_point") == expected_out_point for item in cells.get("objects", [])):
             break
         time.sleep(3)
@@ -442,6 +484,7 @@ def capture_state(
             rpc_url=rpc_url,
             indexer_url=indexer_url,
             contract_code_hash=contract_code_hash,
+            registry_hash_type=registry_hash_type,
         )
     )
     atomic_json(evidence_dir / "discovery" / f"{name}-adapter.json", peers)
@@ -457,6 +500,7 @@ def lifecycle_transition(
     next_lock_arg: str,
     receiver_identity: str,
     contract_code_hash: str,
+    registry_hash_type: str,
     contract_tx_hash: str,
     contract_index: int,
     sighash_dep: dict[str, Any],
@@ -475,7 +519,7 @@ def lifecycle_transition(
             output(
                 next_capacity,
                 next_lock_arg,
-                type_script(contract_code_hash, receiver_identity),
+                type_script(contract_code_hash, receiver_identity, registry_hash_type),
             )
         ],
         outputs_data=[next_record.to_cell_data_hex()],
@@ -534,7 +578,9 @@ def main() -> None:
     )
     atomic_json(evidence_dir / "rpc" / "deployment-transaction.json", committed_deployment)
 
-    contract_code_hash = contract["type_id"]
+    contract_code_hash = (
+        contract["data_hash"] if args.registry_hash_type == "data1" else contract["type_id"]
+    )
     contract_index = int(contract["index"])
     funding_index = int(funding["index"])
     funding_capacity = int(funding["occupied_capacity"])
@@ -547,7 +593,11 @@ def main() -> None:
     )
 
     creation = record(args.receiver_label, 0, base_timestamp)
-    creation_type = type_script(contract_code_hash, receiver_identity)
+    creation_type = type_script(
+        contract_code_hash,
+        receiver_identity,
+        args.registry_hash_type,
+    )
     change_capacity = funding_capacity - REGISTRY_CAPACITY - FEE_SHANNONS
     if change_capacity < 61 * 100_000_000:
         raise SystemExit("Lifecycle funding cell cannot support registry output and change")
@@ -561,7 +611,11 @@ def main() -> None:
             output(
                 REGISTRY_CAPACITY,
                 owner_a["lock_arg"],
-                type_script(contract_code_hash, "0x" + "ff" * 32),
+                type_script(
+                    contract_code_hash,
+                    "0x" + "ff" * 32,
+                    args.registry_hash_type,
+                ),
             ),
             output(change_capacity, owner_a["lock_arg"]),
         ],
@@ -610,6 +664,8 @@ def main() -> None:
         rpc_url=args.rpc_url,
         indexer_url=args.indexer_url,
         contract_code_hash=contract_code_hash,
+        registry_hash_type=args.registry_hash_type,
+        receiver_identity=receiver_identity,
         expected_out_point={"tx_hash": create_hash, "index": "0x0"},
         timeout=args.confirmation_timeout,
     )
@@ -693,6 +749,7 @@ def main() -> None:
         next_lock_arg=owner_a["lock_arg"],
         receiver_identity=receiver_identity,
         contract_code_hash=contract_code_hash,
+        registry_hash_type=args.registry_hash_type,
         contract_tx_hash=deployment_tx_hash,
         contract_index=contract_index,
         sighash_dep=sighash_dep,
@@ -707,6 +764,8 @@ def main() -> None:
         rpc_url=args.rpc_url,
         indexer_url=args.indexer_url,
         contract_code_hash=contract_code_hash,
+        registry_hash_type=args.registry_hash_type,
+        receiver_identity=receiver_identity,
         expected_out_point={"tx_hash": update_hash, "index": "0x0"},
         timeout=args.confirmation_timeout,
     )
@@ -719,6 +778,7 @@ def main() -> None:
         next_lock_arg=owner_b["lock_arg"],
         receiver_identity=receiver_identity,
         contract_code_hash=contract_code_hash,
+        registry_hash_type=args.registry_hash_type,
         contract_tx_hash=deployment_tx_hash,
         contract_index=contract_index,
         sighash_dep=sighash_dep,
@@ -733,6 +793,8 @@ def main() -> None:
         rpc_url=args.rpc_url,
         indexer_url=args.indexer_url,
         contract_code_hash=contract_code_hash,
+        registry_hash_type=args.registry_hash_type,
+        receiver_identity=receiver_identity,
         expected_out_point={"tx_hash": transfer_hash, "index": "0x0"},
         timeout=args.confirmation_timeout,
     )
@@ -771,6 +833,8 @@ def main() -> None:
         rpc_url=args.rpc_url,
         indexer_url=args.indexer_url,
         contract_code_hash=contract_code_hash,
+        registry_hash_type=args.registry_hash_type,
+        receiver_identity=receiver_identity,
         expected_out_point={"tx_hash": revoke_hash, "index": "0x0"},
         timeout=args.confirmation_timeout,
     )
@@ -835,6 +899,7 @@ def main() -> None:
             "binary_sha256": sha256(contract_binary_path),
             "binary_ckb_data_hash": contract["data_hash"],
             "type_script_hash_for_registry_code_hash": contract_code_hash,
+            "registry_script_hash_type": args.registry_hash_type,
         },
         "lifecycle_funding": {
             "out_point": {"tx_hash": deployment_tx_hash, "index": hex(funding_index)},
