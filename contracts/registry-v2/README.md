@@ -12,8 +12,8 @@ make check
 ```
 
 `make test` performs a release build for
-`riscv64imac-unknown-none-elf`, runs four host-side invariant tests, and executes
-ten transaction tests in CKB-VM with `ckb-testtool`.
+`riscv64imac-unknown-none-elf`, runs five host-side invariant tests, and executes
+eleven transaction tests in CKB-VM with `ckb-testtool`.
 
 The transaction tests cover:
 

@@ -26,12 +26,12 @@ every change. The pilot exists to test whether independently owned receiver
 networks find that shared control useful enough to justify using a blockchain
 instead of a spreadsheet or central database.
 
-The pilot application starts in the Receiver directory so owners and
-coordinators meet the primary product first. Success means a first-time user can
-discover a receiver by its stable CKB identity, inspect its owner and lifecycle,
-export the current directory, connect a testnet wallet, complete an authorized
-action, and verify the transaction. The MLAT area then demonstrates how one
-receiver network can consume the same identities.
+The pilot application starts on the Live Map so owners and coordinators can
+investigate the operational problem first. The Receiver directory and Registry
+route remain one click away for stable CKB identity, owner and lifecycle
+inspection, directory export, testnet wallet actions, and transaction
+verification. The MLAT area demonstrates how one receiver network can consume
+the same identities.
 
 The application must distinguish live Registry V2 discovery, saved testnet
 evidence, and synthetic MLAT replay data. It must not imply that CKB proves a
@@ -54,8 +54,8 @@ gratuitous animation, excessive cards, and mock data presented as live data.
 
 ## Design Principles
 
-1. Start with the Receiver directory during the pilot: make stable identity,
-   ownership, lifecycle, and coordinator export the clearest first actions.
+1. Start with the Live Map during the pilot: make aircraft, receiver
+   contribution, and operational context the clearest first investigation.
 2. Preserve investigation context: one selected receiver controls the map,
    inspector, lifecycle, ownership, metadata, and evidence views.
 3. Separate owner and coordinator jobs: wallet-owned receivers and lifecycle

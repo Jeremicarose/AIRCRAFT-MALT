@@ -56,8 +56,8 @@ make check
 ```bash
 cd reference/mlat/frontend
 npm ci
-npm run typecheck
 npm run build
+npm run typecheck
 ```
 
 ```bash

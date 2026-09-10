@@ -4,7 +4,7 @@
 
 - Python: 3.12.11
 - Rust: 1.95.0
-- Node.js: 20
+- Node.js: 22.23.1
 - Contract target: `riscv64imac-unknown-none-elf`
 - CI runner: Ubuntu 24.04
 
@@ -26,7 +26,7 @@ Python version and review all dependency changes before committing.
 ## Registry Contract
 
 Rust dependencies are locked by `contracts/registry-v2/Cargo.lock`; the
-toolchain is pinned by `rust-toolchain.toml`.
+toolchain is pinned by `contracts/registry-v2/rust-toolchain.toml`.
 
 ```bash
 cd contracts/registry-v2

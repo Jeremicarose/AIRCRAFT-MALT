@@ -46,7 +46,7 @@ deployed with an immutable `data1` code hash.
 | `u64` precision | Fixed | Python bounds and TypeScript `bigint` preserve exact values |
 | Testnet evidence generation | Tested locally | Tool tests pass; no new funded testnet execution occurred |
 | Ownership provenance | Fixed in current data path | Owner lock and change history are preserved and verified |
-| Audited-revision reproducibility | Incomplete | Current worktree is not a final immutable revision and has no review bundle |
+| Audited-revision reproducibility | Partial | The current worktree contains a checksum-verifiable review bundle bound to the candidate commit; the bundle and reviewed source still need to be committed together, and any source change requires regeneration |
 
 No security finding is hidden. The contract remains unaudited, the Flask API has
 no built-in rate limiter, and the supported CKB JavaScript dependency chain has

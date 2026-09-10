@@ -120,11 +120,14 @@ timing and clock provenance accepted by the runtime.
 
 ## Render Blueprint
 
-`render.yaml` deploys the replay processor and API as one Python service. It is
-ephemeral and uses `/tmp` SQLite. It does not build or host the Next frontend.
+`render.yaml` defines two ephemeral Render web services: a Python service for
+the replay processor/API and a Docker service for the Next.js frontend. The
+Python service uses `/tmp` SQLite, and the frontend reaches it through the
+internal `MLAT_API_INTERNAL_URL` service binding.
 
-This blueprint is a backend walkthrough, not a production deployment template
-and not evidence of live field operation.
+This blueprint is a hosted walkthrough, not a production deployment template
+and not evidence of live field operation. A public deployment URL and
+production SLO have not been verified in this repository.
 
 ## Operational Requirements
 

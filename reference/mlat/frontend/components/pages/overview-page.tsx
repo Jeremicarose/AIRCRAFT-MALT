@@ -44,6 +44,7 @@ export function OverviewPage({ snapshot, readiness, benchmark, positionsData, po
   const pipeline = pipelineQuery.data;
   const isReplay = Boolean(mode?.demo_mode || mode?.simulation_mode || mode?.synthetic_feed_mode);
   const evidenceReady = Boolean(readiness?.ready && mode?.benchmarkable_output);
+  const registryVerified = Boolean(mode?.registry_discovery_live && mode?.registry_code_immutable);
   const signalAge = health?.freshness?.last_signal_age_s;
   const storeAge = health?.freshness?.last_store_age_s;
   const activeReceivers = Number(readiness?.dimensions?.reliability?.active_receivers ?? receivers.length);
@@ -58,7 +59,7 @@ export function OverviewPage({ snapshot, readiness, benchmark, positionsData, po
   ].filter(Boolean) as Array<{ title: string; detail: string; tone: StatusTone; href: string }>;
 
   const evidenceSteps = [
-    { title: 'Receiver identity', detail: mode?.receiver_registry_type_hash ? 'Registry V2 type hash configured' : 'Registry trust configuration pending', tone: mode?.receiver_registry_type_hash ? 'healthy' as StatusTone : 'attention' as StatusTone },
+    { title: 'Receiver identity', detail: registryVerified ? 'Registry V2 discovery and immutable binding verified' : mode?.receiver_registry_type_hash ? 'Registry trust configuration present; live verification pending' : 'Registry trust configuration pending', tone: registryVerified ? 'healthy' as StatusTone : 'attention' as StatusTone },
     { title: 'Receiver participation', detail: `${activeReceivers} active of ${receivers.length} visible`, tone: activeReceivers >= 4 ? 'healthy' as StatusTone : 'failure' as StatusTone },
     { title: 'Position solving', detail: aircraft.length ? `${aircraft.length} aircraft in the current air picture` : 'No current solved positions', tone: aircraft.length ? 'healthy' as StatusTone : 'attention' as StatusTone },
     { title: 'Evidence readiness', detail: evidenceReady ? 'Current output passes publication gates' : 'Evidence remains constrained', tone: evidenceReady ? 'healthy' as StatusTone : 'attention' as StatusTone },
@@ -67,7 +68,7 @@ export function OverviewPage({ snapshot, readiness, benchmark, positionsData, po
     { label: 'Aircraft', value: number(aircraft.length), detail: storeAge == null ? 'No current solve' : `Latest solve ${Math.round(storeAge)}s ago`, icon: Plane, tone: toneFromFreshness(storeAge, 20, 90) },
     { label: 'Receivers', value: `${number(activeReceivers)}/${number(receivers.length)}`, detail: activeReceivers >= 4 ? 'Solve geometry available' : 'Below solve minimum', icon: RadioTower, tone: activeReceivers >= 4 ? 'healthy' : 'failure' },
     { label: 'Pipeline', value: pipeline?.pipeline_operational ? 'Operational' : 'Blocked', detail: `${pipeline?.stages?.filter((stage) => stage.status === 'pass').length ?? 0}/${pipeline?.stages?.length ?? 0} stages passing`, icon: Workflow, tone: pipeline?.pipeline_operational ? 'healthy' : 'attention' },
-    { label: 'Registry', value: mode?.receiver_registry_type_hash ? 'Verified' : 'Pending', detail: mode?.registry_discovery_live ? 'Live discovery' : 'Trust configuration', icon: Database, tone: mode?.receiver_registry_type_hash ? 'trust' : 'attention' },
+    { label: 'Registry', value: registryVerified ? 'Verified' : mode?.receiver_registry_type_hash ? 'Configured' : 'Pending', detail: registryVerified ? 'Live discovery with immutable binding' : mode?.registry_discovery_live ? 'Live discovery; deployment binding needs review' : 'Trust configuration', icon: Database, tone: registryVerified ? 'trust' : 'attention' },
   ];
 
   const liveRail: Array<{ title: string; detail: string; meta: string; tone: StatusTone; href: string }> = [
