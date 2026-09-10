@@ -253,7 +253,8 @@ export function ReceiversPage({
   const discoveryFailures = directoryQuery.data?.failures ?? [];
   const replayMode = Boolean(modeData?.demo_mode || modeData?.simulation_mode || modeData?.synthetic_feed_mode);
   const summary = summarizeReceiverDirectory(unifiedReceivers);
-  const registryConnected = directoryQuery.isSuccess;
+  const registryDirectoryEmpty = directoryQuery.isSuccess && discovered.length === 0;
+  const registryConnected = directoryQuery.isSuccess && !registryDirectoryEmpty;
   const selectedInspector = selectedUi ? {
     ...selectedUi,
     ownerLockArgs: selected ? ownerAddress(selected, client) : selectedUi.ownerLockArgs,
@@ -267,7 +268,7 @@ export function ReceiversPage({
   const aircraftCount = new Set((positionsQuery.data?.positions ?? []).map((position) => position.aircraft_id)).size;
   const flowNodes = [
     { id: 'receiver', label: 'Receivers', detail: `${summary.registryIdentities} registered identities`, tone: summary.registryIdentities ? 'trust' as const : 'attention' as const, href: '/app/receivers' },
-    { id: 'registry', label: 'Registry', detail: directoryQuery.error ? 'CKB refresh failed' : directoryQuery.isLoading ? 'Querying CKB testnet' : 'Connected to CKB testnet', tone: directoryQuery.error ? 'failure' as const : registryConnected ? 'trust' as const : 'attention' as const, href: '/app/registry' },
+    { id: 'registry', label: 'Registry', detail: directoryQuery.error ? 'CKB refresh failed' : directoryQuery.isLoading ? 'Querying CKB testnet' : registryDirectoryEmpty ? 'No cells returned; check indexer freshness' : 'Connected to CKB testnet', tone: directoryQuery.error ? 'failure' as const : registryConnected ? 'trust' as const : 'attention' as const, href: '/app/registry' },
     { id: 'discovery', label: 'Discovery', detail: directoryQuery.error ? 'Using last MLAT inventory' : `${summary.mlatEligible} eligible identities`, tone: directoryQuery.error ? 'attention' as const : summary.mlatEligible ? 'healthy' as const : 'attention' as const, href: '/app/receivers' },
     { id: 'mlat', label: 'MLAT', detail: runtimePoolDetail, tone: summary.currentRuntimePool ? replayMode ? 'replay' as const : 'healthy' as const : 'attention' as const, href: '/app/pipeline' },
     { id: 'aircraft', label: 'Aircraft', detail: `${aircraftCount} localized in five minutes`, tone: aircraftCount ? 'healthy' as const : 'attention' as const, href: '/app/aircraft' },
@@ -280,7 +281,7 @@ export function ReceiversPage({
         description={perspective === 'registry'
           ? 'Discover current owner-authorized records, manage identities you own, and verify lifecycle history.'
           : 'See which registered receivers MLAT can use, which receivers are contributing now, and why any receiver is unavailable or excluded.'}
-        status={<StatusChip label={directoryQuery.error ? 'Indexer unavailable' : directoryQuery.isLoading ? 'Querying CKB testnet' : 'CKB testnet directory'} tone={directoryQuery.error ? 'failure' : 'trust'} />}
+        status={<StatusChip label={directoryQuery.error ? 'Indexer unavailable' : directoryQuery.isLoading ? 'Querying CKB testnet' : registryDirectoryEmpty ? 'No discoverable records' : 'CKB testnet directory'} tone={directoryQuery.error ? 'failure' : registryDirectoryEmpty ? 'attention' : 'trust'} />}
         actions={<>
           <Button variant="secondary" onClick={() => void directoryQuery.refetch()} disabled={directoryQuery.isFetching}><RefreshCw className={cn('size-4', directoryQuery.isFetching && 'animate-spin')} />Refresh directory</Button>
           <Button variant="secondary" onClick={exportAll} disabled={!discovered.length}><Download className="size-4" />Export JSON</Button>
@@ -305,6 +306,7 @@ export function ReceiversPage({
       </WorkspacePanel> : null}
 
       {directoryQuery.error ? <DataNotice title={perspective === 'registry' ? 'The Registry directory could not be refreshed' : 'Registry refresh failed; Registry receivers are unavailable'} detail={perspective === 'registry' ? 'The CKB testnet indexer did not return a fresh directory. No replay or MLAT receiver is substituted for an on-chain identity.' : 'The CKB testnet indexer did not return a complete directory. Registry-backed receivers are removed from the active MLAT pool until discovery succeeds again. Earlier aircraft evidence remains visible.'} onRetry={() => void directoryQuery.refetch()} /> : null}
+      {registryDirectoryEmpty ? <DataNotice title="No Registry V2 cells were returned" detail="The indexer answered successfully but returned no Registry records. This may be an empty registry or indexer lag; do not treat it as proof that a receiver does not exist." onRetry={() => void directoryQuery.refetch()} /> : null}
       {discoveryFailures.length ? <DataNotice title={`${discoveryFailures.length} registry ${discoveryFailures.length === 1 ? 'cell was' : 'cells were'} quarantined`} detail="The SDK rejected malformed, duplicate, or incomplete data instead of presenting it as a valid receiver." /> : null}
 
       <WorkspaceSplit

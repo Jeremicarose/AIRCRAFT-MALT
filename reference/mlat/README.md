@@ -50,6 +50,21 @@ npm ci
 npm run dev
 ```
 
+For a production-style local run, build first and then use the same `start`
+command used by the documented workflow. It prepares Next.js standalone assets
+automatically, so the page does not load as unstyled HTML:
+
+```bash
+cd reference/mlat/frontend
+npm ci
+npm run build
+npm run start
+```
+
+Set `PORT=3011` when another local service is using port 3000. The server is
+bound to `0.0.0.0` by default; use `HOSTNAME=127.0.0.1` when it should only be
+reachable from the local machine.
+
 Open `http://localhost:3000/app/registry` for the Pudge testnet Registry V2
 journey. Public historical discovery works without a wallet. The bundled July
 deployment is intentionally read-only. After the application is configured

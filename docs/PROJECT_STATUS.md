@@ -35,7 +35,7 @@ validated by external users.
   11 CKB-VM tests, and the RISC-V contract check passed.
 - `npm test && npm run build` in `sdk/typescript`: 69 tests and TypeScript
   compilation passed.
-- `npm test` in the frontend: 6 focused freshness and receiver-reference tests passed.
+- `npm test` in the frontend: 7 focused freshness, receiver-reference, and standalone-asset tests passed.
 - `python3 tools/registry/generate_registry_v2_conformance_report.py`: 57
   shared cases, 171 runtime assertions, and zero failures.
 - `npm run typecheck` and `next build --webpack` in the frontend: passed and
