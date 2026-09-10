@@ -18,7 +18,7 @@ validated by external users.
 | TypeScript SDK | COMPLETE | 69 tests cover codec, discovery, pagination, Type ID, history, immutable deployment binding and binary preflight, mutable-deployment write rejection, CCC-signer lifecycle assembly, the complete documented journey, and public package metadata | Claim the npm scope and approve the first protected release |
 | Historical CKB testnet lifecycle | COMPLETE | Frozen 2026-07-30 create-update-transfer-revoke and seven rejected attacks pass the offline verifier | Evidence is historical and uses the older tooling |
 | Fresh SDK-driven lifecycle | BLOCKED | The SDK and browser journey are implemented; mutable code deployments fail closed | Requires independent review, an immutable `data1` Pudge deployment, funded wallets, and external signer approvals; no fresh transaction is claimed |
-| MLAT reference software | PARTIAL | Full 161-test Python suite passes; strict live gates and evidence verifier exist | Physical synchronized receiver run and independent reference data are absent |
+| MLAT reference software | PARTIAL | Full 166-test Python suite passes; strict live gates and evidence verifier exist | Physical synchronized receiver run and independent reference data are absent |
 | Operator frontend | PARTIAL | The shell starts with the Receiver directory, preserves selected receiver context, keeps MLAT under a separate reference area, and uses the SDK for discovery, export, history, and signer-based lifecycle actions; focused tests, type check, and production build pass | Complete a funded wallet-signed browser run and add automated accessibility coverage |
 | Review evidence bundle | COMPLETE | `evidence/registry-v2-review-2026-09-11-final` binds the current candidate to commit `e7cb2af9` and passes its offline verifier | Regenerate the bundle whenever reviewed source changes; a fresh deployment bundle still requires external signing |
 | Pilot materials | PARTIAL | Browser workflow, readiness gate, owner/coordinator tasks, feedback form, evidence template, proposal, and recruitment research exist | Consent materials, a maintainer wallet rehearsal, recruitment, and observed sessions remain |
@@ -27,7 +27,7 @@ validated by external users.
 
 ## Verification on this tree
 
-- `python3 -m pytest -q`: 161 passed.
+- `python3 -m pytest -q`: 166 passed.
 - `python3 -m black --check src/ckb_registry src/mlat_reference tools tests`:
   77 files unchanged.
 - `python3 -m flake8 src tools tests`: passed.
