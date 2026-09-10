@@ -145,6 +145,12 @@ def test_receiver_identity_is_only_exposed_for_a_valid_type_id(monkeypatch, tmp_
     module = _load_api_module(monkeypatch, tmp_path)
     app = module.create_app()
     receiver_identity = "0x" + "ab" * 32
+    u64_max = (1 << 64) - 1
+    owner_lock = {
+        "code_hash": "0x" + "cd" * 32,
+        "hash_type": "type",
+        "args": "0x" + "ef" * 20,
+    }
     with app.app_context():
         module.get_db().store_receiver(
             receiver_id=receiver_identity,
@@ -157,6 +163,10 @@ def test_receiver_identity_is_only_exposed_for_a_valid_type_id(monkeypatch, tmp_
             status="online",
             last_seen=time.time(),
             capabilities=["mode-s", "mlat"],
+            registry_sequence=u64_max,
+            registry_updated_at=u64_max,
+            owner_lock_args=owner_lock["args"],
+            owner_lock=json.dumps(owner_lock, separators=(",", ":"), sort_keys=True),
         )
 
     receiver = app.test_client().get("/api/receivers").get_json()["receivers"][0]
@@ -165,6 +175,9 @@ def test_receiver_identity_is_only_exposed_for_a_valid_type_id(monkeypatch, tmp_
     assert receiver["receiver_identity"] == receiver_identity
     assert receiver["receiver_label"] == "RECV_CHAIN_001"
     assert receiver["data_source"] == "ckb_registry"
+    assert receiver["registry"]["sequence"] == str(u64_max)
+    assert receiver["registry"]["updated_at"] == str(u64_max)
+    assert receiver["registry"]["owner_lock"] == owner_lock
 
 
 def test_registry_evidence_exposes_saved_testnet_lifecycle(monkeypatch, tmp_path):

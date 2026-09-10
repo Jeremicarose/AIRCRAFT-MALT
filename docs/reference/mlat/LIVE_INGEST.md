@@ -106,7 +106,9 @@ Keep your CKB registry settings too:
 export CKB_NETWORK=testnet
 export CKB_RPC_URL=https://testnet.ckb.dev/rpc
 export CKB_INDEXER_URL=https://testnet.ckb.dev/indexer
-export RECEIVER_REGISTRY_TYPE_HASH=0xYOUR_DEPLOYED_TYPE_HASH
+export RECEIVER_REGISTRY_TYPE_HASH=0xYOUR_DEPLOYED_BINARY_DATA_HASH
+export RECEIVER_REGISTRY_HASH_TYPE=data1
+export ALLOW_MUTABLE_REGISTRY_CODE=false
 ```
 
 ---

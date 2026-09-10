@@ -27,7 +27,7 @@ def test_generate_receiver_registry_deploy_config(tmp_path):
     assert contract.resolve().as_posix() in text
 
 
-def test_update_env_type_hash(tmp_path):
+def test_update_env_type_hash_writes_immutable_code_binding(tmp_path):
     env_file = tmp_path / ".env"
     env_file.write_text("RECEIVER_REGISTRY_TYPE_HASH=\nSIMULATE_IF_UNAVAILABLE=true\n")
 
@@ -46,4 +46,32 @@ def test_update_env_type_hash(tmp_path):
 
     text = env_file.read_text()
     assert "RECEIVER_REGISTRY_TYPE_HASH=" + "0x" + "dd" * 32 in text
+    assert "RECEIVER_REGISTRY_HASH_TYPE=data1" in text
+    assert "ALLOW_MUTABLE_REGISTRY_CODE=false" in text
     assert "SIMULATE_IF_UNAVAILABLE=false" in text
+
+
+def test_update_env_type_hash_rejects_mutable_binding_without_explicit_opt_in(tmp_path):
+    env_file = tmp_path / ".env"
+    original = "RECEIVER_REGISTRY_TYPE_HASH=\n"
+    env_file.write_text(original)
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            "tools/registry/update_env_type_hash.py",
+            "--code-hash",
+            "0x" + "dd" * 32,
+            "--hash-type",
+            "type",
+            "--env-file",
+            str(env_file),
+        ],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+    assert result.returncode != 0
+    assert "permits mutable Registry code" in result.stderr
+    assert env_file.read_text() == original

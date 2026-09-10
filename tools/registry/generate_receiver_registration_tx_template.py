@@ -25,7 +25,13 @@ def parse_args() -> argparse.Namespace:
         description="Generate a receiver registration transaction template"
     )
     parser.add_argument("--lock-arg", required=True, help="Owner lock arg for the receiver cell")
-    parser.add_argument("--type-hash", required=True, help="Deployed receiver-registry type hash")
+    parser.add_argument(
+        "--code-hash",
+        "--type-hash",
+        dest="code_hash",
+        required=True,
+        help="Registry contract code hash (the binary data hash when --hash-type=data1)",
+    )
     parser.add_argument(
         "--hash-type",
         choices=("data1", "type"),
@@ -53,7 +59,7 @@ def ckb_to_shannons(value: str) -> int:
 
 def main() -> None:
     args = parse_args()
-    contract_code_hash = normalize_receiver_identity(args.type_hash)
+    contract_code_hash = normalize_receiver_identity(args.code_hash)
     data_hex = Path(args.data_hex_file).read_text().strip()
     output_path = Path(args.output)
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -82,6 +88,7 @@ def main() -> None:
         "witnesses": [],
         "registry_v2": {
             "identity_rule": "blake2b(first_input_molecule || output_index_le_u64)",
+            "code_binding": args.hash_type,
             "type_args_pending": True,
             "next_step": "run tools/registry/apply_receiver_type_script.py after adding the funding input",
         },

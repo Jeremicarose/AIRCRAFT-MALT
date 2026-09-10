@@ -37,6 +37,8 @@ TESTNET_ADDRESS_RE = re.compile(r'"testnet"\s*:\s*"(ckt1[0-9a-z]+)"')
 FEE_SHANNONS = 1_000_000
 REGISTRY_CAPACITY = 1000 * 100_000_000
 TOMBSTONE_CAPACITY = 500 * 100_000_000
+INDEXER_MAX_PAGES = 100
+INDEXER_MAX_CELLS = 1_000
 
 
 def parse_args() -> argparse.Namespace:
@@ -455,7 +457,12 @@ def capture_state(
         objects: list[dict[str, Any]] = []
         cursor: str | None = None
         seen_cursors: set[str] = set()
-        while True:
+        exhausted = False
+        for _ in range(INDEXER_MAX_PAGES):
+            if time.monotonic() >= deadline:
+                raise TimeoutError(
+                    f"indexer pagination for {receiver_identity} exceeded the capture timeout"
+                )
             params: list[Any] = [search_key, "asc", "0x64"]
             if cursor is not None:
                 params.append(cursor)
@@ -464,14 +471,19 @@ def capture_state(
             if not isinstance(page_objects, list):
                 raise RuntimeError("indexer get_cells response has no objects array")
             objects.extend(page_objects)
+            if len(objects) > INDEXER_MAX_CELLS:
+                raise RuntimeError("indexer lookup exceeded the Registry cell safety limit")
             if not page_objects:
                 cells = {"objects": objects, "last_cursor": page.get("last_cursor")}
+                exhausted = True
                 break
             next_cursor = page.get("last_cursor")
             if not isinstance(next_cursor, str) or not next_cursor or next_cursor in seen_cursors:
                 raise RuntimeError("indexer returned an invalid cursor after a non-empty page")
             seen_cursors.add(next_cursor)
             cursor = next_cursor
+        if not exhausted:
+            raise RuntimeError("indexer lookup exceeded the Registry page safety limit")
         if any(item.get("out_point") == expected_out_point for item in cells.get("objects", [])):
             break
         time.sleep(3)

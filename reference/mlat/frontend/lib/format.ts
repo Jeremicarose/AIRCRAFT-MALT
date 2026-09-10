@@ -6,6 +6,24 @@ export function number(value: unknown, digits = 0, fallback = 'n/a'): string {
   return digits > 0 ? numeric.toFixed(digits) : Math.round(numeric).toLocaleString();
 }
 
+const U64_MAX = (BigInt(1) << BigInt(64)) - BigInt(1);
+
+export function u64(value: unknown, fallback = 'n/a'): string {
+  try {
+    const parsed = typeof value === 'bigint'
+      ? value
+      : typeof value === 'string' && /^(0|[1-9][0-9]*)$/.test(value)
+        ? BigInt(value)
+        : typeof value === 'number' && Number.isSafeInteger(value)
+          ? BigInt(value)
+          : null;
+    if (parsed === null || parsed < BigInt(0) || parsed > U64_MAX) return fallback;
+    return parsed.toLocaleString('en-US');
+  } catch {
+    return fallback;
+  }
+}
+
 export function percent(value: unknown, digits = 0, fallback = 'n/a'): string {
   const numeric = Number(value);
   if (!Number.isFinite(numeric)) return fallback;
@@ -47,8 +65,22 @@ export function toneFromFreshness(value: unknown, warnAt = 30, riskAt = 120): St
 }
 
 export function formatDateTime(epochSeconds: unknown): string {
+  if (typeof epochSeconds === 'bigint' && !Number.isSafeInteger(Number(epochSeconds))) {
+    return epochSeconds.toString();
+  }
+  if (typeof epochSeconds === 'string' && /^(0|[1-9][0-9]*)$/.test(epochSeconds)) {
+    try {
+      if (BigInt(epochSeconds) > BigInt(Number.MAX_SAFE_INTEGER)) return epochSeconds;
+    } catch {
+      return 'Awaiting timestamp';
+    }
+  }
   const numeric = Number(epochSeconds);
-  return Number.isFinite(numeric) ? `${new Intl.DateTimeFormat('en-GB', { timeZone: 'UTC', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }).format(new Date(numeric * 1000))} UTC` : 'Awaiting timestamp';
+  const date = new Date(numeric * 1000);
+  if (!Number.isFinite(numeric) || !Number.isFinite(date.getTime())) {
+    return typeof epochSeconds === 'string' ? epochSeconds : 'Awaiting timestamp';
+  }
+  return `${new Intl.DateTimeFormat('en-GB', { timeZone: 'UTC', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }).format(date)} UTC`;
 }
 
 export function formatCoordinate(lat: unknown, lon: unknown): string {

@@ -25,14 +25,14 @@ def main() -> None:
     print()
     print("4. Build a cell transaction that:")
     print("   - uses your deployer lock script as owner")
-    print("   - sets type.code_hash to the receiver-registry type hash")
-    print("   - sets type.hash_type to 'type'")
+    print("   - sets type.code_hash to the receiver-registry binary data hash")
+    print("   - sets type.hash_type to 'data1' so the contract code is immutable")
     print("   - sets type.args to the 32-byte Type ID derived from the first input")
     print("   - never reuses a Receiver Identity for another receiver lifecycle")
     print("   - writes the generated hex payload as output data")
     print()
     print("5. Run apply_receiver_type_script.py after the first input exists.")
-    print("6. After registration, restart mlat-processor and query /api/receivers")
+    print("6. Wait for the Registry refresh, then query /api/receivers")
 
 
 if __name__ == "__main__":

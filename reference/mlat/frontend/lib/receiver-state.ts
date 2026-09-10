@@ -23,7 +23,7 @@ export interface UnifiedReceiver {
   ownerLockArgs: string | null;
   capabilities: string[];
   lastObservationAt: number | null;
-  lastRegistryUpdateAt: number | null;
+  lastRegistryUpdateAt: string | null;
   relatedAircraftIds: string[];
   source: Receiver['data_source'] | null;
 }
@@ -53,6 +53,18 @@ interface ReconcileReceiverOptions {
 function normalizedIdentity(value?: string | null): string | null {
   if (!value || !RECEIVER_IDENTITY_PATTERN.test(value)) return null;
   return value.toLowerCase();
+}
+
+function normalizedRegistryTimestamp(value: unknown): string | null {
+  if (typeof value !== 'string' || !/^(0|[1-9][0-9]*)$/.test(value)) return null;
+  try {
+    const parsed = BigInt(value);
+    return parsed > BigInt(0) && parsed <= ((BigInt(1) << BigInt(64)) - BigInt(1))
+      ? value
+      : null;
+  } catch {
+    return null;
+  }
 }
 
 export function receiverIdentity(receiver?: Receiver | null): string | null {
@@ -223,9 +235,11 @@ export function reconcileReceivers({
       ownerLockArgs: registry?.registry?.owner_lock_args ?? runtime?.registry?.owner_lock_args ?? null,
       capabilities,
       lastObservationAt,
-      lastRegistryUpdateAt: Number.isFinite(Number(registry?.updated_at ?? runtime?.updated_at))
-        ? Number(registry?.updated_at ?? runtime?.updated_at)
-        : null,
+      lastRegistryUpdateAt: normalizedRegistryTimestamp(
+        registry?.registry?.updated_at
+          ?? registry?.updated_at
+          ?? runtime?.registry?.updated_at,
+      ),
       relatedAircraftIds: relatedAircraft(references, positions),
       source: runtime?.data_source ?? registry?.data_source ?? null,
     };

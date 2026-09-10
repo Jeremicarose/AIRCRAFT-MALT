@@ -20,7 +20,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { StatusChip } from '@/components/ui/status-chip';
 import { WalletControl } from '@/components/wallet-control';
 import { fetchJson, PUBLIC_POSITIONS_PATH } from '@/lib/api';
-import { formatDateTime, number, titleCase, truncateMiddle } from '@/lib/format';
+import { formatDateTime, number, titleCase, truncateMiddle, u64 } from '@/lib/format';
 import { useOperatorStore } from '@/lib/operator-store';
 import { createRegistrySdk, discoveredReceiverToUi, downloadJson, explorerTransactionUrl, registryDirectoryExport, receiverExport, withRegistryTimeout } from '@/lib/registry';
 import { mlatStatusPresentation, receiverDockState, reconcileReceivers, registryStatusPresentation, summarizeReceiverDirectory, type UnifiedReceiver } from '@/lib/receiver-state';
@@ -199,7 +199,7 @@ export function ReceiversPage({
         receiverColumn,
         columnHelper.display({ id: 'state', header: 'Current state', size: 120, cell: ({ row }) => <StatusChip label={titleCase(row.original.registryRecordStatus ?? 'unknown')} tone={recordStatusTone(row.original.registryRecordStatus)} /> }),
         ownerColumn,
-        columnHelper.display({ id: 'sequence', header: 'Sequence', size: 90, cell: ({ row }) => number(row.original.registry?.registry?.sequence) }),
+        columnHelper.display({ id: 'sequence', header: 'Sequence', size: 90, cell: ({ row }) => u64(row.original.registry?.registry?.sequence) }),
         columnHelper.display({ id: 'updated', header: 'Registry updated', size: 170, cell: ({ row }) => row.original.lastRegistryUpdateAt ? formatDateTime(row.original.lastRegistryUpdateAt) : 'Not available' }),
       ];
     }

@@ -211,7 +211,8 @@ Generate the output template:
 ```bash
 python3 tools/registry/generate_receiver_registration_tx_template.py \
   --lock-arg 0xYOUR_OWNER_LOCK_ARG \
-  --type-hash 0xYOUR_V2_CONTRACT_CODE_HASH
+  --code-hash 0xYOUR_V2_CONTRACT_BINARY_DATA_HASH \
+  --hash-type data1
 ```
 
 Add the funding input and receiver output to the transaction first. Then derive
