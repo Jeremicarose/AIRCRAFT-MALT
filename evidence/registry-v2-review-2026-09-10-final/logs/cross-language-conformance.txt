@@ -1,0 +1,8 @@
+$ /Users/jeremicarose/Downloads/mlat-system 2/.venv/bin/python3 tools/registry/generate_registry_v2_conformance_report.py --output /Users/jeremicarose/Downloads/mlat-system 2/evidence/registry-v2-review-2026-09-10-final/conformance-report.json
+cwd: .
+exit_code: 0
+
+STDOUT
+{"assertion_count": 171, "case_count": 57, "conformant": true, "cross_language_equal": true, "failed_case_count": 0, "implementation_count": 3, "passed_case_count": 57}
+
+STDERR

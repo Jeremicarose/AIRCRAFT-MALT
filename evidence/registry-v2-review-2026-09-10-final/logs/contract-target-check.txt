@@ -1,0 +1,9 @@
+$ make check
+cwd: contracts/registry-v2
+exit_code: 0
+
+STDOUT
+cargo check --locked --target riscv64imac-unknown-none-elf --features contract-bin --bin receiver-registry
+
+STDERR
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.14s
