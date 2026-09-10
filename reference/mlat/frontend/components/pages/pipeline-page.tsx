@@ -76,7 +76,7 @@ export function PipelinePage({ pipeline, metrics }: { pipeline: PipelineData | n
       evidence: Object.entries(selectedStage.metrics ?? {}).slice(0, 4).map(([key, value]) => ({ title: titleCase(key), detail: String(value), state: 'Metric', tone: stageTone(selectedStage.status) })),
       actions: [
         { label: 'Open metrics', href: '/app/metrics', tone: 'secondary' },
-        { label: 'Open environment', href: '/app/environment', tone: 'primary' },
+        { label: 'Open diagnostics', href: '/app/environment', tone: 'primary' },
       ],
     });
     return () => useOperatorStore.getState().setDock(null);

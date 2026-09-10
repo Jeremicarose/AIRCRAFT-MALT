@@ -36,6 +36,8 @@
     ".next/dev/types/**/*.ts",
     ".next-grant-dev/types/**/*.ts",
     ".next-grant-dev/dev/types/**/*.ts",
+    ".next-browser/types/**/*.ts",
+    ".next-browser/dev/types/**/*.ts",
     ".next-pilot/types/**/*.ts",
     ".next-pilot/dev/types/**/*.ts"
   ],

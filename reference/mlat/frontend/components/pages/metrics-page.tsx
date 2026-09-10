@@ -79,7 +79,7 @@ export function MetricsPage({ metrics, performance, reliability }: { metrics: Me
       ],
       actions: [
         { label: 'Open pipeline', href: '/app/pipeline', tone: 'primary' },
-        { label: 'Open environment', href: '/app/environment', tone: 'secondary' },
+        { label: 'Open diagnostics', href: '/app/environment', tone: 'secondary' },
       ],
     });
     return () => useOperatorStore.getState().setDock(null);

@@ -4,6 +4,7 @@ import { ArrowUpRight, Plane, RadioTower } from 'lucide-react';
 import Link from 'next/link';
 import { RelativeTime } from '@/components/ui/relative-time';
 import { percent, toneFromScore } from '@/lib/format';
+import { receiverOperationalKey } from '@/lib/receiver-state';
 import type { Position, Receiver, StatusTone } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { useOperatorStore } from '@/lib/operator-store';
@@ -31,13 +32,13 @@ export function ActivityFeed({ aircraft, receivers, limit = 8 }: { aircraft: Pos
       focus: item.aircraft_id,
     })),
     ...receivers.map((receiver) => ({
-      id: `receiver-${receiver.receiver_id}-${receiver.last_seen}`,
+      id: `receiver-${receiverOperationalKey(receiver)}-${receiver.last_seen}`,
       timestamp: Number(receiver.last_seen ?? 0),
-      title: receiver.receiver_id,
+      title: receiver.receiver_label || receiver.receiver_id,
       detail: 'Receiver heartbeat received',
       tone: String(receiver.status).toLowerCase() === 'online' ? 'healthy' as StatusTone : 'failure' as StatusTone,
       kind: 'receiver' as const,
-      focus: receiver.receiver_id,
+      focus: receiverOperationalKey(receiver),
     })),
   ].filter((item) => item.timestamp > 0).sort((a, b) => b.timestamp - a.timestamp).slice(0, limit);
 
@@ -47,7 +48,7 @@ export function ActivityFeed({ aircraft, receivers, limit = 8 }: { aircraft: Pos
     <ol className="divide-y divide-line">
       {events.map((event) => {
         const Icon = event.kind === 'aircraft' ? Plane : RadioTower;
-        const href = event.kind === 'aircraft' ? `/app/aircraft?aircraft=${encodeURIComponent(event.title.replace('Aircraft ', ''))}` : `/app/receivers?receiver=${encodeURIComponent(event.title)}`;
+        const href = event.kind === 'aircraft' ? `/app/aircraft?aircraft=${encodeURIComponent(event.focus)}` : `/app/receivers?receiver=${encodeURIComponent(event.focus)}`;
         return (
           <li key={event.id}>
             <Link href={href} onClick={() => setInvestigationContext({ focus: event.focus })} className="grid grid-cols-[58px_28px_minmax(0,1fr)_16px] items-start gap-3 px-4 py-3 outline-none transition-colors duration-standard hover:bg-graphite-hover/45 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-signal-blue">

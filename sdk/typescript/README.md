@@ -19,10 +19,16 @@ fixtures.
 
 The bundled `REGISTRY_V2_PUDGE_2026_07_30` deployment is the historical
 deployment proven by the repository's signed evidence. It was built from
-contract commit `61ab011de58397cb8d6ca3cecb5c659c69e2fc8c`. The current
-contract source is a stricter, undeployed review candidate. New SDK records
-follow the stricter current validation rules, but transactions created with the
-bundled deployment use the historical testnet binary.
+contract commit `61ab011de58397cb8d6ca3cecb5c659c69e2fc8c`. Its type-hash code
+binding allows the implementation cell to be replaced without changing the
+receiver type hash, so `RegistryV2Sdk.testnet()` supports discovery but rejects
+all writes. Do not bypass that guard.
+
+The current contract source is a stricter, undeployed review candidate. The
+create-to-revoke journey requires that binary to be independently reviewed and
+deployed on Pudge with an immutable `data1` code hash. The SDK then needs only
+the deployment's three public manifest values: binary code hash, deployment
+transaction hash, and output index.
 
 ## 1. Install
 
@@ -74,11 +80,12 @@ npm ci
 npm test
 ```
 
-The reference application at `/app/receivers` exposes the same journey as a
-wallet-reviewed browser flow. Start it from `reference/mlat/frontend` with
-`npm run dev`, open the route, and connect a Pudge wallet. The application uses
-the SDK for lifecycle rules and waits for public-indexer visibility before it
-shows a write as complete.
+The reference application at `/app/registry` exposes public historical
+discovery by default. Start it from `reference/mlat/frontend` with `npm run dev`
+and open the route. Owner actions remain disabled until the application is
+configured with a reviewed immutable deployment. Once configured, it uses the
+SDK for lifecycle rules and waits for public-indexer visibility before it shows
+a write as complete.
 
 ## 2. Configure a testnet signer
 
@@ -108,19 +115,40 @@ export function CkbProvider({ children }: { children: ReactNode }) {
 Inside a client component, open the wallet dialog and use its signer:
 
 ```tsx
-import { RegistryV2Sdk } from "@aircraft-malt/registry-v2";
+import {
+  RegistryV2Sdk,
+  type WritableRegistryV2TestnetDeployment,
+} from "@aircraft-malt/registry-v2";
 import { ccc } from "@ckb-ccc/connector-react";
 import { useMemo } from "react";
 
 const { client, signerInfo, open } = ccc.useCcc();
-const registry = useMemo(() => RegistryV2Sdk.testnet(client), [client]);
+const reviewedDeployment = {
+  contractCodeHash: process.env.NEXT_PUBLIC_REGISTRY_CODE_HASH!,
+  contractTransactionHash: process.env.NEXT_PUBLIC_REGISTRY_CONTRACT_TX_HASH!,
+  contractIndex: Number(process.env.NEXT_PUBLIC_REGISTRY_CONTRACT_INDEX!),
+} satisfies WritableRegistryV2TestnetDeployment;
+const registry = useMemo(
+  () => RegistryV2Sdk.writableTestnet(client, reviewedDeployment),
+  [client],
+);
 const signer = signerInfo?.signer;
 
 // Call open() from a user-initiated button click when signer is undefined.
 ```
 
-`RegistryV2Sdk.testnet()` rejects a mainnet client. Lifecycle methods also
-reject a signer connected to a different CKB network.
+Copy those three values exactly from the reviewed deployment manifest. They are
+public identifiers, not wallet secrets. The factory derives `hashType: data1`,
+the contract cell dependency, and the exact script configuration. It rejects
+missing or malformed hashes, an invalid output index, and a mainnet client.
+Lifecycle methods also reject a signer connected to a different CKB network.
+The first write verifies that the dependency is still live and hashes its cell
+data to confirm that it contains the configured binary. Applications can run
+the same check earlier with `await registry.verifyWritableDeployment()`.
+
+For historical read-only discovery, use `RegistryV2Sdk.testnet(client)` without
+a deployment. Any lifecycle method on that instance fails before asking the
+wallet to sign.
 
 The owner wallet needs a plain testnet CKB cell for storage capacity and fees.
 Fund the public testnet address shown by the wallet, then wait for that funding
@@ -137,7 +165,8 @@ Never ask the recipient for a private key or seed phrase.
 ## 3. Create and submit
 
 The SDK fills the schema version, initial sequence, timestamp, Type ID, output
-capacity, dependencies, and fee inputs:
+capacity, dependencies, and fee inputs. `registry` below must be the writable
+instance configured in the previous section:
 
 ```ts
 if (!signer) throw new Error("Connect a Pudge testnet wallet first");
@@ -299,6 +328,9 @@ if (revoked?.record.status !== "revoked") {
 
 | Error text | Meaning | Action |
 |---|---|---|
+| `historical and read-only` | The SDK is using the mutable July deployment or another non-`data1` deployment. | Stop. Configure a reviewed immutable Pudge deployment; do not bypass the guard. |
+| `contract dependency is not a live Pudge cell` | The configured deployment outpoint is wrong or has been spent. | Compare all three values with the reviewed deployment manifest. |
+| `deployment code hash mismatch` | The outpoint exists, but its binary does not match the configured `data1` hash. | Stop before signing and correct the deployment configuration. |
 | `no plain CKB testnet capacity cell` | The wallet has no spendable plain testnet cell for storage and fees. | Fund the wallet's public Pudge address and wait for indexing. |
 | `Connected signer uses ... but the Registry client uses ...` | The wallet and client are on different networks. | Switch both to Pudge testnet. |
 | `Recipient must be a valid ckt address` | The transfer address is malformed or belongs to another network. | Ask for the recipient's public Pudge address. |

@@ -97,7 +97,7 @@ export function ReceiversPage({
   const setInvestigationContext = useOperatorStore((state) => state.setInvestigationContext);
   const [selectedId, setSelectedId] = useState<string | null>(selectedReceiverId ?? null);
   const [search, setSearch] = useState('');
-  const [view, setView] = useState<DirectoryView>('active');
+  const [view, setView] = useState<DirectoryView>(perspective === 'registry' ? 'active' : 'all');
   const [walletLocks, setWalletLocks] = useState<ccc.Script[]>([]);
   const basePath = perspective === 'registry' ? '/app/registry' : '/app/receivers';
 
@@ -258,13 +258,18 @@ export function ReceiversPage({
     ...selectedUi,
     ownerLockArgs: selected ? ownerAddress(selected, client) : selectedUi.ownerLockArgs,
   } : null;
-  const runtimeReceiverCount = receiverData?.receivers.length ?? 0;
+  const currentPoolDetail = replayMode
+    ? `${summary.currentRuntimePool} current replay or hybrid receivers`
+    : `${summary.currentRuntimePool} receivers in current pool`;
+  const runtimePoolDetail = summary.staleRuntime
+    ? `${currentPoolDetail}; ${summary.staleRuntime} stale`
+    : currentPoolDetail;
   const aircraftCount = new Set((positionsQuery.data?.positions ?? []).map((position) => position.aircraft_id)).size;
   const flowNodes = [
     { id: 'receiver', label: 'Receivers', detail: `${summary.registryIdentities} registered identities`, tone: summary.registryIdentities ? 'trust' as const : 'attention' as const, href: '/app/receivers' },
     { id: 'registry', label: 'Registry', detail: directoryQuery.error ? 'CKB refresh failed' : directoryQuery.isLoading ? 'Querying CKB testnet' : 'Connected to CKB testnet', tone: directoryQuery.error ? 'failure' as const : registryConnected ? 'trust' as const : 'attention' as const, href: '/app/registry' },
     { id: 'discovery', label: 'Discovery', detail: directoryQuery.error ? 'Using last MLAT inventory' : `${summary.mlatEligible} eligible identities`, tone: directoryQuery.error ? 'attention' as const : summary.mlatEligible ? 'healthy' as const : 'attention' as const, href: '/app/receivers' },
-    { id: 'mlat', label: 'MLAT', detail: replayMode ? `${runtimeReceiverCount} replay or hybrid receivers` : `${runtimeReceiverCount} receivers in pool`, tone: replayMode ? 'replay' as const : runtimeReceiverCount ? 'healthy' as const : 'attention' as const, href: '/app/pipeline' },
+    { id: 'mlat', label: 'MLAT', detail: runtimePoolDetail, tone: summary.currentRuntimePool ? replayMode ? 'replay' as const : 'healthy' as const : 'attention' as const, href: '/app/pipeline' },
     { id: 'aircraft', label: 'Aircraft', detail: `${aircraftCount} localized in five minutes`, tone: aircraftCount ? 'healthy' as const : 'attention' as const, href: '/app/aircraft' },
   ];
 

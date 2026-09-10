@@ -47,6 +47,12 @@ export interface WaitForIndexedTransactionOptions {
   transactionTimeoutMs?: number;
 }
 
+export interface WritableRegistryV2TestnetDeployment {
+  contractCodeHash: string;
+  contractTransactionHash: string;
+  contractIndex: number;
+}
+
 function recordObject(value: unknown): Record<string, unknown> {
   if (value === null || typeof value !== "object" || Array.isArray(value)) {
     throw new Error("Registry V2 record input must be an object");
@@ -70,9 +76,17 @@ function normalizeTransactionHash(value: string): string {
   return value.toLowerCase();
 }
 
+function normalizeContractCodeHash(value: string): string {
+  if (!/^0x[0-9a-fA-F]{64}$/.test(value)) {
+    throw new Error("contractCodeHash must be 0x-prefixed 32-byte hex");
+  }
+  return value.toLowerCase();
+}
+
 export class RegistryV2Sdk {
   readonly discovery: RegistryV2Discovery;
   readonly history: RegistryV2History;
+  private deploymentVerification?: Promise<void>;
 
   constructor(
     readonly client: ccc.Client,
@@ -91,11 +105,36 @@ export class RegistryV2Sdk {
     return new RegistryV2Sdk(client, REGISTRY_V2_PUDGE_2026_07_30);
   }
 
+  static writableTestnet(
+    client: ccc.Client,
+    deployment: WritableRegistryV2TestnetDeployment,
+  ): RegistryV2Sdk {
+    if (client.addressPrefix !== "ckt") {
+      throw new Error(
+        `Registry V2 testnet requires a CKB testnet client with address prefix ckt; received ${client.addressPrefix}`,
+      );
+    }
+    if (!Number.isSafeInteger(deployment.contractIndex) || deployment.contractIndex < 0) {
+      throw new Error("contractIndex must be a safe non-negative integer");
+    }
+    return new RegistryV2Sdk(client, {
+      contractCodeHash: normalizeContractCodeHash(deployment.contractCodeHash),
+      scriptHashType: "data1",
+      contractCellDep: {
+        outPoint: {
+          txHash: normalizeTransactionHash(deployment.contractTransactionHash),
+          index: deployment.contractIndex,
+        },
+        depType: "code",
+      },
+    });
+  }
+
   async prepareCreate(
     signer: ccc.Signer,
     recordValue: RegistryV2CreateInput | RegistryV2Record,
   ): Promise<PreparedCreate> {
-    this.assertWritableDeployment();
+    await this.assertWritableDeployment();
     this.assertSignerNetwork(signer);
     const record = validateCreation({
       schema_version: 2,
@@ -145,7 +184,7 @@ export class RegistryV2Sdk {
     receiverIdentityValue: string,
     nextRecord: RegistryV2Update | RegistryV2Record,
   ): Promise<ccc.Transaction> {
-    this.assertWritableDeployment();
+    await this.assertWritableDeployment();
     const current = await this.requireCurrentCell(receiverIdentityValue);
     const validated = validateSuccessor(current.record, {
       ...current.record,
@@ -170,7 +209,7 @@ export class RegistryV2Sdk {
     nextOwner: RegistryV2Owner,
     updatedAt?: bigint,
   ): Promise<ccc.Transaction> {
-    this.assertWritableDeployment();
+    await this.assertWritableDeployment();
     const current = await this.requireCurrentCell(receiverIdentityValue);
     const next = validateSuccessor(current.record, {
       ...current.record,
@@ -208,7 +247,7 @@ export class RegistryV2Sdk {
     receiverIdentityValue: string,
     updatedAt?: bigint,
   ): Promise<ccc.Transaction> {
-    this.assertWritableDeployment();
+    await this.assertWritableDeployment();
     const current = await this.requireCurrentCell(receiverIdentityValue);
     const next = validateSuccessor(current.record, {
       ...current.record,
@@ -275,6 +314,23 @@ export class RegistryV2Sdk {
         );
       }
       await new Promise((resolve) => setTimeout(resolve, pollIntervalMs));
+    }
+  }
+
+  async verifyWritableDeployment(): Promise<void> {
+    this.assertWritableDeploymentConfiguration();
+    const dependency = ccc.CellDep.from(this.deployment.contractCellDep);
+    const contractCell = await this.client.getCellLive(dependency.outPoint, true);
+    if (contractCell === undefined) {
+      throw new Error(
+        `Registry V2 contract dependency is not a live Pudge cell: ${dependency.outPoint.txHash}:${dependency.outPoint.index}`,
+      );
+    }
+    const actualCodeHash = ccc.hashCkb(contractCell.outputData);
+    if (actualCodeHash !== this.discovery.contractCodeHash) {
+      throw new Error(
+        `Registry V2 deployment code hash mismatch: configured ${this.discovery.contractCodeHash}, dependency contains ${actualCodeHash}`,
+      );
     }
   }
 
@@ -369,11 +425,25 @@ export class RegistryV2Sdk {
     }
   }
 
-  private assertWritableDeployment(): void {
-    if (this.deployment.readOnly === true) {
+  private assertWritableDeploymentConfiguration(): void {
+    if (
+      this.deployment.readOnly === true ||
+      this.deployment.scriptHashType !== "data1"
+    ) {
       throw new Error(
         "This Registry V2 deployment is historical and read-only; use a reviewed data1 deployment for lifecycle transactions",
       );
     }
+  }
+
+  private async assertWritableDeployment(): Promise<void> {
+    this.assertWritableDeploymentConfiguration();
+    if (this.deploymentVerification === undefined) {
+      this.deploymentVerification = this.verifyWritableDeployment().catch((error: unknown) => {
+        this.deploymentVerification = undefined;
+        throw error;
+      });
+    }
+    await this.deploymentVerification;
   }
 }

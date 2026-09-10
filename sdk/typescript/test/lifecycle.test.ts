@@ -20,7 +20,8 @@ const nextOwnerLock = ccc.Script.from({
   hashType: "type",
   args: "0x5678",
 });
-const contractCodeHash = "0x" + "44".repeat(32);
+const contractData = "0x01020304";
+const contractCodeHash = ccc.hashCkb(contractData);
 const contractCellDep = {
   outPoint: { txHash: "0x" + "99".repeat(32), index: 0 },
   depType: "code" as const,
@@ -61,7 +62,7 @@ test("CCC signer lifecycle prepares create, update, transfer, and revoke transac
   const current = cell(
     { txHash: "0x" + "bb".repeat(32), index: 0 },
     ownerLock,
-    ccc.Script.from({ codeHash: contractCodeHash, hashType: "type", args: receiverIdentity }),
+    ccc.Script.from({ codeHash: contractCodeHash, hashType: "data1", args: receiverIdentity }),
     ccc.hexFrom(new TextEncoder().encode(JSON.stringify({
       ...initialRecord,
       sequence: Number(initialRecord.sequence),
@@ -70,6 +71,9 @@ test("CCC signer lifecycle prepares create, update, transfer, and revoke transac
   );
   const client = {
     addressPrefix: "ckt",
+    async getCellLive() {
+      return cell(contractCellDep.outPoint, ownerLock, undefined, contractData);
+    },
     async findCellsPaged(_key: unknown, _order: unknown, _limit: unknown, cursor?: string) {
       return cursor === undefined
         ? { cells: [current], lastCursor: "0x1" }
@@ -101,8 +105,7 @@ test("CCC signer lifecycle prepares create, update, transfer, and revoke transac
   try {
     const sdk = new RegistryV2Sdk(client, {
       contractCodeHash,
-      scriptHashType: "type",
-      allowMutableCode: true,
+      scriptHashType: "data1",
       contractCellDep,
     });
     const created = await sdk.prepareCreate(signer, {
@@ -183,6 +186,9 @@ test("documented journey creates, discovers, updates, transfers, revokes, and ve
   let submittedCount = 0;
   const client = {
     addressPrefix: "ckt",
+    async getCellLive() {
+      return cell(contractCellDep.outPoint, ownerLock, undefined, contractData);
+    },
     async findCellsPaged(
       search: {
         script: { codeHash: string; args: string };
@@ -243,8 +249,7 @@ test("documented journey creates, discovers, updates, transfers, revokes, and ve
   try {
     const sdk = new RegistryV2Sdk(client, {
       contractCodeHash,
-      scriptHashType: "type",
-      allowMutableCode: true,
+      scriptHashType: "data1",
       contractCellDep,
     });
     const created = await sdk.create(ownerSigner, {
@@ -313,7 +318,7 @@ test("documented journey creates, discovers, updates, transfers, revokes, and ve
 });
 
 test("history reads and validates the real create, update, transfer, and revoke chain", async () => {
-  const type = ccc.Script.from({ codeHash: contractCodeHash, hashType: "type", args: receiverIdentity });
+  const type = ccc.Script.from({ codeHash: contractCodeHash, hashType: "data1", args: receiverIdentity });
   const records: RegistryV2Record[] = [
     initialRecord,
     { ...initialRecord, sequence: 1n, updated_at: 1_700_000_001n, status: "degraded" },
@@ -357,8 +362,7 @@ test("history reads and validates the real create, update, transfer, and revoke 
 
   const events = await new RegistryV2Sdk(client, {
     contractCodeHash,
-    scriptHashType: "type",
-    allowMutableCode: true,
+    scriptHashType: "data1",
     contractCellDep,
   })
     .history.discover(receiverIdentity);

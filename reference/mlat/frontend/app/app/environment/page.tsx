@@ -9,5 +9,5 @@ export default async function EnvironmentRoute() {
     fetchJsonSafe<HealthData | null>('/api/health', null),
     fetchJsonSafe<ReadinessData | null>('/api/readiness', null),
   ]);
-  return <AppShell pageKey="environment" title="Environment" description="Review deployment mode, connectivity, registry, and production readiness." snapshot={snapshot}><EnvironmentPage modeData={snapshot.modeData} health={health} readiness={readiness} /></AppShell>;
+  return <AppShell pageKey="environment" title="Diagnostics" description="Review deployment mode, connectivity, Registry discovery, and production readiness." snapshot={snapshot}><EnvironmentPage modeData={snapshot.modeData} health={health} readiness={readiness} /></AppShell>;
 }

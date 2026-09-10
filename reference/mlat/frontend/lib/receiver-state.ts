@@ -1,4 +1,5 @@
 import { formatDateTime, truncateMiddle } from '@/lib/format';
+import { classifyReceiverObservation, RECEIVER_STALE_AFTER_SECONDS, type ReceiverObservationFreshness } from '@/lib/receiver-freshness';
 import type { InvestigationDockState, Position, Receiver, StatusTone } from '@/lib/types';
 
 export const RECEIVER_IDENTITY_PATTERN = /^0x[0-9a-f]{64}$/i;
@@ -34,6 +35,8 @@ export interface ReceiverDirectorySummary {
   mlatEligible: number;
   contributing: number;
   conflicts: number;
+  currentRuntimePool: number;
+  staleRuntime: number;
 }
 
 interface ReconcileReceiverOptions {
@@ -98,7 +101,7 @@ function operationalState({
   eligible,
   runtime,
   contributing,
-  stale,
+  observationFreshness,
   runtimeInventoryAvailable,
 }: {
   registryStatus: RegistryIdentityStatus;
@@ -106,7 +109,7 @@ function operationalState({
   eligible: boolean;
   runtime: Receiver | null;
   contributing: boolean;
-  stale: boolean;
+  observationFreshness: ReceiverObservationFreshness | null;
   runtimeInventoryAvailable: boolean;
 }): Pick<UnifiedReceiver, 'mlatStatus' | 'mlatReason'> {
   if (registryStatus === 'conflict') {
@@ -135,7 +138,13 @@ function operationalState({
   if (!runtime) {
     return { mlatStatus: 'offline', mlatReason: 'This active identity is not in the current MLAT receiver pool.' };
   }
-  if (stale) {
+  if (observationFreshness === 'invalid') {
+    return { mlatStatus: 'unavailable', mlatReason: 'The receiver has no valid latest-observation timestamp, so availability cannot be confirmed.' };
+  }
+  if (observationFreshness === 'future') {
+    return { mlatStatus: 'unavailable', mlatReason: 'The receiver latest-observation timestamp is implausibly far in the future.' };
+  }
+  if (observationFreshness === 'stale') {
     return { mlatStatus: 'stale', mlatReason: 'The receiver is known to MLAT, but its latest observation is stale.' };
   }
   if (contributing) {
@@ -150,7 +159,7 @@ export function reconcileReceivers({
   positions = [],
   conflictIdentities = [],
   nowSeconds = Date.now() / 1000,
-  staleAfterSeconds = 120,
+  staleAfterSeconds = RECEIVER_STALE_AFTER_SECONDS,
   runtimeInventoryAvailable = true,
 }: ReconcileReceiverOptions): UnifiedReceiver[] {
   const registryByIdentity = groupByKey(registryReceivers, true);
@@ -184,7 +193,9 @@ export function reconcileReceivers({
     const lastObservationAt = Number.isFinite(Number(runtime?.last_seen))
       ? Number(runtime?.last_seen)
       : null;
-    const stale = lastObservationAt !== null && nowSeconds - lastObservationAt > staleAfterSeconds;
+    const observationFreshness = runtime
+      ? classifyReceiverObservation(runtime.last_seen, nowSeconds, staleAfterSeconds)
+      : null;
     const isContributing = contributions.has(key);
     const mlat = operationalState({
       registryStatus,
@@ -192,7 +203,7 @@ export function reconcileReceivers({
       eligible: identity === null ? Boolean(runtime) : mlatEligible,
       runtime,
       contributing: isContributing,
-      stale,
+      observationFreshness,
       runtimeInventoryAvailable,
     });
 
@@ -230,6 +241,8 @@ export function summarizeReceiverDirectory(receivers: UnifiedReceiver[]): Receiv
     mlatEligible: registryReceivers.filter((receiver) => receiver.mlatEligible).length,
     contributing: receivers.filter((receiver) => receiver.mlatStatus === 'contributing').length,
     conflicts: registryReceivers.filter((receiver) => receiver.identityConflict).length,
+    currentRuntimePool: receivers.filter((receiver) => receiver.mlatStatus === 'available' || receiver.mlatStatus === 'contributing').length,
+    staleRuntime: receivers.filter((receiver) => receiver.mlatStatus === 'stale').length,
   };
 }
 
