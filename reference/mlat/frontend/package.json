@@ -10,8 +10,8 @@
   "scripts": {
     "dev": "next dev --webpack",
     "build": "next build --webpack",
-    "start": "next start",
-    "test": "node --experimental-strip-types --test test/*.test.mjs",
+    "start": "node scripts/start-standalone.mjs",
+    "test": "node --experimental-transform-types --test test/*.test.mjs",
     "lint": "tsc --noEmit",
     "typecheck": "tsc --noEmit"
   },
