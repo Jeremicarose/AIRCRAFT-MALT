@@ -9,7 +9,7 @@ available.
 
 | Test | Expected result | Status | Verification |
 |---|---|---|---|
-| Open application | Live Map is the first operational screen | PASS | Root, `/app`, and legacy `/dashboard` redirect to `/app/localization`; the Registry route remains available for identity and lifecycle work |
+| Open application | Receiver directory is the first screen | PASS | Root, `/app`, and legacy `/dashboard` redirect to `/app/registry`; MLAT remains available as a reference consumer |
 | Direct route and refresh | Every major URL renders without client navigation | PASS | Registry, MLAT overview, map, aircraft, receivers, pipeline, metrics, diagnostics, and settings returned HTTP 200 |
 | Navigate with browser history | Back and forward restore the expected route | PASS | Settings and Live Map restored in order |
 | Load map | Geographic base map, controls, markers, and attribution render | PASS | OpenStreetMap context plus 3 aircraft and 5 receiver markers rendered |
