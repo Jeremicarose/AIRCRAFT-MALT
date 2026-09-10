@@ -1,7 +1,7 @@
 # MLAT Reference Implementation
 
 This directory contains the frontend, deterministic benchmark inputs, and field
-configuration for the flagship CKB Registry V2 reference implementation. The
+configuration for an example application that consumes CKB Registry V2. The
 Python backend lives under `src/mlat_reference`; its tools and tests live under
 `tools/mlat` and `tests/mlat`.
 

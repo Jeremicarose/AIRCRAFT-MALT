@@ -63,7 +63,9 @@ export default function LiveMapPage({ initialModeData, initialHealthData, initia
   const receiverModels = useMemo(() => reconcileReceivers({ runtimeReceivers: receivers, positions: positionsQuery.data?.positions ?? [], runtimeInventoryAvailable: !receiversQuery.isError }), [positionsQuery.data?.positions, receivers, receiversQuery.isError]);
   const selectedAircraft = aircraft.find((item) => item.aircraft_id === (initialSelectedAircraftId ?? selectedAircraftId)) ?? aircraft.find((item) => item.aircraft_id === selectedAircraftId) ?? aircraft[0] ?? null;
   const selectedReceiverModel = receiverModels.find((item) => item.key === (initialSelectedReceiverId ?? selectedReceiverId)) ?? receiverModels.find((item) => item.key === selectedReceiverId) ?? null;
-  const contributingReceivers = selectedAircraft ? receiverModels.filter((receiver) => selectedAircraft.correlation?.receiver_ids?.includes(receiver.key)) : [];
+  const contributingReceivers = selectedAircraft
+    ? receiverModels.filter((receiver) => receiver.relatedAircraftIds.includes(selectedAircraft.aircraft_id))
+    : [];
   const isReplay = Boolean(modeQuery.data?.demo_mode || modeQuery.data?.simulation_mode || modeQuery.data?.synthetic_feed_mode);
 
   const selectAircraft = useCallback((aircraftId: string) => {

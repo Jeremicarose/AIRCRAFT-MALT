@@ -1,5 +1,6 @@
 import { formatDateTime, truncateMiddle } from '@/lib/format';
 import { classifyReceiverObservation, RECEIVER_STALE_AFTER_SECONDS, type ReceiverObservationFreshness } from '@/lib/receiver-freshness';
+import { receiverReferenceIds, receiverReferencesInclude } from '@/lib/receiver-reference';
 import type { InvestigationDockState, Position, Receiver, StatusTone } from '@/lib/types';
 
 export const RECEIVER_IDENTITY_PATTERN = /^0x[0-9a-f]{64}$/i;
@@ -81,16 +82,12 @@ function groupByKey(receivers: Receiver[], registrySource: boolean): Map<string,
   return result;
 }
 
-function contributionIds(positions: Position[]): Set<string> {
-  return new Set(
-    positions.flatMap((position) => position.correlation?.receiver_ids ?? []),
-  );
-}
-
-function relatedAircraft(key: string, positions: Position[]): string[] {
+function relatedAircraft(references: string[], positions: Position[]): string[] {
   return [...new Set(
     positions
-      .filter((position) => position.correlation?.receiver_ids?.includes(key))
+      .filter((position) => position.correlation?.receiver_ids?.some(
+        (receiverId) => receiverReferencesInclude(references, receiverId),
+      ))
       .map((position) => position.aircraft_id),
   )].sort();
 }
@@ -165,7 +162,6 @@ export function reconcileReceivers({
   const registryByIdentity = groupByKey(registryReceivers, true);
   const runtimeByKey = groupByKey(runtimeReceivers, false);
   const explicitConflicts = new Set(conflictIdentities.map(normalizedIdentity).filter(Boolean) as string[]);
-  const contributions = contributionIds(positions);
   const keys = new Set([...registryByIdentity.keys(), ...runtimeByKey.keys(), ...explicitConflicts]);
 
   return [...keys].sort().map((key) => {
@@ -196,7 +192,12 @@ export function reconcileReceivers({
     const observationFreshness = runtime
       ? classifyReceiverObservation(runtime.last_seen, nowSeconds, staleAfterSeconds)
       : null;
-    const isContributing = contributions.has(key);
+    const references = receiverReferenceIds(key, identity, runtime?.receiver_id);
+    const isContributing = positions.some((position) =>
+      position.correlation?.receiver_ids?.some(
+        (receiverId) => receiverReferencesInclude(references, receiverId),
+      ),
+    );
     const mlat = operationalState({
       registryStatus,
       recordStatus: registryRecordStatus,
@@ -225,7 +226,7 @@ export function reconcileReceivers({
       lastRegistryUpdateAt: Number.isFinite(Number(registry?.updated_at ?? runtime?.updated_at))
         ? Number(registry?.updated_at ?? runtime?.updated_at)
         : null,
-      relatedAircraftIds: relatedAircraft(key, positions),
+      relatedAircraftIds: relatedAircraft(references, positions),
       source: runtime?.data_source ?? registry?.data_source ?? null,
     };
   });
