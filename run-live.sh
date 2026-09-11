@@ -12,6 +12,7 @@ export SIMULATE_IF_UNAVAILABLE=false
 export REQUIRE_LIVE_BENCHMARKABLE_OUTPUT=true
 export DEMO_MODE=false
 export ENABLE_ADMIN_API=false
+export RATE_LIMIT_ENABLED=true
 export BENCHMARK_REPORT_PATH="${BENCHMARK_REPORT_PATH:-$ROOT_DIR/evidence/mlat-reference/live/latest.json}"
 export PERFORMANCE_REPORT_PATH="${PERFORMANCE_REPORT_PATH:-$ROOT_DIR/evidence/mlat-reference/experimental/performance-local-simulation.json}"
 export RELIABILITY_REPORT_PATH="${RELIABILITY_REPORT_PATH:-$ROOT_DIR/evidence/mlat-reference/experimental/reliability-local-simulation.json}"

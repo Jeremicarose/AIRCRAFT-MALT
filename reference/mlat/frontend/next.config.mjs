@@ -1,10 +1,14 @@
 import path from 'node:path';
+import { PRODUCTION_DIST_DIR } from './lib/standalone.mjs';
+
+const distDir = process.env.NEXT_DIST_DIR
+  || (process.env.NODE_ENV === 'development' ? '.next' : PRODUCTION_DIST_DIR);
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
-  distDir: process.env.NEXT_DIST_DIR || '.next',
+  distDir,
   output: 'standalone',
   outputFileTracingRoot: path.join(process.cwd(), '../../..'),
   transpilePackages: ['@aircraft-malt/registry-v2'],

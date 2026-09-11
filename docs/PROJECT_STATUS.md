@@ -18,7 +18,7 @@ validated by external users.
 | TypeScript SDK | COMPLETE | 69 tests cover codec, discovery, pagination, Type ID, history, immutable deployment binding and binary preflight, mutable-deployment write rejection, CCC-signer lifecycle assembly, the complete documented journey, and public package metadata | Claim the npm scope and approve the first protected release |
 | Historical CKB testnet lifecycle | COMPLETE | Frozen 2026-07-30 create-update-transfer-revoke and seven rejected attacks pass the offline verifier | Evidence is historical and uses the older tooling |
 | Fresh SDK-driven lifecycle | BLOCKED | The SDK and browser journey are implemented; mutable code deployments fail closed | Requires independent review, an immutable `data1` Pudge deployment, funded wallets, and external signer approvals; no fresh transaction is claimed |
-| MLAT reference software | PARTIAL | Full 168-test Python suite passes; strict live gates and evidence verifier exist | Physical synchronized receiver run and independent reference data are absent |
+| MLAT reference software | PARTIAL | Full 180-test Python suite passes; strict live gates and evidence verifier exist | Physical synchronized receiver run and independent reference data are absent |
 | Operator frontend | PARTIAL | The shell starts with the Receiver directory, preserves selected receiver context, keeps MLAT under a separate reference area, and uses the SDK for discovery, export, history, and signer-based lifecycle actions; focused tests, type check, and production build pass | Complete a funded wallet-signed browser run and add automated accessibility coverage |
 | Review evidence bundle | PARTIAL | Source-bound generation and verification are implemented; earlier bundles were invalidated by later source fixes | Regenerate and verify the bundle after the final source commit |
 | Pilot materials | PARTIAL | Browser workflow, readiness gate, owner/coordinator tasks, feedback form, evidence template, proposal, and recruitment research exist | Consent materials, a maintainer wallet rehearsal, recruitment, and observed sessions remain |
@@ -27,7 +27,7 @@ validated by external users.
 
 ## Verification on this tree
 
-- `python3 -m pytest -q`: 168 passed.
+- `python3 -m pytest -q`: 180 passed.
 - `python3 -m black --check src/ckb_registry src/mlat_reference tools tests`:
   passed.
 - `python3 -m flake8 src tools tests`: passed.
@@ -35,14 +35,14 @@ validated by external users.
   11 CKB-VM tests, and the RISC-V contract check passed.
 - `npm test && npm run build` in `sdk/typescript`: 69 tests and TypeScript
   compilation passed.
-- `npm test` in the frontend: 9 focused precision, freshness, receiver-reference, and standalone-asset tests passed.
+- `npm test` in the frontend: 10 focused precision, freshness, receiver-reference, and standalone-asset tests passed.
 - `python3 tools/registry/generate_registry_v2_conformance_report.py`: 57
   shared cases, 171 runtime assertions, and zero failures.
 - `npm run typecheck` and `next build --webpack` in the frontend: passed and
   generated all 16 routes. Turbopack could not run in the restricted local
   environment because its CSS worker was denied permission to bind a helper
   port; the CI environment still uses the normal Next build.
-- `python3 tools/check_documentation.py`: passed.
+- `python3 tools/check_documentation.py`: 85 Markdown files passed.
 - `npm audit --audit-level=moderate`: both npm projects passed the configured
   threshold. The current upstream CKB dependency chain retains the low-severity
   `elliptic` advisory documented in `SECURITY.md`.

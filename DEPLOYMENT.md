@@ -9,6 +9,9 @@ deployment used to consume and validate registry records.
 No production SLO, mainnet release, or horizontally scaled topology has been
 validated.
 
+Every supported configuration value is documented in the
+[environment-variable reference](docs/ENVIRONMENT.md).
+
 ## Contract Build
 
 ```bash
@@ -98,6 +101,7 @@ CKB_SSL_VERIFY=true
 RECEIVER_REGISTRY_TYPE_HASH=0x...
 RECEIVER_REGISTRY_HASH_TYPE=data1
 ALLOW_MUTABLE_REGISTRY_CODE=false
+RATE_LIMIT_ENABLED=true
 FOURDSKY_TRANSPORT=command-jsonl
 FOURDSKY_BRIDGE_COMMAND=python3 tools/mlat/multi_receiver_beast_bridge.py --config receiver-clocks.local.json --audit-log logs/field-trial-raw.jsonl
 MLAT_RECEIVER_CONFIG=receiver-clocks.local.json

@@ -85,7 +85,9 @@ Known risks:
 - The JSON/floating-point schema is comparatively complex for on-chain parsing.
 - `CKB_SSL_VERIFY=false` disables TLS certificate validation and must not be used
   in production.
-- The Flask API has no built-in rate limiter or account lockout.
+- The Flask API has a bounded, process-local sliding-window rate limiter when
+  `RATE_LIMIT_ENABLED=true`; strict production mode requires it. It is not an
+  account lockout or a shared limiter for multi-worker deployments.
 - SQLite and a shared local volume are single-node operational dependencies.
 - Security/SBOM workflow execution and branch-protection enforcement must be
   confirmed after the reorganized branch is pushed.

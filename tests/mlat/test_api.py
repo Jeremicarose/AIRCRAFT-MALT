@@ -475,6 +475,8 @@ def test_system_mode_exposes_strict_production_configuration(monkeypatch, tmp_pa
         FOURDSKY_TRANSPORT="command-jsonl",
         SIMULATE_IF_UNAVAILABLE="false",
         RECEIVER_REGISTRY_HASH_TYPE="data1",
+        CKB_SSL_VERIFY="true",
+        RATE_LIMIT_ENABLED="true",
     )
     app = module.create_app()
     client = app.test_client()
@@ -485,6 +487,45 @@ def test_system_mode_exposes_strict_production_configuration(monkeypatch, tmp_pa
     assert mode["startup_guardrail_status"] == "strict_waiting"
     assert mode["configured_transport"] == "command-jsonl"
     assert mode["simulate_if_unavailable"] is False
+
+
+def test_strict_production_requires_rate_limiting(monkeypatch, tmp_path):
+    with pytest.raises(ValueError, match="RATE_LIMIT_ENABLED=true"):
+        _load_api_module(
+            monkeypatch,
+            tmp_path,
+            STRICT_PRODUCTION_MODE="true",
+            FOURDSKY_TRANSPORT="command-jsonl",
+            SIMULATE_IF_UNAVAILABLE="false",
+            RECEIVER_REGISTRY_HASH_TYPE="data1",
+            CKB_SSL_VERIFY="true",
+            RATE_LIMIT_ENABLED="false",
+        )
+
+
+def test_api_rate_limit_returns_retry_metadata(monkeypatch, tmp_path):
+    module = _load_api_module(monkeypatch, tmp_path)
+    app = module.create_app(
+        {
+            "RATE_LIMIT_ENABLED": True,
+            "RATE_LIMIT_REQUESTS": 2,
+            "RATE_LIMIT_WINDOW_SECONDS": 60,
+        }
+    )
+    client = app.test_client()
+
+    first = client.get("/api/health")
+    second = client.get("/api/health")
+    limited = client.get("/api/health")
+    liveness = client.get("/healthz")
+
+    assert first.status_code == 200
+    assert second.headers["X-RateLimit-Remaining"] == "0"
+    assert limited.status_code == 429
+    assert limited.get_json() == {"error": "Rate limit exceeded"}
+    assert int(limited.headers["Retry-After"]) > 0
+    assert liveness.status_code == 200
+    assert "X-RateLimit-Limit" not in liveness.headers
 
 
 def test_api_restricts_cors_to_allowed_origins(monkeypatch, tmp_path):

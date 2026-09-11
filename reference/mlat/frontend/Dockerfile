@@ -28,8 +28,8 @@ ENV PORT=3000
 
 RUN addgroup --system --gid 1001 nodejs && adduser --system --uid 1001 nextjs
 WORKDIR /app
-COPY --from=builder --chown=nextjs:nodejs /workspace/reference/mlat/frontend/.next/standalone ./
-COPY --from=builder --chown=nextjs:nodejs /workspace/reference/mlat/frontend/.next/static ./reference/mlat/frontend/.next/static
+COPY --from=builder --chown=nextjs:nodejs /workspace/reference/mlat/frontend/.next-production/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /workspace/reference/mlat/frontend/.next-production/static ./reference/mlat/frontend/.next-production/static
 
 USER nextjs
 WORKDIR /app/reference/mlat/frontend

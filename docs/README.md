@@ -19,6 +19,8 @@ Root documents are authoritative for repository-wide concerns:
 Domain documentation:
 
 - `docs/registry/`: Registry V2 integration and external review scope
+- [`docs/ENVIRONMENT.md`](ENVIRONMENT.md): authoritative runtime, testnet,
+  frontend, and secret-variable reference
 - [`docs/registry/SDK_DEVELOPER_JOURNEY_REVIEW.md`](registry/SDK_DEVELOPER_JOURNEY_REVIEW.md):
   first-use SDK findings, fixes, and verification boundaries
 - `docs/reference/mlat/`: MLAT reference ingest, timing, solver, frontend,

@@ -80,6 +80,8 @@ CHECKS = (
 )
 
 REVIEW_PATHS = (
+    ".env.example",
+    ".github/workflows/pilot-readiness.yml",
     ".github/workflows/registry-v2.yml",
     "contracts/registry-v2/Cargo.lock",
     "contracts/registry-v2/examples/conformance.rs",
@@ -120,10 +122,18 @@ REVIEW_PATHS = (
     "reference/mlat/frontend/test/receiver-freshness.test.mjs",
     "reference/mlat/frontend/test/receiver-reference.test.mjs",
     "tests/registry/fixtures/registry_v2_conformance.json",
+    "tests/registry/test_deployment_and_indexer_health.py",
     "tests/registry/test_registry_v2_conformance_report.py",
     "tests/registry/test_registry_v2_review_evidence.py",
+    "tests/test_environment_documentation.py",
+    "tools/check_environment_documentation.py",
     "tools/registry/generate_registry_v2_conformance_report.py",
     "tools/registry/registry_v2_conformance.py",
+    "tools/registry/check_registry_indexer_health.py",
+    "tools/registry/verify_data1_deployment.py",
+    "docs/pilot/READINESS_GATE.md",
+    "docs/pilot/IMPLEMENTATION_STATUS_2026-09-11.md",
+    "docs/ENVIRONMENT.md",
 )
 
 

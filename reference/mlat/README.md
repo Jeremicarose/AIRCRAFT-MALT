@@ -52,7 +52,8 @@ npm run dev
 
 For a production-style local run, build first and then use the same `start`
 command used by the documented workflow. It prepares Next.js standalone assets
-automatically, so the page does not load as unstyled HTML:
+automatically and keeps production output separate from the development server,
+so the page does not load as unstyled HTML:
 
 ```bash
 cd reference/mlat/frontend

@@ -91,7 +91,7 @@ The exact path-by-path transition is maintained in
 | Documentation health | 91/100 | one authoritative hierarchy with explicit claim boundaries |
 | Maintainability | 80/100 | duplicate implementations removed; API/database modules remain large |
 | Reproducibility | 85/100 | locked graphs and deterministic evidence; cross-platform contract bytes differ |
-| Security | 72/100 | good lifecycle tests/evidence and configured scans; no audit or rate limit, and new scans are not yet proven green |
+| Security | 74/100 | good lifecycle tests/evidence, configured scans, and a tested process-local rate limit; no independent audit or shared production limiter, and new scans are not yet proven green |
 | Ecosystem readiness | 72/100 | CKB-native evidence, MIT licensing, shared vectors, and the workspace SDK are strong; no published package, external adopter, or generic schema |
 | Grant readiness | 74/100 | signed testnet proof; independent review and field trial still missing |
 
@@ -121,7 +121,7 @@ The exact path-by-path transition is maintained in
 
 ### Medium-Priority Findings
 
-1. The API uses a deployment-wide admin token and has no rate limiting.
+1. The API uses a deployment-wide admin token and its rate limiter is process-local; multi-worker deployments still need a shared edge limiter and account policy.
 2. TLS verification can be disabled by configuration.
 3. Docker Compose shares SQLite through local bind mounts and cannot scale out.
 4. The frontend image base is now digest-pinned; digest updates still require a

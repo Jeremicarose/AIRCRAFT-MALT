@@ -65,6 +65,8 @@ def _validate_runtime_settings(
         violations.append("FOURDSKY_TRANSPORT=auto")
     if config.simulate_if_unavailable:
         violations.append("SIMULATE_IF_UNAVAILABLE=true")
+    if not config.ssl_verify:
+        violations.append("CKB_SSL_VERIFY=false")
     if config.receiver_registry_type_hash:
         if config.receiver_registry_hash_type not in {"data1", "type"}:
             violations.append("RECEIVER_REGISTRY_HASH_TYPE is not data1 or type")
@@ -85,8 +87,8 @@ def load_runtime_settings(
     db_path_default: str = "data/mlat_data.db",
 ) -> RuntimeSettings:
     """Load shared network and storage settings from environment."""
-    fourdsky_endpoint = os.getenv("FOURDSKYENDPOINT") or os.getenv("FOURDSKY_ENDPOINT", "")
-    fourdsky_api_key = os.getenv("FOURDSKYAPIKEY") or os.getenv("FOURDSKY_API_KEY")
+    fourdsky_endpoint = os.getenv("FOURDSKY_ENDPOINT") or os.getenv("FOURDSKYENDPOINT", "")
+    fourdsky_api_key = os.getenv("FOURDSKY_API_KEY") or os.getenv("FOURDSKYAPIKEY")
     strict_production_mode = env_bool("STRICT_PRODUCTION_MODE", False)
 
     config = NetworkConfig(

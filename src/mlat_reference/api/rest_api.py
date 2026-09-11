@@ -23,6 +23,7 @@ from typing import Any, Dict, List, Optional
 
 from mlat_reference.demo import get_demo_scenario, get_scenario_metadata
 from mlat_reference.config import load_runtime_settings
+from mlat_reference.api.rate_limit import SlidingWindowRateLimiter
 
 try:
     from dotenv import load_dotenv
@@ -155,6 +156,10 @@ def load_app_config() -> Dict[str, object]:
         "API_HOST": os.getenv("API_HOST", "0.0.0.0"),
         "API_PORT": int(os.getenv("API_PORT", "5000")),
         "API_DEBUG": _env_bool("API_DEBUG", False),
+        "RATE_LIMIT_ENABLED": _env_bool("RATE_LIMIT_ENABLED", False),
+        "RATE_LIMIT_REQUESTS": int(os.getenv("RATE_LIMIT_REQUESTS", "120")),
+        "RATE_LIMIT_WINDOW_SECONDS": int(os.getenv("RATE_LIMIT_WINDOW_SECONDS", "60")),
+        "RATE_LIMIT_MAX_CLIENTS": int(os.getenv("RATE_LIMIT_MAX_CLIENTS", "10000")),
         "HEALTH_STALE_SIGNAL_SECONDS": int(os.getenv("HEALTH_STALE_SIGNAL_SECONDS", "120")),
         "SIMULATION_MODE": simulation_mode,
         "STRICT_PRODUCTION_MODE": settings.strict_production_mode,
@@ -180,10 +185,43 @@ def create_app(config_overrides: Optional[Dict[str, object]] = None) -> Flask:
     if config_overrides:
         app.config.update(config_overrides)
 
+    if app.config["STRICT_PRODUCTION_MODE"] and not app.config["RATE_LIMIT_ENABLED"]:
+        raise ValueError("STRICT_PRODUCTION_MODE requires RATE_LIMIT_ENABLED=true")
+
+    rate_limiter = SlidingWindowRateLimiter(
+        limit=int(app.config["RATE_LIMIT_REQUESTS"]),
+        window_seconds=int(app.config["RATE_LIMIT_WINDOW_SECONDS"]),
+        max_clients=int(app.config["RATE_LIMIT_MAX_CLIENTS"]),
+    )
+
+    @app.before_request
+    def enforce_rate_limit():
+        if (
+            not app.config["RATE_LIMIT_ENABLED"]
+            or request.method == "OPTIONS"
+            or request.path == "/healthz"
+        ):
+            return None
+
+        decision = rate_limiter.consume(request.remote_addr or "unknown")
+        g.rate_limit_decision = decision
+        if decision.allowed:
+            return None
+
+        response = jsonify({"error": "Rate limit exceeded"})
+        response.status_code = 429
+        response.headers["Retry-After"] = str(decision.reset_after_seconds)
+        return response
+
     @app.after_request
     def apply_response_headers(response):
         response.headers["Cache-Control"] = "no-store"
         response.headers.setdefault("X-Content-Type-Options", "nosniff")
+        decision = getattr(g, "rate_limit_decision", None)
+        if decision is not None:
+            response.headers["X-RateLimit-Limit"] = str(decision.limit)
+            response.headers["X-RateLimit-Remaining"] = str(decision.remaining)
+            response.headers["X-RateLimit-Reset"] = str(decision.reset_after_seconds)
         return response
 
     allowed_origins = app.config["CORS_ALLOWED_ORIGINS"]

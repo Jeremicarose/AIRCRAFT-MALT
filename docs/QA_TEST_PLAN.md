@@ -38,8 +38,8 @@ available.
 | Verify lifecycle evidence | Create, update, transfer, and revoke hashes resolve | PASS | Offline verifier passed; CKB testnet explorer loaded the create transaction |
 | Contract lifecycle | Valid transitions pass and invalid transitions fail | PASS | 5 host and 11 CKB-VM tests passed after the CKB target build |
 | Cross-language SDK | Protocol vectors and transaction preparation agree | PASS | 69 TypeScript SDK tests and 171 shared runtime assertions passed |
-| Frontend receiver state | Invalid, future, and stale observations fail closed; exact `u64` values are not rounded | PASS | 9 focused precision, freshness, receiver-reference, and standalone-asset tests passed |
-| Python application | Registry, API, MLAT, database, and evidence tests pass | PASS | 168 tests passed |
+| Frontend receiver state | Invalid, future, and stale observations fail closed; exact `u64` values are not rounded | PASS | 10 focused precision, freshness, receiver-reference, and standalone-asset tests passed |
+| Python application | Registry, API, MLAT, database, and evidence tests pass | PASS | 180 tests passed |
 | Production build | Optimized Node 22 build completes | PASS | Next.js 16.3.4 Webpack build generated all 16 routes |
 | Production console | No critical browser errors or development overlay | PASS | Desktop and mobile production console/error checks were empty |
 | Production response security | Basic security headers present; framework hidden | PASS | `nosniff`, `DENY`, referrer, and permissions policies present; no `X-Powered-By` |

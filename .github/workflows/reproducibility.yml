@@ -38,7 +38,10 @@ jobs:
       - name: Run complete Python suite
         run: python -m pytest -q
       - name: Verify documentation links
-        run: python tools/check_documentation.py
+        run: |
+          python tools/check_documentation.py
+          python tools/check_environment_documentation.py
+          python tools/check_release_readiness.py --profile repository
 
   deterministic-benchmark:
     runs-on: ubuntu-24.04

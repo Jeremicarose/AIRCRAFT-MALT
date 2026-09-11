@@ -64,6 +64,7 @@ def test_strict_production_accepts_explicit_data1_registry_binding(monkeypatch):
     monkeypatch.setenv("DEMO_MODE", "false")
     monkeypatch.setenv("RECEIVER_REGISTRY_TYPE_HASH", "0x" + "12" * 32)
     monkeypatch.setenv("RECEIVER_REGISTRY_HASH_TYPE", "data1")
+    monkeypatch.setenv("CKB_SSL_VERIFY", "true")
 
     settings = load_runtime_settings(max_receivers_default=10)
 
@@ -80,6 +81,17 @@ def test_strict_production_rejects_mutable_type_hash_registry_binding(monkeypatc
     monkeypatch.setenv("ALLOW_MUTABLE_REGISTRY_CODE", "true")
 
     with pytest.raises(ValueError, match="mutable contract code"):
+        load_runtime_settings(max_receivers_default=10)
+
+
+def test_strict_production_rejects_disabled_ckb_tls_verification(monkeypatch):
+    monkeypatch.setenv("STRICT_PRODUCTION_MODE", "true")
+    monkeypatch.setenv("FOURDSKY_TRANSPORT", "command-jsonl")
+    monkeypatch.setenv("SIMULATE_IF_UNAVAILABLE", "false")
+    monkeypatch.setenv("DEMO_MODE", "false")
+    monkeypatch.setenv("CKB_SSL_VERIFY", "false")
+
+    with pytest.raises(ValueError, match="CKB_SSL_VERIFY=false"):
         load_runtime_settings(max_receivers_default=10)
 
 

@@ -1,6 +1,8 @@
 import path from 'node:path';
 import { access, cp } from 'node:fs/promises';
 
+export const PRODUCTION_DIST_DIR = '.next-production';
+
 /**
  * Resolve the paths produced by Next.js when output: 'standalone' is enabled.
  * The tracing root is the repository root, so the generated server keeps the
@@ -9,7 +11,7 @@ import { access, cp } from 'node:fs/promises';
 export function resolveStandalonePaths({
   projectRoot,
   tracingRoot = path.resolve(projectRoot, '../../..'),
-  distDir = process.env.NEXT_DIST_DIR || '.next',
+  distDir = process.env.NEXT_DIST_DIR || PRODUCTION_DIST_DIR,
 } = {}) {
   if (!projectRoot) {
     throw new Error('projectRoot is required');
