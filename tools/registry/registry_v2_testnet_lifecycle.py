@@ -47,17 +47,24 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--deployment-info",
-        default="deploy/registry-v2-testnet-2026-07-30-canonical/deployment-info.json",
+        required=True,
+        help="ckb-cli deployment-info.json for the exact contract deployment",
     )
     parser.add_argument(
         "--contract-binary",
-        default="evidence/registry-v2-testnet-2026-07-30-final/contract/receiver-registry",
+        required=True,
+        help="Exact reviewed contract binary referenced by the deployment recipe",
+    )
+    parser.add_argument(
+        "--contract-review-manifest",
+        help="Review manifest that pins the exact binary and source used by a new data1 deployment",
     )
     parser.add_argument("--owner-a-key", default="/private/tmp/registry-v2-owner-a.key")
     parser.add_argument("--owner-b-key", default="/private/tmp/registry-v2-owner-b.key")
     parser.add_argument(
         "--evidence-dir",
-        default="evidence/registry-v2-testnet-2026-07-30-final",
+        required=True,
+        help="New directory for public lifecycle evidence; existing files are not overwritten",
     )
     parser.add_argument("--rpc-url", default="https://testnet.ckb.dev/rpc")
     parser.add_argument("--indexer-url", default="https://testnet.ckb.dev/indexer")
@@ -84,6 +91,24 @@ def atomic_json(path: Path, value: Any) -> None:
     temporary = path.with_suffix(path.suffix + ".tmp")
     temporary.write_text(json.dumps(value, indent=2, sort_keys=True) + "\n")
     temporary.replace(path)
+
+
+def write_checksums(directory: Path) -> None:
+    entries = []
+    for path in sorted(directory.rglob("*")):
+        if path.is_file() and path.name != "checksums.sha256":
+            entries.append(f"{sha256(path)}  {path.relative_to(directory).as_posix()}")
+    checksum_path = directory / "checksums.sha256"
+    temporary = checksum_path.with_suffix(".sha256.tmp")
+    temporary.write_text("\n".join(entries) + "\n", encoding="ascii")
+    temporary.replace(checksum_path)
+
+
+def require_new_evidence_directory(directory: Path) -> None:
+    if directory.exists():
+        raise SystemExit(
+            f"Evidence directory already exists; choose a new path to preserve prior evidence: {directory}"
+        )
 
 
 def rpc(url: str, method: str, params: list[Any]) -> Any:
@@ -557,6 +582,7 @@ def main() -> None:
     deployment_info_path = (ROOT / args.deployment_info).resolve()
     contract_binary_path = (ROOT / args.contract_binary).resolve()
     evidence_dir = (ROOT / args.evidence_dir).resolve()
+    require_new_evidence_directory(evidence_dir)
     owner_a_key = Path(args.owner_a_key).resolve()
     owner_b_key = Path(args.owner_b_key).resolve()
     ensure_private_key(owner_a_key)
@@ -573,6 +599,28 @@ def main() -> None:
         raise SystemExit("Contract and lifecycle funding must share one deployment transaction")
     if contract["data_hash"] != ckb_hash(contract_binary_path.read_bytes()):
         raise SystemExit("Deployment recipe data hash does not match the local contract binary")
+    contract_source_commit = "61ab011de58397cb8d6ca3cecb5c659c69e2fc8c"
+    contract_review: dict[str, Any] | None = None
+    if args.registry_hash_type == "data1":
+        if not args.contract_review_manifest:
+            raise SystemExit("New data1 evidence requires --contract-review-manifest")
+        review_manifest_path = (ROOT / args.contract_review_manifest).resolve()
+        review = json.loads(review_manifest_path.read_text())
+        candidate = review.get("contract_candidate") or {}
+        source = review.get("source") or {}
+        if candidate.get("binary_sha256") != sha256(contract_binary_path):
+            raise SystemExit("Review manifest SHA-256 does not match the deployed contract binary")
+        if candidate.get("binary_ckb_data_hash") != contract["data_hash"]:
+            raise SystemExit("Review manifest CKB data hash does not match the deployment recipe")
+        if not re.fullmatch(r"[0-9a-f]{40}", str(source.get("commit", ""))):
+            raise SystemExit("Review manifest does not pin a valid source commit")
+        contract_source_commit = source["commit"]
+        contract_review = {
+            "bundle": str(review_manifest_path.parent.relative_to(ROOT)),
+            "manifest_sha256": sha256(review_manifest_path),
+            "source_commit": source["commit"],
+            "source_tree": source.get("tree"),
+        }
     deployment_lock_arg = deployment_info["deployment"]["lock"]["args"]
     if owner_a["lock_arg"] != deployment_lock_arg:
         raise SystemExit("Owner A key does not match the deployment lifecycle lock")
@@ -901,7 +949,8 @@ def main() -> None:
         "source": {
             "repository": "https://github.com/Jeremicarose/AIRCRAFT-MALT",
             "branch": "registry-v2-testnet-evidence",
-            "contract_source_commit": "61ab011de58397cb8d6ca3cecb5c659c69e2fc8c",
+            "contract_source_commit": contract_source_commit,
+            "contract_review": contract_review,
             "lifecycle_tooling_commit": tooling_commit,
         },
         "contract": {
@@ -944,6 +993,7 @@ def main() -> None:
         "private_keys_included": False,
     }
     atomic_json(evidence_dir / "manifest.json", manifest)
+    write_checksums(evidence_dir)
     print(json.dumps(manifest, indent=2, sort_keys=True))
 
 

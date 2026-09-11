@@ -6,8 +6,10 @@ import pytest
 
 from ckb_registry.record import calculate_type_id
 from tools.registry.verify_registry_v2_evidence import (
+    Verification,
     calculate_transaction_hash,
     rpc,
+    verify_data1_reports,
     verify_bundle,
 )
 
@@ -196,6 +198,101 @@ def build_bundle(tmp_path):
 def test_verifier_accepts_complete_consistent_bundle(tmp_path):
     report = verify_bundle(build_bundle(tmp_path))
     assert report["pass"] is True
+
+
+def test_live_chain_scope_does_not_claim_missing_ci_provenance(tmp_path):
+    bundle = build_bundle(tmp_path)
+    (bundle / "ci" / "local.json").unlink()
+    (bundle / "ci" / "github.json").unlink()
+    write_checksums(bundle)
+
+    report = verify_bundle(bundle, require_ci_provenance=False)
+
+    assert report["pass"] is True
+    assert report["ci_provenance_checked"] is False
+    assert not any("CI" in check["name"] for check in report["checks"])
+
+
+def test_data1_reports_enforce_indexer_pagination_and_runtime_revocation(tmp_path):
+    bundle = tmp_path / "data1-evidence"
+    identity = "0x" + "11" * 32
+    code_hash = "0x" + "22" * 32
+    revoke_hash = "0x" + "33" * 32
+    indexer_checks = {
+        name: True
+        for name in (
+            "canonical_identity_matches",
+            "data1_code_binding_matches",
+            "duplicate_output_attack_rejected",
+            "exact_identity_has_one_live_cell",
+            "exact_query_exhausted",
+            "exact_query_used_multiple_pages",
+            "live_record_is_revoked",
+            "prefix_has_one_live_registry_cell",
+            "prefix_query_exhausted",
+            "prefix_query_used_multiple_pages",
+        )
+    }
+    runtime_checks = {
+        name: True
+        for name in (
+            "canonical_identity_removed_from_active_pool",
+            "canonical_identity_removed_from_database",
+            "canonical_identity_removed_from_solver_positions",
+            "no_feed_task_left_for_revoked_receiver",
+            "old_feed_task_cancelled",
+            "real_indexer_refresh_succeeded",
+            "real_indexer_returned_no_active_receiver",
+            "rebind_contains_no_revoked_receiver",
+            "rebind_preserved_message_callback",
+            "runtime_start_time_unchanged",
+            "same_process_without_manual_restart",
+            "stream_rebound_automatically_once",
+        )
+    }
+    write_json(
+        bundle / "real-indexer-verification.json",
+        {
+            "pass": True,
+            "receiver_identity": identity,
+            "code_hash": code_hash,
+            "checks": indexer_checks,
+        },
+    )
+    runtime = {
+        "pass": True,
+        "receiver_identity": identity,
+        "revocation_tx_hash": revoke_hash,
+        "registry_script": {"code_hash": code_hash, "hash_type": "data1"},
+        "discovered_active_count": 0,
+        "active_receiver_ids_after": [],
+        "database_receiver_ids_after": [],
+        "solver_receiver_ids_after": [],
+        "checks": runtime_checks,
+    }
+    write_json(bundle / "runtime-revocation-verification.json", runtime)
+
+    verification = Verification()
+    verify_data1_reports(
+        verification,
+        bundle,
+        receiver_identity=identity,
+        code_hash=code_hash,
+        revoke_transaction_hash=revoke_hash,
+    )
+    assert verification.passed is True
+
+    runtime["checks"]["canonical_identity_removed_from_database"] = False
+    write_json(bundle / "runtime-revocation-verification.json", runtime)
+    verification = Verification()
+    verify_data1_reports(
+        verification,
+        bundle,
+        receiver_identity=identity,
+        code_hash=code_hash,
+        revoke_transaction_hash=revoke_hash,
+    )
+    assert verification.passed is False
 
 
 def test_rpc_translates_connection_failures(monkeypatch):

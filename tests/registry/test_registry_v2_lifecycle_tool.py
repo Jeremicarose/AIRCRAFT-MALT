@@ -69,6 +69,29 @@ def test_write_tx_rejects_mismatched_outputs_and_data(tmp_path):
         )
 
 
+def test_write_checksums_covers_every_evidence_file(tmp_path):
+    (tmp_path / "nested").mkdir()
+    (tmp_path / "manifest.json").write_text("{}\n")
+    (tmp_path / "nested" / "record.json").write_text("[]\n")
+
+    lifecycle.write_checksums(tmp_path)
+
+    lines = (tmp_path / "checksums.sha256").read_text().splitlines()
+    assert len(lines) == 2
+    assert lines[0].endswith("  manifest.json")
+    assert lines[1].endswith("  nested/record.json")
+
+
+def test_lifecycle_refuses_to_overwrite_an_existing_evidence_directory(tmp_path):
+    existing = tmp_path / "existing-evidence"
+    existing.mkdir()
+
+    with pytest.raises(SystemExit, match="choose a new path"):
+        lifecycle.require_new_evidence_directory(existing)
+
+    lifecycle.require_new_evidence_directory(tmp_path / "new-evidence")
+
+
 def test_submission_records_public_result_without_private_key_path(tmp_path, monkeypatch):
     tx_path = tmp_path / "tx.json"
     tx_path.write_text("{}\n")

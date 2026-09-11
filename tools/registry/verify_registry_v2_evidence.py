@@ -37,6 +37,22 @@ def parse_args() -> argparse.Namespace:
         help="Evidence bundle directory",
     )
     parser.add_argument("--live", action="store_true", help="Re-query the public CKB RPC")
+    parser.add_argument(
+        "--live-chain-only",
+        action="store_true",
+        help=(
+            "Verify checksums, binary, saved transaction bodies, and live chain state "
+            "without claiming that CI provenance is included in the bundle"
+        ),
+    )
+    parser.add_argument(
+        "--saved-chain-only",
+        action="store_true",
+        help=(
+            "Verify saved chain, indexer, and runtime evidence without requiring "
+            "CI provenance or making network requests"
+        ),
+    )
     parser.add_argument("--output", help="Optional JSON verification report")
     return parser.parse_args()
 
@@ -265,7 +281,13 @@ def rpc(url: str, method: str, params: list[Any]) -> Any:
 
             ssl_context = ssl.create_default_context(cafile=certifi.where())
         except ImportError:
-            ssl_context = ssl.create_default_context()
+            default_paths = ssl.get_default_verify_paths()
+            system_ca = Path("/etc/ssl/cert.pem")
+            ssl_context = (
+                ssl.create_default_context(cafile=str(system_ca))
+                if default_paths.cafile is None and system_ca.is_file()
+                else ssl.create_default_context()
+            )
     try:
         with urllib.request.urlopen(request, timeout=30, context=ssl_context) as response:
             body = json.loads(response.read().decode())
@@ -318,7 +340,93 @@ def first_input_out_point(response: dict[str, Any]) -> dict[str, Any]:
     return transaction_view(response)["inputs"][0]["previous_output"]
 
 
-def verify_bundle(bundle: Path, *, live: bool = False) -> dict[str, Any]:
+def verify_data1_reports(
+    verification: Verification,
+    bundle: Path,
+    *,
+    receiver_identity: str,
+    code_hash: str,
+    revoke_transaction_hash: str,
+) -> None:
+    indexer_path = bundle / "real-indexer-verification.json"
+    verification.require("real indexer report exists", indexer_path.is_file(), str(indexer_path))
+    if indexer_path.is_file():
+        try:
+            report = load_json(indexer_path)
+            required = {
+                "canonical_identity_matches",
+                "data1_code_binding_matches",
+                "duplicate_output_attack_rejected",
+                "exact_identity_has_one_live_cell",
+                "exact_query_exhausted",
+                "exact_query_used_multiple_pages",
+                "live_record_is_revoked",
+                "prefix_has_one_live_registry_cell",
+                "prefix_query_exhausted",
+                "prefix_query_used_multiple_pages",
+            }
+            checks = report.get("checks") if isinstance(report, dict) else None
+            valid = (
+                report.get("pass") is True
+                and report.get("receiver_identity") == receiver_identity
+                and report.get("code_hash") == code_hash
+                and isinstance(checks, dict)
+                and all(checks.get(name) is True for name in required)
+            )
+            detail = f"identity={report.get('receiver_identity')} checks={len(checks or {})}"
+        except (AttributeError, json.JSONDecodeError, OSError, TypeError):
+            valid = False
+            detail = "invalid JSON report"
+        verification.require("real indexer pagination and binding", valid, detail)
+
+    runtime_path = bundle / "runtime-revocation-verification.json"
+    verification.require(
+        "runtime revocation report exists", runtime_path.is_file(), str(runtime_path)
+    )
+    if runtime_path.is_file():
+        try:
+            report = load_json(runtime_path)
+            required = {
+                "canonical_identity_removed_from_active_pool",
+                "canonical_identity_removed_from_database",
+                "canonical_identity_removed_from_solver_positions",
+                "no_feed_task_left_for_revoked_receiver",
+                "old_feed_task_cancelled",
+                "real_indexer_refresh_succeeded",
+                "real_indexer_returned_no_active_receiver",
+                "rebind_contains_no_revoked_receiver",
+                "rebind_preserved_message_callback",
+                "runtime_start_time_unchanged",
+                "same_process_without_manual_restart",
+                "stream_rebound_automatically_once",
+            }
+            checks = report.get("checks") if isinstance(report, dict) else None
+            script = report.get("registry_script") if isinstance(report, dict) else None
+            valid = (
+                report.get("pass") is True
+                and report.get("receiver_identity") == receiver_identity
+                and report.get("revocation_tx_hash") == revoke_transaction_hash
+                and script == {"code_hash": code_hash, "hash_type": "data1"}
+                and report.get("discovered_active_count") == 0
+                and report.get("active_receiver_ids_after") == []
+                and report.get("database_receiver_ids_after") == []
+                and report.get("solver_receiver_ids_after") == []
+                and isinstance(checks, dict)
+                and all(checks.get(name) is True for name in required)
+            )
+            detail = f"identity={report.get('receiver_identity')} checks={len(checks or {})}"
+        except (AttributeError, json.JSONDecodeError, OSError, TypeError):
+            valid = False
+            detail = "invalid JSON report"
+        verification.require("same-process revocation removal", valid, detail)
+
+
+def verify_bundle(
+    bundle: Path,
+    *,
+    live: bool = False,
+    require_ci_provenance: bool = True,
+) -> dict[str, Any]:
     verification = Verification()
     checksums_pass, checksums_detail = verify_checksums(bundle)
     verification.require("bundle checksums", checksums_pass, checksums_detail)
@@ -363,14 +471,19 @@ def verify_bundle(bundle: Path, *, live: bool = False) -> dict[str, Any]:
 
     local_ci_path = bundle / "ci" / "local.json"
     github_ci_path = bundle / "ci" / "github.json"
-    verification.require("local CI evidence exists", local_ci_path.is_file(), str(local_ci_path))
-    verification.require("GitHub CI evidence exists", github_ci_path.is_file(), str(github_ci_path))
-    if local_ci_path.is_file():
+    if require_ci_provenance:
+        verification.require(
+            "local CI evidence exists", local_ci_path.is_file(), str(local_ci_path)
+        )
+        verification.require(
+            "GitHub CI evidence exists", github_ci_path.is_file(), str(github_ci_path)
+        )
+    if require_ci_provenance and local_ci_path.is_file():
         local_ci = load_json(local_ci_path)
         verification.require(
             "local CI passed", local_ci.get("pass") is True, str(local_ci.get("pass"))
         )
-    if github_ci_path.is_file():
+    if require_ci_provenance and github_ci_path.is_file():
         github_ci = load_json(github_ci_path)
         verification.require(
             "GitHub CI passed",
@@ -414,6 +527,13 @@ def verify_bundle(bundle: Path, *, live: bool = False) -> dict[str, Any]:
             "immutable data1 code binding",
             expected_code_hash == manifest["contract"]["binary_ckb_data_hash"],
             f"code_hash={expected_code_hash} data_hash={manifest['contract']['binary_ckb_data_hash']}",
+        )
+        verify_data1_reports(
+            verification,
+            bundle,
+            receiver_identity=expected_receiver_identity,
+            code_hash=expected_code_hash,
+            revoke_transaction_hash=accepted["revoke"],
         )
     saved: dict[str, dict[str, Any]] = {}
     for stage in ACCEPTED_STAGES:
@@ -665,6 +785,7 @@ def verify_bundle(bundle: Path, *, live: bool = False) -> dict[str, Any]:
         "pass": verification.passed,
         "bundle": str(bundle),
         "live_rpc_checked": live,
+        "ci_provenance_checked": require_ci_provenance,
         "checks": verification.checks,
     }
 
@@ -672,7 +793,11 @@ def verify_bundle(bundle: Path, *, live: bool = False) -> dict[str, Any]:
 def main() -> None:
     args = parse_args()
     try:
-        report = verify_bundle(Path(args.bundle).resolve(), live=args.live)
+        report = verify_bundle(
+            Path(args.bundle).resolve(),
+            live=args.live or args.live_chain_only,
+            require_ci_provenance=not (args.live_chain_only or args.saved_chain_only),
+        )
     except RuntimeError as exc:
         raise SystemExit(f"Registry V2 verification could not complete: {exc}") from None
     rendered = json.dumps(report, indent=2, sort_keys=True) + "\n"
