@@ -33,7 +33,7 @@ const routeIcons: Record<string, LucideIcon> = {
   settings: Settings,
 };
 
-const groups: ConsoleRoute['group'][] = ['Operations', 'System'];
+const groups: ConsoleRoute['group'][] = ['Registry', 'MLAT reference', 'System'];
 
 function getSystemSummary(snapshot: ShellSnapshot): { label: string; tone: StatusTone; environment: string } {
   const mode = snapshot.modeData;
@@ -205,7 +205,7 @@ export function AppShell({ pageKey, title, description, snapshot, children }: { 
       <a href="#main-content" className="sr-only z-modal rounded-md bg-signal-blue px-3 py-2 font-semibold text-graphite-deep focus:not-sr-only focus:fixed focus:left-3 focus:top-3">Skip to main content</a>
       <aside className={cn('fixed inset-y-0 left-0 z-sticky hidden border-r border-line bg-[#0b0e12] transition-[width] duration-standard ease-operational lg:flex lg:flex-col', collapsed ? 'w-[68px]' : 'w-[232px]')}>
         <div className={cn('flex h-16 items-center border-b border-line', collapsed ? 'justify-center px-2' : 'justify-between px-3')}>
-          <Link href="/app/localization" className="flex min-w-0 items-center gap-2.5 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal-blue">
+          <Link href="/app/registry" className="flex min-w-0 items-center gap-2.5 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal-blue">
             <span className="relative flex size-8 shrink-0 items-center justify-center rounded-md bg-signal-blue text-[11px] font-bold text-graphite-deep"><span className="absolute inset-[5px] rounded-full border border-graphite-deep/45" />R</span>
             {!collapsed ? <span className="min-w-0"><strong className="block truncate text-[13px] font-semibold text-ink">Receiver Registry</strong><small className="block truncate text-[10px] font-medium text-ink-quiet">CKB TESTNET</small></span> : null}
           </Link>
