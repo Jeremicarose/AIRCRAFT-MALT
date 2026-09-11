@@ -30,7 +30,7 @@ physical receiver hardware exists.
 
 | Check | Result |
 |---|---|
-| Python backend, Registry, MLAT, and readiness tests | 188 passed |
+| Python backend, Registry, MLAT, and readiness tests | 194 passed |
 | Rust Registry unit/lifecycle tests | 16 passed |
 | Rust RISC-V target check | passed |
 | TypeScript SDK build and tests | 70 passed |

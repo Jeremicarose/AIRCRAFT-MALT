@@ -56,7 +56,7 @@ documented low-severity upstream advisory.
 
 ## Verification results
 
-- Python: 188 passed with `python -m pytest`.
+- Python: 194 passed with `python -m pytest`.
 - Registry contract: 16 tests passed.
 - TypeScript SDK: 70 tests passed.
 - Cross-language conformance: 57 cases, 171 assertions, zero failures.

@@ -47,7 +47,7 @@ machine-readable release report are written under ignored `test-results/` and
 | Frontend unit and harness behavior | Invalid, future, and stale observations fail closed; exact `u64` values are not rounded; production and browser harnesses are isolated | PASS | 13 precision, freshness, receiver-reference, standalone-runtime, reporter, and Playwright-config tests passed |
 | Browser evidence report | Failed tests and axe findings make the machine-readable report fail closed | PASS | 1 reporter contract test passed |
 | Automated production browser suite | Registry-first navigation, MLAT reference context, assets, accessibility, mobile width, and headers work together | BLOCKED | All 9 Playwright tests are defined, but the retained report completed 0 tests and does not certify the current source |
-| Python application | Registry, API, MLAT, database, and evidence tests pass | PASS | 188 tests passed on 2026-09-11 |
+| Python application | Registry, API, MLAT, database, and evidence tests pass | PASS | 194 tests passed on 2026-09-11 |
 | Production build | Optimized Node 22 build completes | PASS | Next.js 16.3.4 Webpack build generated all 16 routes |
 | Production console | No critical browser errors or development overlay | BLOCKED | Confirm this again in the required clean production-browser run |
 | Production response security | Basic security headers present; framework hidden | PASS | `nosniff`, `DENY`, referrer, and permissions policies present; no `X-Powered-By` |

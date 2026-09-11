@@ -225,6 +225,47 @@ def verify_bundle(bundle: Path) -> dict[str, Any]:
         and all(check.get("exit_code") == 0 for check in recorded_checks),
         f"{len(recorded_checks)} recorded checks",
     )
+    browser_evidence = manifest.get("browser_evidence")
+    browser_report_path = bundle / "browser-qa-report.json"
+    if deployment_status == "deployed_testnet_data1" or browser_evidence is not None:
+        browser_evidence = browser_evidence or {}
+        verification.require(
+            "browser report exists",
+            browser_evidence.get("report") == "browser-qa-report.json"
+            and browser_report_path.is_file(),
+            str(browser_evidence.get("report")),
+        )
+    if browser_evidence is not None and browser_report_path.is_file():
+        browser_report = json.loads(browser_report_path.read_text(encoding="utf-8"))
+        verification.require(
+            "browser report is bound to source",
+            browser_report.get("source_commit") == commit
+            and browser_report.get("source_tree") == tree
+            and browser_report.get("worktree_clean") is True
+            and browser_evidence.get("source_commit") == commit
+            and browser_evidence.get("source_tree") == tree
+            and browser_evidence.get("worktree_clean") is True,
+            f"{browser_report.get('source_commit')}/{browser_report.get('source_tree')}",
+        )
+        total_tests = browser_report.get("total_tests")
+        verification.require(
+            "browser and accessibility checks passed",
+            isinstance(total_tests, int)
+            and not isinstance(total_tests, bool)
+            and total_tests >= 9
+            and browser_report.get("completed_tests") == total_tests
+            and browser_report.get("passed_tests") == total_tests
+            and browser_report.get("failed_tests") == 0
+            and browser_report.get("failures") == []
+            and browser_report.get("accessibility_violations") == 0
+            and browser_report.get("route") == "/app/registry"
+            and browser_report.get("pass") is True
+            and browser_evidence.get("total_tests") == total_tests
+            and browser_evidence.get("accessibility_violations") == 0
+            and browser_evidence.get("route") == "/app/registry"
+            and browser_evidence.get("pass") is True,
+            f"{total_tests} tests; {browser_report.get('accessibility_violations')} findings",
+        )
     verification.require(
         "private keys excluded",
         manifest.get("private_keys_included") is False,

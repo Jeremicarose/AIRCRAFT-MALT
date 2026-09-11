@@ -1,4 +1,5 @@
 from pathlib import Path
+import json
 
 import pytest
 
@@ -28,3 +29,51 @@ def test_clean_worktree_allows_only_the_bundle_being_generated(monkeypatch, tmp_
 
     with pytest.raises(RuntimeError, match="tracked or untracked changes"):
         review.require_clean_worktree(Path(tmp_path) / "outside-repository")
+
+
+def browser_report(commit: str, tree: str) -> dict:
+    return {
+        "schema_version": 1,
+        "source_commit": commit,
+        "source_tree": tree,
+        "worktree_clean": True,
+        "route": "/app/registry",
+        "total_tests": 9,
+        "completed_tests": 9,
+        "passed_tests": 9,
+        "failed_tests": 0,
+        "failures": [],
+        "accessibility_violations": 0,
+        "pass": True,
+    }
+
+
+def test_browser_report_must_pass_and_match_source(tmp_path):
+    commit = "a" * 40
+    tree = "b" * 40
+    path = tmp_path / "browser.json"
+    path.write_text(json.dumps(browser_report(commit, tree)), encoding="utf-8")
+
+    assert review.validate_browser_report(path, commit, tree)["total_tests"] == 9
+
+
+@pytest.mark.parametrize(
+    ("field", "value", "message"),
+    [
+        ("source_tree", "c" * 40, "source_tree"),
+        ("worktree_clean", False, "worktree_clean"),
+        ("total_tests", 8, "at least 9"),
+        ("accessibility_violations", 1, "accessibility_violations"),
+        ("pass", False, "pass"),
+    ],
+)
+def test_browser_report_fails_closed(tmp_path, field, value, message):
+    commit = "a" * 40
+    tree = "b" * 40
+    report = browser_report(commit, tree)
+    report[field] = value
+    path = tmp_path / "browser.json"
+    path.write_text(json.dumps(report), encoding="utf-8")
+
+    with pytest.raises(RuntimeError, match=message):
+        review.validate_browser_report(path, commit, tree)

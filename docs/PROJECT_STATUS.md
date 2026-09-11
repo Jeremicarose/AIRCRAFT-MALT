@@ -19,7 +19,7 @@ validated by external users.
 | Historical CKB testnet lifecycle | COMPLETE | Frozen 2026-07-30 create-update-transfer-revoke and seven rejected attacks pass the offline verifier | Evidence is historical and uses the older tooling |
 | Fresh immutable testnet lifecycle | COMPLETE | The CKB CLI-signed `data1` deployment, create, update, transfer, revoke, seven rejected attacks, source-review linkage, and 100 live-chain checks are preserved without private keys | Clean CI provenance and independent review are still required for a stable release, but not for the factual testnet lifecycle claim |
 | Browser/SDK-driven lifecycle | BLOCKED | The SDK and browser journey use the fresh immutable deployment and mutable deployments still fail closed | Connect a funded CCC testnet wallet and approve a new create-update-transfer-revoke rehearsal; no SDK-driven transaction is claimed yet |
-| MLAT reference software | PARTIAL | Full 188-test repository Python suite passes; strict live gates and evidence verifier exist | Physical synchronized receiver run and independent reference data are absent |
+| MLAT reference software | PARTIAL | Full 194-test repository Python suite passes; strict live gates and evidence verifier exist | Physical synchronized receiver run and independent reference data are absent |
 | Operator frontend | PARTIAL | The shell starts with the Receiver Registry, places MLAT under a secondary reference group, preserves aircraft-receiver return context, and uses the SDK for discovery, export, history, and signer-based lifecycle actions; 13 unit tests and type checking pass | Complete a clean production build, run all 9 browser checks on the current source, preserve the source-bound report, and complete a funded wallet-signed browser run |
 | Review evidence bundle | PARTIAL | Source-bound generation and verification are implemented; earlier bundles were invalidated by later source fixes | Regenerate and verify the bundle after the final source commit |
 | Pilot materials | PARTIAL | Browser workflow, readiness gate, owner/coordinator tasks, feedback form, evidence template, proposal, and recruitment research exist | Consent materials, a maintainer wallet rehearsal, recruitment, and observed sessions remain |
@@ -28,7 +28,7 @@ validated by external users.
 
 ## Verification on this tree
 
-- `python3 -m pytest -q`: 188 passed.
+- `python3 -m pytest -q`: 194 passed.
 - `python3 -m black --check src/ckb_registry src/mlat_reference tools tests`:
   passed.
 - `python3 -m flake8 src tools tests`: passed.

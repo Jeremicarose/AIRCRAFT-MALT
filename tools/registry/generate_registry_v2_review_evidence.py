@@ -155,9 +155,13 @@ REVIEW_PATHS = (
     "tests/test_environment_documentation.py",
     "tools/check_environment_documentation.py",
     "tools/registry/generate_registry_v2_conformance_report.py",
+    "tools/registry/generate_registry_v2_review_evidence.py",
     "tools/registry/registry_v2_conformance.py",
     "tools/registry/check_registry_indexer_health.py",
     "tools/registry/verify_data1_deployment.py",
+    "tools/registry/verify_registry_v2_review_evidence.py",
+    "EVIDENCE.md",
+    "REPRODUCIBILITY.md",
     "docs/pilot/READINESS_GATE.md",
     "docs/pilot/IMPLEMENTATION_STATUS_2026-09-11.md",
     "docs/ENVIRONMENT.md",
@@ -167,6 +171,12 @@ REVIEW_PATHS = (
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", type=Path, required=True, help="New bundle directory")
+    parser.add_argument(
+        "--browser-report",
+        type=Path,
+        required=True,
+        help="Passing browser QA report produced from the clean source tree",
+    )
     return parser.parse_args()
 
 
@@ -213,6 +223,41 @@ def require_clean_worktree(allowed_output: Path | None = None) -> None:
             "worktree contains tracked or untracked changes; commit or remove them "
             "before generating evidence:\n" + "\n".join(unexpected)
         )
+
+
+def validate_browser_report(path: Path, source_commit: str, source_tree: str) -> dict[str, Any]:
+    try:
+        report = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise RuntimeError(f"browser report cannot be read: {path}: {exc}") from exc
+
+    failures = []
+    expected_values = {
+        "schema_version": 1,
+        "source_commit": source_commit,
+        "source_tree": source_tree,
+        "worktree_clean": True,
+        "route": "/app/registry",
+        "failed_tests": 0,
+        "failures": [],
+        "accessibility_violations": 0,
+        "pass": True,
+    }
+    for field, expected in expected_values.items():
+        if report.get(field) != expected:
+            failures.append(f"{field} must be {expected!r}")
+
+    total = report.get("total_tests")
+    completed = report.get("completed_tests")
+    passed = report.get("passed_tests")
+    if not isinstance(total, int) or isinstance(total, bool) or total < 9:
+        failures.append("total_tests must be an integer of at least 9")
+    elif completed != total or passed != total:
+        failures.append("all expected browser tests must be completed and pass")
+
+    if failures:
+        raise RuntimeError("browser report is not release evidence: " + "; ".join(failures))
+    return report
 
 
 def run_check(check: Check, logs: Path) -> dict[str, Any]:
@@ -273,6 +318,9 @@ def main() -> None:
     source_commit = git("rev-parse", "HEAD")
     source_tree = git("rev-parse", "HEAD^{tree}")
     repository = git("remote", "get-url", "origin")
+    browser_report = validate_browser_report(
+        args.browser_report.resolve(), source_commit, source_tree
+    )
 
     output.mkdir(parents=True, exist_ok=True)
     logs = output / "logs"
@@ -297,6 +345,7 @@ def main() -> None:
     binary_dir.mkdir()
     copied_binary = binary_dir / "receiver-registry"
     shutil.copy2(CONTRACT_BINARY, copied_binary)
+    shutil.copy2(args.browser_report.resolve(), output / "browser-qa-report.json")
 
     historical = json.loads((HISTORICAL_BUNDLE / "manifest.json").read_text(encoding="utf-8"))
     deployed = json.loads((DEPLOYED_BUNDLE / "manifest.json").read_text(encoding="utf-8"))
@@ -333,6 +382,16 @@ def main() -> None:
             "summary": conformance["summary"],
         },
         "verification": {"checks": checks, "all_passed": True},
+        "browser_evidence": {
+            "report": "browser-qa-report.json",
+            "route": browser_report["route"],
+            "total_tests": browser_report["total_tests"],
+            "accessibility_violations": browser_report["accessibility_violations"],
+            "source_commit": browser_report["source_commit"],
+            "source_tree": browser_report["source_tree"],
+            "worktree_clean": browser_report["worktree_clean"],
+            "pass": browser_report["pass"],
+        },
         "tool_versions": {
             "python": tool_version((sys.executable, "--version")),
             "node": tool_version(("node", "--version")),
@@ -383,7 +442,8 @@ def main() -> None:
         "The included contract binary matches the immutable `data1` Pudge deployment "
         "and its signed CKB CLI lifecycle evidence. The July mutable deployment is "
         "retained separately for historical comparison. No private key is included. "
-        "A browser/TypeScript-SDK signed lifecycle and independent security review "
+        "The browser QA report is bound to the same clean source tree. A "
+        "browser/TypeScript-SDK signed lifecycle and independent security review "
         "remain external steps.\n\n"
         "Verify this bundle from the repository with:\n\n"
         "```bash\n"

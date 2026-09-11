@@ -70,6 +70,28 @@ The July package remains historical and unchanged. The September package binds
 the hardened binary directly through `data1`; its normal release verification
 also requires clean local and GitHub CI provenance.
 
+## Source-Bound Review Bundle
+
+First run the production browser suite from a clean commit. The browser reporter
+records that exact commit and Git tree under the frontend's ignored `tmp`
+directory. Then generate a new review directory; never reuse an existing one:
+
+```bash
+cd reference/mlat/frontend
+npm run test:e2e
+cd ../../..
+python3 tools/registry/generate_registry_v2_review_evidence.py \
+  --browser-report reference/mlat/frontend/tmp/browser-qa-report.json \
+  --output evidence/registry-v2-review-YYYY-MM-DD-final
+python3 tools/registry/verify_registry_v2_review_evidence.py \
+  --bundle evidence/registry-v2-review-YYYY-MM-DD-final
+```
+
+Generation fails if the browser suite did not pass all nine checks, found a
+serious or critical accessibility issue, used a dirty worktree, or names a
+different source commit or tree. The resulting checksum file covers the browser
+report, conformance report, contract binary, manifest, and every test log.
+
 ## Deterministic MLAT Benchmark
 
 The MLAT benchmark fixture validates matching logic, artifact generation, and
