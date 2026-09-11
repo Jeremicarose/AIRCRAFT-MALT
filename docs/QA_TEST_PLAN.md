@@ -9,7 +9,7 @@ available.
 
 | Test | Expected result | Status | Verification |
 |---|---|---|---|
-| Open application | Receiver directory is the first screen | PASS | Root, `/app`, and legacy `/dashboard` redirect to `/app/registry`; MLAT remains available as a reference consumer |
+| Open application | Live Map is the first operational screen | PASS | Root, `/app`, and legacy `/dashboard` redirect to `/app/localization`; the Registry route remains available for identity and lifecycle work |
 | Direct route and refresh | Every major URL renders without client navigation | PASS | Registry, MLAT overview, map, aircraft, receivers, pipeline, metrics, diagnostics, and settings returned HTTP 200 |
 | Navigate with browser history | Back and forward restore the expected route | PASS | Settings and Live Map restored in order |
 | Load map | Geographic base map, controls, markers, and attribution render | PASS | OpenStreetMap context plus 3 aircraft and 5 receiver markers rendered |
@@ -38,8 +38,8 @@ available.
 | Verify lifecycle evidence | Create, update, transfer, and revoke hashes resolve | PASS | Offline verifier passed; CKB testnet explorer loaded the create transaction |
 | Contract lifecycle | Valid transitions pass and invalid transitions fail | PASS | 5 host and 11 CKB-VM tests passed after the CKB target build |
 | Cross-language SDK | Protocol vectors and transaction preparation agree | PASS | 69 TypeScript SDK tests and 171 shared runtime assertions passed |
-| Frontend receiver state | Invalid, future, and stale observations fail closed | PASS | 7 focused freshness, receiver-reference, and standalone-asset tests passed |
-| Python application | Registry, API, MLAT, database, and evidence tests pass | PASS | 161 tests passed |
+| Frontend receiver state | Invalid, future, and stale observations fail closed; exact `u64` values are not rounded | PASS | 9 focused precision, freshness, receiver-reference, and standalone-asset tests passed |
+| Python application | Registry, API, MLAT, database, and evidence tests pass | PASS | 168 tests passed |
 | Production build | Optimized Node 22 build completes | PASS | Next.js 16.3.4 Webpack build generated all 16 routes |
 | Production console | No critical browser errors or development overlay | PASS | Desktop and mobile production console/error checks were empty |
 | Production response security | Basic security headers present; framework hidden | PASS | `nosniff`, `DENY`, referrer, and permissions policies present; no `X-Powered-By` |

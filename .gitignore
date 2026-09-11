@@ -30,3 +30,5 @@ reference/mlat/frontend/.vercel/
 /frontend/
 *.tsbuildinfo
 *.local.json
+artifacts/registry-v2/conformance-report.json
+artifacts/

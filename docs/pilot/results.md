@@ -10,9 +10,9 @@ Status date: 2026-09-09
   physically synchronized receivers has not happened.
 - Security: code-level P0 feed binding and refresh propagation fixes pass. H-01
   still requires an independently reviewed immutable testnet deployment.
-- UI: production build passes. The Receiver directory is the first screen, MLAT
-  remains a separate reference area, and Registry versus replay provenance is
-  visible. A funded browser lifecycle has not run.
+- UI: production build passes. The Live Map is the first screen, the Receiver
+  directory remains the Registry workflow, and Registry versus replay provenance
+  is visible. A funded browser lifecycle has not run.
 - Deployment: local/reference deployment only. No complete public frontend URL
   has been verified.
 - Known blockers: immutable testnet deployment, funded wallet rehearsal,

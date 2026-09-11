@@ -121,6 +121,7 @@ REVIEW_PATHS = (
     "reference/mlat/frontend/test/receiver-reference.test.mjs",
     "tests/registry/fixtures/registry_v2_conformance.json",
     "tests/registry/test_registry_v2_conformance_report.py",
+    "tests/registry/test_registry_v2_review_evidence.py",
     "tools/registry/generate_registry_v2_conformance_report.py",
     "tools/registry/registry_v2_conformance.py",
 )
@@ -155,11 +156,25 @@ def git(*args: str) -> str:
     ).stdout.strip()
 
 
-def require_clean_tracked_tree() -> None:
-    status = git("status", "--short", "--untracked-files=no")
-    if status:
+def require_clean_worktree(allowed_output: Path | None = None) -> None:
+    allowed_prefix: str | None = None
+    if allowed_output is not None:
+        try:
+            allowed_prefix = allowed_output.resolve().relative_to(ROOT).as_posix().rstrip("/")
+        except ValueError:
+            pass
+
+    unexpected = []
+    for line in git("status", "--porcelain=v1", "--untracked-files=all").splitlines():
+        if line.startswith("?? ") and allowed_prefix is not None:
+            relative = line[3:]
+            if relative == allowed_prefix or relative.startswith(f"{allowed_prefix}/"):
+                continue
+        unexpected.append(line)
+    if unexpected:
         raise RuntimeError(
-            "tracked files are modified; commit the review target before generating evidence"
+            "worktree contains tracked or untracked changes; commit or remove them "
+            "before generating evidence:\n" + "\n".join(unexpected)
         )
 
 
@@ -217,7 +232,7 @@ def main() -> None:
     if output.exists() and (not output.is_dir() or any(output.iterdir())):
         raise RuntimeError(f"output directory is not empty: {output}")
 
-    require_clean_tracked_tree()
+    require_clean_worktree()
     source_commit = git("rev-parse", "HEAD")
     source_tree = git("rev-parse", "HEAD^{tree}")
     repository = git("remote", "get-url", "origin")
@@ -240,7 +255,7 @@ def main() -> None:
     checks.append(run_check(conformance_check, logs))
     conformance = json.loads(conformance_path.read_text(encoding="utf-8"))
 
-    require_clean_tracked_tree()
+    require_clean_worktree(output)
     binary_dir = output / "contract"
     binary_dir.mkdir()
     copied_binary = binary_dir / "receiver-registry"
@@ -256,6 +271,7 @@ def main() -> None:
             "commit": source_commit,
             "tree": source_tree,
             "tracked_worktree_clean": True,
+            "untracked_worktree_clean": True,
             "review_paths": list(REVIEW_PATHS),
         },
         "contract_candidate": {

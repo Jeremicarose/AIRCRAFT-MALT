@@ -66,8 +66,8 @@ In a new checkout with no project caches or databases:
 2. Install locked Python and Node dependencies.
 3. Run the test suite.
 4. Start processor, API, and frontend.
-5. Open the Receiver directory from the root URL.
-6. Complete the lifecycle workflow, then open MLAT and complete its reference workflow.
+5. Open the Live Map from the root URL.
+6. Inspect the Receiver directory lifecycle workflow, then complete the MLAT reference workflow.
 7. Stop the indexer path and verify fail-closed behavior.
 8. Restore it and verify recovery.
 9. Restart all services and verify persisted non-secret evidence.
