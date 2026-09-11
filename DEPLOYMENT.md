@@ -144,7 +144,7 @@ Before any production claim:
 - pin and verify deployment artifacts
 - terminate TLS and restrict CORS
 - keep admin routes off unless required
-- add rate limiting and dependency scanning
+- keep rate limiting enabled; use a shared edge limiter before adding API workers
 - move from SQLite if multi-node operation is required
 - define backups, restore tests, metrics, alerts, SLOs, and rollback
 - capture a live field evidence window

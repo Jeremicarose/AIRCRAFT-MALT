@@ -67,11 +67,18 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install --no-install-recommends -y gcc-riscv64-unknown-elf
+      - name: Install the browser used for Registry accessibility checks
+        working-directory: reference/mlat/frontend
+        run: npx playwright install --with-deps chromium
       - name: Run the clean-clone Registry and MLAT evidence bundle
         run: |
-          mkdir -p "$PILOT_ARTIFACT_DIR"
           python tools/registry/generate_registry_v2_review_evidence.py \
             --output "$PILOT_ARTIFACT_DIR/review"
+      - name: Test the built Registry page and record browser evidence
+        working-directory: reference/mlat/frontend
+        run: |
+          BROWSER_QA_REPORT="$GITHUB_WORKSPACE/$PILOT_ARTIFACT_DIR/browser-qa.json" \
+            npm run test:e2e:prepared
       - name: Run strict live preflight and preserve its blockers
         continue-on-error: true
         run: |

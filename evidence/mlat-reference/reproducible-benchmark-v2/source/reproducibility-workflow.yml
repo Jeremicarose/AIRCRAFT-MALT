@@ -38,7 +38,10 @@ jobs:
       - name: Run complete Python suite
         run: python -m pytest -q
       - name: Verify documentation links
-        run: python tools/check_documentation.py
+        run: |
+          python tools/check_documentation.py
+          python tools/check_environment_documentation.py
+          python tools/check_release_readiness.py --profile repository
 
   deterministic-benchmark:
     runs-on: ubuntu-24.04
@@ -92,12 +95,53 @@ jobs:
           cache-dependency-path: reference/mlat/frontend/package-lock.json
       - name: Install locked frontend dependencies
         run: npm ci
+      - name: Audit frontend dependencies
+        run: npm audit --audit-level=moderate
       - name: Test frontend receiver-state rules
         run: npm test
       - name: Build MLAT reference frontend
         run: npm run build
       - name: Type-check MLAT reference frontend
         run: npm run typecheck
+
+  frontend-browser:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: reference/mlat/frontend
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version-file: .python-version
+          cache: pip
+          cache-dependency-path: requirements-dev.lock
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 22.23.1
+          cache: npm
+          cache-dependency-path: reference/mlat/frontend/package-lock.json
+      - name: Install locked application dependencies
+        run: |
+          python -m pip install --disable-pip-version-check --require-hashes -r ../../../requirements-dev.lock
+          npm ci
+      - name: Install pinned Chromium runtime
+        run: npx playwright install --with-deps chromium
+      - name: Build the production frontend used by browser QA
+        run: npm run build
+      - name: Run browser and accessibility regression suite
+        run: npm run test:e2e:prepared
+        env:
+          BROWSER_QA_REPORT: test-results/browser-qa-report.json
+      - name: Upload browser QA evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: browser-qa-${{ github.sha }}
+          path: reference/mlat/frontend/test-results
+          if-no-files-found: error
+          retention-days: 30
 
   registry-sdk:
     runs-on: ubuntu-24.04
@@ -114,6 +158,8 @@ jobs:
           cache-dependency-path: sdk/typescript/package-lock.json
       - name: Install locked SDK dependencies
         run: npm ci
+      - name: Audit SDK dependencies
+        run: npm audit --audit-level=moderate
       - name: Test TypeScript protocol implementation
         run: npm test
 

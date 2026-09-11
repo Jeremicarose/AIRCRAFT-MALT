@@ -40,6 +40,8 @@ python3 -m black --check src/ckb_registry src/mlat_reference tools tests
 python3 -m flake8 src/ckb_registry src/mlat_reference tools tests
 python3 -m pytest -q
 python3 tools/check_documentation.py
+python3 tools/check_environment_documentation.py
+python3 tools/check_release_readiness.py --profile repository
 python3 tools/mlat/run_reproducible_benchmark.py --verify-only
 python3 tools/registry/verify_registry_v2_evidence.py \
   --bundle evidence/registry-v2-testnet-2026-07-30-final
@@ -56,8 +58,10 @@ make check
 ```bash
 cd reference/mlat/frontend
 npm ci
+npm test
 npm run build
 npm run typecheck
+npm run test:e2e
 ```
 
 ```bash

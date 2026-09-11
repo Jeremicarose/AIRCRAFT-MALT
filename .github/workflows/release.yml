@@ -26,18 +26,19 @@ jobs:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           fetch-depth: 0
-      - name: Enforce release prerequisites
-        run: |
-          test -f LICENSE
-          test -f RELEASE.md
-          test -f SECURITY.md
-          test -f docs/audit/REPOSITORY_AUDIT.md
-          [[ "$GITHUB_REF_NAME" =~ ^v[0-9]+\.[0-9]+\.[0-9]+([.-][0-9A-Za-z.-]+)?$ ]]
       - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
           python-version-file: .python-version
           cache: pip
           cache-dependency-path: requirements-dev.lock
+      - name: Enforce release prerequisites
+        run: |
+          [[ "$GITHUB_REF_NAME" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]
+          python tools/check_release_readiness.py \
+            --profile stable \
+            --manifest release/release.json \
+            --release-ref "$GITHUB_REF_NAME" \
+            --live
       - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
           node-version: 22.23.1
@@ -56,13 +57,17 @@ jobs:
         working-directory: reference/mlat/frontend
         run: |
           npm ci
+          npm audit --audit-level=moderate
           npm test
           npm run build
           npm run typecheck
+          npx playwright install --with-deps chromium
+          npm run test:e2e:prepared
       - name: Test TypeScript Registry V2 SDK
         working-directory: sdk/typescript
         run: |
           npm ci
+          npm audit --audit-level=moderate
           npm test
       - name: Install contract compiler
         run: |

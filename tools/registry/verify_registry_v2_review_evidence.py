@@ -148,12 +148,38 @@ def verify_bundle(bundle: Path) -> dict[str, Any]:
         ckb_hash(binary_path) == candidate.get("binary_ckb_data_hash"),
         ckb_hash(binary_path),
     )
-    verification.require(
-        "candidate is not claimed as deployed",
-        candidate.get("deployment_status") == "not_deployed"
-        and candidate.get("future_registry_code_hash") is None,
-        str(candidate.get("deployment_status")),
-    )
+    deployment_status = candidate.get("deployment_status")
+    if deployment_status == "not_deployed":
+        verification.require(
+            "candidate is not claimed as deployed",
+            candidate.get("future_registry_code_hash") is None,
+            str(deployment_status),
+        )
+    else:
+        verification.require(
+            "candidate is bound to immutable testnet deployment",
+            deployment_status == "deployed_testnet_data1"
+            and candidate.get("registry_code_hash") == candidate.get("binary_ckb_data_hash"),
+            str(deployment_status),
+        )
+
+        deployed = manifest.get("immutable_testnet_deployment", {})
+        deployed_bundle_name = "evidence/registry-v2-testnet-2026-09-11-data1-final"
+        deployed_bundle = ROOT / deployed_bundle_name
+        deployed_manifest = deployed_bundle / "manifest.json"
+        deployed_checksums = deployed_bundle / "checksums.sha256"
+        verification.require(
+            "immutable lifecycle bundle is pinned",
+            deployed.get("bundle") == deployed_bundle_name
+            and deployed.get("status") == "signed_chain_evidence_complete_ci_provenance_pending"
+            and deployed.get("registry_hash_type") == "data1"
+            and deployed.get("registry_code_hash") == candidate.get("binary_ckb_data_hash")
+            and deployed_manifest.is_file()
+            and deployed_checksums.is_file()
+            and sha256(deployed_manifest) == deployed.get("manifest_sha256")
+            and sha256(deployed_checksums) == deployed.get("checksums_sha256"),
+            str(deployed.get("bundle")),
+        )
 
     conformance = manifest.get("conformance", {})
     corpus_hash = conformance.get("corpus_sha256")
@@ -204,11 +230,14 @@ def verify_bundle(bundle: Path) -> dict[str, Any]:
         manifest.get("private_keys_included") is False,
         str(manifest.get("private_keys_included")),
     )
+    sdk_lifecycle_status = manifest.get("external_dependencies", {}).get(
+        "fresh_sdk_testnet_lifecycle"
+    )
     verification.require(
-        "fresh signed lifecycle remains external",
-        manifest.get("external_dependencies", {}).get("fresh_sdk_testnet_lifecycle")
-        == "blocked_external_signer_and_testnet_funds",
-        str(manifest.get("external_dependencies", {}).get("fresh_sdk_testnet_lifecycle")),
+        "browser SDK lifecycle remains external",
+        sdk_lifecycle_status
+        in {"blocked_browser_wallet_approval", "blocked_external_signer_and_testnet_funds"},
+        str(sdk_lifecycle_status),
     )
     return {"pass": verification.passed, "checks": verification.checks}
 

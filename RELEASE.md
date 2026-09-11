@@ -16,6 +16,12 @@ an independent contract review and remediation cycle are published.
   and signed evidence package
 - the maintainer explicitly approves the GitHub `release` environment
 
+The machine-readable stable-release contract is documented in
+[`release/README.md`](release/README.md). A stable tag fails closed unless
+`release/release.json` points to a published independent review, an immutable
+signed `data1` lifecycle, current browser/accessibility evidence, hardened
+operation settings, and a healthy public HTTPS deployment.
+
 ## Versioning
 
 Use semantic version tags such as `v0.2.0`. Until compatibility commitments are
@@ -27,12 +33,14 @@ changing its behavior always creates a new contract version and code hash.
 
 1. Update `CHANGELOG.md`, `docs/PROJECT_STATUS.md`, and evidence claim limits.
 2. Run every command in `CONTRIBUTING.md` from the supported toolchains.
-3. Merge through review and confirm all required GitHub checks are green.
-4. Create an annotated tag: `git tag -a vX.Y.Z -m "vX.Y.Z"`.
-5. Push only that tag: `git push origin vX.Y.Z`.
-6. Approve the protected `release` environment after reviewing its commit.
-7. Let `.github/workflows/release.yml` build, hash, attest, and publish assets.
-8. Download the release assets and independently verify checksums and
+3. Populate `release/release.json` and run `python
+   tools/check_release_readiness.py --profile stable --release-ref vX.Y.Z --live`.
+4. Merge through review and confirm all required GitHub checks are green.
+5. Create an annotated tag: `git tag -a vX.Y.Z -m "vX.Y.Z"`.
+6. Push only that tag: `git push origin vX.Y.Z`.
+7. Approve the protected `release` environment after reviewing its commit.
+8. Let `.github/workflows/release.yml` build, hash, attest, and publish assets.
+9. Download the release assets and independently verify checksums and
    attestations.
 
 ## TypeScript SDK publication

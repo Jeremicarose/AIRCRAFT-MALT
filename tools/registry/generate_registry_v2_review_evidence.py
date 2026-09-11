@@ -21,6 +21,7 @@ FRONTEND = ROOT / "reference/mlat/frontend"
 CORPUS = ROOT / "tests/registry/fixtures/registry_v2_conformance.json"
 CONTRACT_BINARY = CONTRACT / "target/riscv64imac-unknown-none-elf/release/receiver-registry"
 HISTORICAL_BUNDLE = ROOT / "evidence/registry-v2-testnet-2026-07-30-final"
+DEPLOYED_BUNDLE = ROOT / "evidence/registry-v2-testnet-2026-09-11-data1-final"
 
 
 @dataclass(frozen=True)
@@ -66,6 +67,24 @@ CHECKS = (
             "--bundle",
             "evidence/registry-v2-testnet-2026-07-30-final",
         ),
+    ),
+    Check(
+        "immutable-testnet-evidence",
+        (
+            sys.executable,
+            "tools/registry/verify_registry_v2_evidence.py",
+            "--bundle",
+            "evidence/registry-v2-testnet-2026-09-11-data1-final",
+            "--saved-chain-only",
+        ),
+    ),
+    Check(
+        "environment-documentation",
+        (sys.executable, "tools/check_environment_documentation.py"),
+    ),
+    Check(
+        "repository-release-readiness",
+        (sys.executable, "tools/check_release_readiness.py", "--profile", "repository"),
     ),
     Check(
         "deterministic-mlat-evidence",
@@ -117,11 +136,19 @@ REVIEW_PATHS = (
     "reference/mlat/frontend/lib/registry.ts",
     "reference/mlat/frontend/lib/routes.ts",
     "reference/mlat/frontend/package.json",
+    "reference/mlat/frontend/playwright.config.mjs",
     "reference/mlat/frontend/scripts/start-standalone.mjs",
+    "reference/mlat/frontend/test/e2e/evidence-reporter.mjs",
+    "reference/mlat/frontend/test/e2e/registry-accessibility.spec.mjs",
+    "reference/mlat/frontend/test/e2e/release.spec.mjs",
+    "reference/mlat/frontend/test/evidence-reporter.test.mjs",
+    "reference/mlat/frontend/test/playwright-config.test.mjs",
     "reference/mlat/frontend/test/standalone.test.mjs",
     "reference/mlat/frontend/test/receiver-freshness.test.mjs",
     "reference/mlat/frontend/test/receiver-reference.test.mjs",
     "tests/registry/fixtures/registry_v2_conformance.json",
+    "evidence/registry-v2-testnet-2026-09-11-data1-final/manifest.json",
+    "evidence/registry-v2-testnet-2026-09-11-data1-final/checksums.sha256",
     "tests/registry/test_deployment_and_indexer_health.py",
     "tests/registry/test_registry_v2_conformance_report.py",
     "tests/registry/test_registry_v2_review_evidence.py",
@@ -272,9 +299,16 @@ def main() -> None:
     shutil.copy2(CONTRACT_BINARY, copied_binary)
 
     historical = json.loads((HISTORICAL_BUNDLE / "manifest.json").read_text(encoding="utf-8"))
+    deployed = json.loads((DEPLOYED_BUNDLE / "manifest.json").read_text(encoding="utf-8"))
+    deployed_contract = deployed["contract"]
+    if (
+        sha256(copied_binary) != deployed_contract["binary_sha256"]
+        or ckb_hash(copied_binary) != deployed_contract["binary_ckb_data_hash"]
+    ):
+        raise RuntimeError("review binary does not match the immutable testnet deployment")
     manifest = {
         "schema_version": 1,
-        "status": "verified_undeployed_review_candidate",
+        "status": "verified_immutable_testnet_deployment",
         "generated_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
         "source": {
             "repository": repository,
@@ -285,12 +319,12 @@ def main() -> None:
             "review_paths": list(REVIEW_PATHS),
         },
         "contract_candidate": {
-            "deployment_status": "not_deployed",
+            "deployment_status": "deployed_testnet_data1",
             "binary": "contract/receiver-registry",
             "binary_bytes": copied_binary.stat().st_size,
             "binary_sha256": sha256(copied_binary),
             "binary_ckb_data_hash": ckb_hash(copied_binary),
-            "future_registry_code_hash": None,
+            "registry_code_hash": deployed_contract["type_script_hash_for_registry_code_hash"],
         },
         "conformance": {
             "report": "conformance-report.json",
@@ -315,9 +349,23 @@ def main() -> None:
             "registry_code_hash": historical["contract"]["type_script_hash_for_registry_code_hash"],
             "binary_sha256": historical["contract"]["binary_sha256"],
         },
+        "immutable_testnet_deployment": {
+            "status": "signed_chain_evidence_complete_ci_provenance_pending",
+            "bundle": "evidence/registry-v2-testnet-2026-09-11-data1-final",
+            "manifest_sha256": sha256(DEPLOYED_BUNDLE / "manifest.json"),
+            "checksums_sha256": sha256(DEPLOYED_BUNDLE / "checksums.sha256"),
+            "contract_source_commit": deployed["source"]["contract_source_commit"],
+            "deployment_tx_hash": deployed_contract["deployment_tx_hash"],
+            "contract_out_point": deployed_contract["out_point"],
+            "registry_code_hash": deployed_contract["type_script_hash_for_registry_code_hash"],
+            "registry_hash_type": deployed_contract["registry_script_hash_type"],
+            "receiver_identity": deployed["receiver"]["receiver_identity"],
+            "accepted_transactions": deployed["accepted_transactions"],
+        },
         "external_dependencies": {
-            "fresh_sdk_testnet_lifecycle": "blocked_external_signer_and_testnet_funds",
+            "fresh_sdk_testnet_lifecycle": "blocked_browser_wallet_approval",
             "independent_security_review": "not_completed",
+            "github_ci_provenance": "not_completed",
         },
         "private_keys_included": False,
     }
@@ -332,9 +380,11 @@ def main() -> None:
         "# Registry V2 Review Evidence\n\n"
         f"This bundle is bound to source commit `{source_commit}` and Git tree "
         f"`{source_tree}`. All recorded checks passed.\n\n"
-        "The included contract binary is an undeployed review candidate. The July "
-        "testnet deployment is separate historical evidence and does not claim to "
-        "run this binary. No private key or new testnet transaction is included.\n\n"
+        "The included contract binary matches the immutable `data1` Pudge deployment "
+        "and its signed CKB CLI lifecycle evidence. The July mutable deployment is "
+        "retained separately for historical comparison. No private key is included. "
+        "A browser/TypeScript-SDK signed lifecycle and independent security review "
+        "remain external steps.\n\n"
         "Verify this bundle from the repository with:\n\n"
         "```bash\n"
         "python tools/registry/verify_registry_v2_review_evidence.py "

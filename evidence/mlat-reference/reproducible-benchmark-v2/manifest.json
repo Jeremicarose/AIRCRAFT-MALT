@@ -33,8 +33,8 @@
       "sha256": "43fd694bd564dd2215f51a6b23f6a3712834850225e629d7781c81c71076092d"
     },
     "source/reproducibility-workflow.yml": {
-      "bytes": 4992,
-      "sha256": "c7b5d31b26c0e7cbc805ef61cd555f40fe21a67d69eaca7af1622c6d879f18c6"
+      "bytes": 6868,
+      "sha256": "9b1c5c23dffd491577848d2af649f33a80d7899ea01b3ff9c0eaa75f5eaf6bb4"
     },
     "source/requirements-build.in": {
       "bytes": 113,

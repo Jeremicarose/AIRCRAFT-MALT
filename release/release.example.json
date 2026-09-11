@@ -1,0 +1,21 @@
+{
+  "browser_qa_report": "evidence/browser-qa-current/report.json",
+  "lifecycle_evidence_bundle": "evidence/registry-v2-testnet-current",
+  "operations": {
+    "admin_api_enabled": false,
+    "allow_mutable_registry_code": false,
+    "ckb_ssl_verify": true,
+    "cors_allowed_origins": [
+      "https://replace-with-release-host.example"
+    ],
+    "demo_mode": false,
+    "rate_limit_enabled": true,
+    "registry_hash_type": "data1",
+    "simulate_if_unavailable": false,
+    "strict_production_mode": true
+  },
+  "public_deployment_url": "https://replace-with-release-host.example",
+  "release_version": "v0.0.0",
+  "schema_version": 1,
+  "security_review_attestation": "evidence/registry-v2-security-review/attestation.json"
+}

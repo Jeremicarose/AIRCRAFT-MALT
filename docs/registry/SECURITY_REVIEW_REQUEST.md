@@ -10,14 +10,17 @@ The external review target is one exact, clean Git commit containing every path
 listed under Review targets. Record that full commit SHA in the reviewer
 attestation; do not infer the review target from the deployed contract alone.
 
-The historical testnet deployment has separate, immutable provenance. Its
+The historical July testnet deployment has separate, immutable provenance. Its
 contract source is commit `61ab011de58397cb8d6ca3cecb5c659c69e2fc8c` and its
 lifecycle tooling is commit `adbdbd1a5a2afebad4067649dc3af57a682e545a`, as
 recorded in `evidence/registry-v2-testnet-2026-07-30-final/manifest.json`. The
-current review tree contains both on-chain and off-chain hardening that
-postdates that deployment. The current Rust binary is therefore a new,
-undeployed review candidate. The historical binary and evidence remain
-immutable; they must not be presented as a deployment of the current source.
+historical binary and evidence must not be presented as the current contract.
+
+The hardened binary is deployed separately with immutable `data1` binding. Its
+outpoint, binary hashes, accepted lifecycle, and rejected attacks are recorded
+in `evidence/registry-v2-testnet-2026-09-11-data1-final`. The deployment does
+not replace independent review. The reviewer must confirm that the submitted
+source builds the exact deployed binary before attesting to it.
 
 ## Security objective
 
@@ -95,7 +98,8 @@ verification.
 
 1. Build with the pinned toolchain and compare both published hashes.
 2. Run the Rust invariant and signed secp256k1 CKB-VM tests.
-3. Run `tools/registry/verify_registry_v2_evidence.py` locally and with `--live`.
+3. Run `tools/registry/verify_registry_v2_evidence.py` locally and with
+   `--live-chain-only`; do not treat that narrower mode as CI provenance.
 4. Add at least one attack transaction or fuzz/property test not written by the
    project author.
 5. Publish findings with severity, affected invariant, reproduction steps, and
@@ -107,6 +111,13 @@ the attestation. The historical evidence directory must not be rewritten to
 make it appear to have been produced from the newer review target.
 
 ## Reviewer attestation
+
+For a stable release, publish the signed report and encode the same result in
+the JSON format documented by [`release/README.md`](../../release/README.md).
+The release checker verifies the report hash, public reviewer identity, source
+commit, reviewed binary SHA-256 and CKB data hash, unresolved finding counts,
+whether reviewed protocol paths changed, and whether the reviewed binary is the
+one used by the immutable lifecycle deployment.
 
 ```text
 Reviewer name / organization:

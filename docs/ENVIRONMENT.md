@@ -104,9 +104,17 @@ immutable deployment. Never use the historical mutable hash for writes.
 | `API_STARTUP_TIMEOUT_SECONDS` | `45` | Seconds the process supervisor waits for `/healthz`. |
 | `MLAT_API_INTERNAL_URL` | `http://127.0.0.1:5057` | Server-only API origin used by Next.js. |
 | `NEXT_PUBLIC_API_BASE_URL` | same origin | Optional browser-visible API origin. Never put a credential here. |
-| `NEXT_DIST_DIR` | `.next` | Alternate Next.js build directory for isolated QA sessions. |
+| `NEXT_DIST_DIR` | unset | Optional Next.js build-directory override. Development defaults to `.next`; production defaults to `.next-production`. |
 | `NODE_ENV` | framework-managed | Selects development or production behavior and the default Next build directory. |
 | `GITHUB_REF_NAME` | GitHub-managed | Supplies the pushed tag to the stable-release checker in GitHub Actions. |
+| `PLAYWRIGHT_EXECUTABLE_PATH` | Playwright-managed | Optional local path to an installed Chromium browser. CI installs Playwright's pinned Chromium instead. |
+| `PLAYWRIGHT_API_PORT` | `4312` | Dedicated local demo API port used by browser QA. |
+| `PLAYWRIGHT_FRONTEND_PORT` | `4311` | Dedicated local production frontend port used by browser QA. |
+| `PLAYWRIGHT_DIST_DIR` | `.next-production` | Existing production build directory staged into an isolated runtime for browser QA. |
+| `PATH` | inherited | System executable search path. Browser QA prepends the repository `.venv/bin` directory when it starts the local API. |
+| `GITHUB_SHA` | GitHub-managed | Binds browser QA evidence to the checked-out source commit. Local runs derive the commit from Git. |
+| `CI` | CI-managed | Enables Playwright retries. Browser checks always start fresh repository servers. |
+| `BROWSER_QA_REPORT` | `tmp/browser-qa-report.json` | Optional output path for the Playwright Live Map and Registry accessibility evidence report. |
 
 The built-in rate limiter is correct only for the documented single-worker API.
 A multi-worker or multi-node deployment needs a shared limiter at the ingress or
@@ -121,9 +129,9 @@ in a shared store.
 
 ## Stable Release Values
 
-`GITHUB_REF_NAME` is supplied automatically by GitHub Actions when release
-readiness runs. It is only used to label CI evidence; local operators should
-leave it unset.
+`GITHUB_REF_NAME` and `GITHUB_SHA` are supplied automatically by GitHub Actions
+when release readiness runs. They only bind CI evidence to a tag and commit;
+local operators should leave them unset.
 
 A stable release must record deployment values in immutable evidence rather
 than relying on a maintainer's `.env`. At minimum it must use:

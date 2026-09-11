@@ -6,9 +6,15 @@ feed exists.
 
 ## 1. Immutable Deployment
 
-Build the current contract, publish its binary hash, and deploy it with a
-maintainer-controlled funded CKB testnet account. The Registry cells must use
-`hash_type=data1`; the historical `type` deployment is read-only.
+The current immutable Pudge deployment is recorded at outpoint
+`0xc2241446c19b61293b0901f801898ebeade7df9f4fd52669fc1eeebebee450bf:0`.
+Its verified CKB data hash is
+`0x40ebcd7df892234592a97c987faadce70df6bcfb5f7fa24fa78431cc24f3d6fa`.
+The historical `type` deployment remains read-only.
+
+For any replacement contract, build the candidate, publish its binary hash,
+and deploy it with a maintainer-controlled funded CKB testnet account. Registry
+cells must continue to use `hash_type=data1`.
 
 After the deployment transaction is confirmed, verify the code cell before
 configuring the browser:
@@ -81,8 +87,18 @@ mode cannot satisfy this gate.
 ## 5. Clean Evidence
 
 Use the manually triggered GitHub workflow `Pilot Readiness Evidence` after
-committing the source. It runs the clean-clone Registry, SDK, MLAT, frontend,
-contract, and conformance checks and uploads the evidence bundle. Optional
+committing the source. The workflow runs the source-bound review generator and
+the nine-check Chromium/accessibility suite as separate checks. A local browser
+reproduction needs the pinned browser installed after `npm ci`:
+
+```bash
+cd reference/mlat/frontend
+npx playwright install chromium
+npm run test:e2e
+```
+
+The GitHub workflow builds once, runs the prepared browser command, and stores a
+separately named browser report in the uploaded artifact. Optional
 deployment and indexer inputs add the two live checks above.
 
 The workflow can prove reproducibility. It cannot manufacture wallet approvals,
