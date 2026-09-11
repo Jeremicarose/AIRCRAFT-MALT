@@ -46,7 +46,7 @@ deployed with an immutable `data1` code hash.
 | `u64` precision | Fixed | Python bounds and TypeScript `bigint` preserve exact values |
 | Testnet evidence generation | Tested locally | Tool tests pass; no new funded testnet execution occurred |
 | Ownership provenance | Fixed in current data path | Owner lock and change history are preserved and verified |
-| Audited-revision reproducibility | Complete | `evidence/registry-v2-review-2026-09-11-final` binds the candidate to commit `e7cb2af9` and passes its offline verifier | Regenerate the bundle whenever reviewed source changes; a fresh deployment bundle still requires external signing |
+| Audited-revision reproducibility | Partial | Source-bound generation and verification are implemented; the final bundle must be regenerated after the latest source fixes | A fresh deployment bundle still requires external signing |
 
 No security finding is hidden. The contract remains unaudited, the Flask API has
 no built-in rate limiter, and the supported CKB JavaScript dependency chain has

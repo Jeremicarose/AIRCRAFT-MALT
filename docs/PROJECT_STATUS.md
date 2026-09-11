@@ -20,7 +20,7 @@ validated by external users.
 | Fresh SDK-driven lifecycle | BLOCKED | The SDK and browser journey are implemented; mutable code deployments fail closed | Requires independent review, an immutable `data1` Pudge deployment, funded wallets, and external signer approvals; no fresh transaction is claimed |
 | MLAT reference software | PARTIAL | Full 166-test Python suite passes; strict live gates and evidence verifier exist | Physical synchronized receiver run and independent reference data are absent |
 | Operator frontend | PARTIAL | The shell starts with the Receiver directory, preserves selected receiver context, keeps MLAT under a separate reference area, and uses the SDK for discovery, export, history, and signer-based lifecycle actions; focused tests, type check, and production build pass | Complete a funded wallet-signed browser run and add automated accessibility coverage |
-| Review evidence bundle | COMPLETE | `evidence/registry-v2-review-2026-09-11-final` binds the current candidate to commit `e7cb2af9` and passes its offline verifier | Regenerate the bundle whenever reviewed source changes; a fresh deployment bundle still requires external signing |
+| Review evidence bundle | PARTIAL | Source-bound generation and verification are implemented; earlier bundles were invalidated by later source fixes | Regenerate and verify the bundle after the final source commit |
 | Pilot materials | PARTIAL | Browser workflow, readiness gate, owner/coordinator tasks, feedback form, evidence template, proposal, and recruitment research exist | Consent materials, a maintainer wallet rehearsal, recruitment, and observed sessions remain |
 | Security/release baseline | PARTIAL | CodeQL, dependency review, SBOM, attestations, locked dependencies, MIT license, protected general release, and protected provenance-backed SDK release workflows exist | The npm organization and first package release need maintainer approval; workflows need a public green run; independent audit is absent; one low upstream npm advisory remains |
 | Product demand | MISSING | No customer, partner, participant, revenue, or adoption evidence is claimed | Recruit and run the precommitted product-validation pilot |
@@ -35,7 +35,7 @@ validated by external users.
   11 CKB-VM tests, and the RISC-V contract check passed.
 - `npm test && npm run build` in `sdk/typescript`: 69 tests and TypeScript
   compilation passed.
-- `npm test` in the frontend: 7 focused freshness, receiver-reference, and standalone-asset tests passed.
+- `npm test` in the frontend: 9 focused precision, freshness, receiver-reference, and standalone-asset tests passed.
 - `python3 tools/registry/generate_registry_v2_conformance_report.py`: 57
   shared cases, 171 runtime assertions, and zero failures.
 - `npm run typecheck` and `next build --webpack` in the frontend: passed and
@@ -48,7 +48,7 @@ validated by external users.
   `elliptic` advisory documented in `SECURITY.md`.
 - `python3 -m pip check`: no broken Python requirements.
 - `python3 tools/registry/verify_registry_v2_review_evidence.py --bundle
-  evidence/registry-v2-review-2026-09-11-final`: 17 checks passed, including the
+  evidence/registry-v2-review-2026-09-12-final`: 17 checks passed, including the
   source commit/tree, candidate binary hashes, conformance report, and external
   signer blocker.
 These are local results. Public CI results must be checked after the commits are

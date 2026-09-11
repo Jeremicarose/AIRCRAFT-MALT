@@ -1,0 +1,1903 @@
+{
+  "cases": [
+    {
+      "category": "record",
+      "expected": {
+        "accepted": true,
+        "creation_accepted": true
+      },
+      "id": "record/valid_creation_with_stream",
+      "implementations_equal": true,
+      "matches_expected": true,
+      "outcomes": {
+        "python": {
+          "accepted": true,
+          "creation_accepted": true,
+          "record": {
+            "altitude_f64_bits": "0x409c0c0000000000",
+            "capabilities": [
+              "mode-s",
+              "mlat"
+            ],
+            "latitude_f64_bits": "0xbff4950ca1cef241",
+            "longitude_f64_bits": "0x4042689ac36544fe",
+            "metadata_hash": "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "receiver_id": "RECV_TEST",
+            "schema_version": 2,
+            "sequence": "0",
+            "status": "online",
+            "stream_endpoint": "wss://feed.example/ws",
+            "stream_format": "json",
+            "stream_protocol": "websocket-json",
+            "updated_at": "1700000000"
+          }
+        },
+        "rust": {
+          "accepted": true,
+          "creation_accepted": true,
+          "record": {
+            "altitude_f64_bits": "0x409c0c0000000000",
+            "capabilities": [
+              "mode-s",
+              "mlat"
+            ],
+            "latitude_f64_bits": "0xbff4950ca1cef241",
+            "longitude_f64_bits": "0x4042689ac36544fe",
+            "metadata_hash": "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "receiver_id": "RECV_TEST",
+            "schema_version": 2,
+            "sequence": "0",
+            "status": "online",
+            "stream_endpoint": "wss://feed.example/ws",
+            "stream_format": "json",
+            "stream_protocol": "websocket-json",
+            "updated_at": "1700000000"
+          }
+        },
+        "typescript": {
+          "accepted": true,
+          "creation_accepted": true,
+          "record": {
+            "altitude_f64_bits": "0x409c0c0000000000",
+            "capabilities": [
+              "mode-s",
+              "mlat"
+            ],
+            "latitude_f64_bits": "0xbff4950ca1cef241",
+            "longitude_f64_bits": "0x4042689ac36544fe",
+            "metadata_hash": "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "receiver_id": "RECV_TEST",
+            "schema_version": 2,
+            "sequence": "0",
+            "status": "online",
+            "stream_endpoint": "wss://feed.example/ws",
+            "stream_format": "json",
+            "stream_protocol": "websocket-json",
+            "updated_at": "1700000000"
+          }
+        }
+      },
+      "pass": true
+    },
+    {
+      "category": "record",
+      "expected": {
+        "accepted": true,
+        "creation_accepted": true
+      },
+      "id": "record/valid_u64_minimums",
+      "implementations_equal": true,
+      "matches_expected": true,
+      "outcomes": {
+        "python": {
+          "accepted": true,
+          "creation_accepted": true,
+          "record": {
+            "altitude_f64_bits": "0x0000000000000000",
+            "capabilities": [
+              "mode-s"
+            ],
+            "latitude_f64_bits": "0x0000000000000000",
+            "longitude_f64_bits": "0x0000000000000000",
+            "metadata_hash": null,
+            "receiver_id": "RECV_TEST",
+            "schema_version": 2,
+            "sequence": "0",
+            "status": "offline",
+            "stream_endpoint": null,
+            "stream_format": null,
+            "stream_protocol": null,
+            "updated_at": "1"
+          }
+        },
+        "rust": {
+          "accepted": true,
+          "creation_accepted": true,
+          "record": {
+            "altitude_f64_bits": "0x0000000000000000",
+            "capabilities": [
+              "mode-s"
+            ],
+            "latitude_f64_bits": "0x0000000000000000",
+            "longitude_f64_bits": "0x0000000000000000",
+            "metadata_hash": null,
+            "receiver_id": "RECV_TEST",
+            "schema_version": 2,
+            "sequence": "0",
+            "status": "offline",
+            "stream_endpoint": null,
+            "stream_format": null,
+            "stream_protocol": null,
+            "updated_at": "1"
+          }
+        },
+        "typescript": {
+          "accepted": true,
+          "creation_accepted": true,
+          "record": {
+            "altitude_f64_bits": "0x0000000000000000",
+            "capabilities": [
+              "mode-s"
+            ],
+            "latitude_f64_bits": "0x0000000000000000",
+            "longitude_f64_bits": "0x0000000000000000",
+            "metadata_hash": null,
+            "receiver_id": "RECV_TEST",
+            "schema_version": 2,
+            "sequence": "0",
+            "status": "offline",
+            "stream_endpoint": null,
+            "stream_format": null,
+            "stream_protocol": null,
+            "updated_at": "1"
+          }
+        }
+      },
+      "pass": true
+    },
+    {
+      "category": "record",
+      "expected": {
+        "accepted": true,
+        "creation_accepted": false
+      },
+      "id": "record/valid_integer_coordinates",
+      "implementations_equal": true,
+      "matches_expected": true,
+      "outcomes": {
+        "python": {
+          "accepted": true,
+          "creation_accepted": false,
+          "record": {
+            "altitude_f64_bits": "0x409c0c0000000000",
+            "capabilities": [
+              "mode-s"
+            ],
+            "latitude_f64_bits": "0xbff0000000000000",
+            "longitude_f64_bits": "0x4042000000000000",
+            "metadata_hash": null,
+            "receiver_id": "RECV_TEST",
+            "schema_version": 2,
+            "sequence": "4",
+            "status": "offline",
+            "stream_endpoint": null,
+            "stream_format": null,
+            "stream_protocol": null,
+            "updated_at": "1700000004"
+          }
+        },
+        "rust": {
+          "accepted": true,
+          "creation_accepted": false,
+          "record": {
+            "altitude_f64_bits": "0x409c0c0000000000",
+            "capabilities": [
+              "mode-s"
+            ],
+            "latitude_f64_bits": "0xbff0000000000000",
+            "longitude_f64_bits": "0x4042000000000000",
+            "metadata_hash": null,
+            "receiver_id": "RECV_TEST",
+            "schema_version": 2,
+            "sequence": "4",
+            "status": "offline",
+            "stream_endpoint": null,
+            "stream_format": null,
+            "stream_protocol": null,
+            "updated_at": "1700000004"
+          }
+        },
+        "typescript": {
+          "accepted": true,
+          "creation_accepted": false,
+          "record": {
+            "altitude_f64_bits": "0x409c0c0000000000",
+            "capabilities": [
+              "mode-s"
+            ],
+            "latitude_f64_bits": "0xbff0000000000000",
+            "longitude_f64_bits": "0x4042000000000000",
+            "metadata_hash": null,
+            "receiver_id": "RECV_TEST",
+            "schema_version": 2,
+            "sequence": "4",
+            "status": "offline",
+            "stream_endpoint": null,
+            "stream_format": null,
+            "stream_protocol": null,
+            "updated_at": "1700000004"
+          }
+        }
+      },
+      "pass": true
+    },
+    {
+      "category": "record",
+      "expected": {
+        "accepted": true,
+        "creation_accepted": false
+      },
+      "id": "record/valid_negative_zero_coordinate",
+      "implementations_equal": true,
+      "matches_expected": true,
+      "outcomes": {
+        "python": {
+          "accepted": true,
+          "creation_accepted": false,
+          "record": {
+            "altitude_f64_bits": "0x0000000000000000",
+            "capabilities": [
+              "mode-s"
+            ],
+            "latitude_f64_bits": "0x8000000000000000",
+            "longitude_f64_bits": "0x0000000000000000",
+            "metadata_hash": null,
+            "receiver_id": "RECV_TEST",
+            "schema_version": 2,
+            "sequence": "4",
+            "status": "offline",
+            "stream_endpoint": null,
+            "stream_format": null,
+            "stream_protocol": null,
+            "updated_at": "1700000004"
+          }
+        },
+        "rust": {
+          "accepted": true,
+          "creation_accepted": false,
+          "record": {
+            "altitude_f64_bits": "0x0000000000000000",
+            "capabilities": [
+              "mode-s"
+            ],
+            "latitude_f64_bits": "0x8000000000000000",
+            "longitude_f64_bits": "0x0000000000000000",
+            "metadata_hash": null,
+            "receiver_id": "RECV_TEST",
+            "schema_version": 2,
+            "sequence": "4",
+            "status": "offline",
+            "stream_endpoint": null,
+            "stream_format": null,
+            "stream_protocol": null,
+            "updated_at": "1700000004"
+          }
+        },
+        "typescript": {
+          "accepted": true,
+          "creation_accepted": false,
+          "record": {
+            "altitude_f64_bits": "0x0000000000000000",
+            "capabilities": [
+              "mode-s"
+            ],
+            "latitude_f64_bits": "0x8000000000000000",
+            "longitude_f64_bits": "0x0000000000000000",
+            "metadata_hash": null,
+            "receiver_id": "RECV_TEST",
+            "schema_version": 2,
+            "sequence": "4",
+            "status": "offline",
+            "stream_endpoint": null,
+            "stream_format": null,
+            "stream_protocol": null,
+            "updated_at": "1700000004"
+          }
+        }
+      },
+      "pass": true
+    },
+    {
+      "category": "record",
+      "expected": {
+        "accepted": true,
+        "creation_accepted": false
+      },
+      "id": "record/valid_revoked_tombstone",
+      "implementations_equal": true,
+      "matches_expected": true,
+      "outcomes": {
+        "python": {
+          "accepted": true,
+          "creation_accepted": false,
+          "record": {
+            "altitude_f64_bits": "0x409c0c0000000000",
+            "capabilities": [
+              "mode-s",
+              "mlat"
+            ],
+            "latitude_f64_bits": "0xbff4950ca1cef241",
+            "longitude_f64_bits": "0x4042689ac36544fe",
+            "metadata_hash": null,
+            "receiver_id": "RECV_TEST",
+            "schema_version": 2,
+            "sequence": "4",
+            "status": "revoked",
+            "stream_endpoint": null,
+            "stream_format": null,
+            "stream_protocol": null,
+            "updated_at": "1700000004"
+          }
+        },
+        "rust": {
+          "accepted": true,
+          "creation_accepted": false,
+          "record": {
+            "altitude_f64_bits": "0x409c0c0000000000",
+            "capabilities": [
+              "mode-s",
+              "mlat"
+            ],
+            "latitude_f64_bits": "0xbff4950ca1cef241",
+            "longitude_f64_bits": "0x4042689ac36544fe",
+            "metadata_hash": null,
+            "receiver_id": "RECV_TEST",
+            "schema_version": 2,
+            "sequence": "4",
+            "status": "revoked",
+            "stream_endpoint": null,
+            "stream_format": null,
+            "stream_protocol": null,
+            "updated_at": "1700000004"
+          }
+        },
+        "typescript": {
+          "accepted": true,
+          "creation_accepted": false,
+          "record": {
+            "altitude_f64_bits": "0x409c0c0000000000",
+            "capabilities": [
+              "mode-s",
+              "mlat"
+            ],
+            "latitude_f64_bits": "0xbff4950ca1cef241",
+            "longitude_f64_bits": "0x4042689ac36544fe",
+            "metadata_hash": null,
+            "receiver_id": "RECV_TEST",
+            "schema_version": 2,
+            "sequence": "4",
+            "status": "revoked",
+            "stream_endpoint": null,
+            "stream_format": null,
+            "stream_protocol": null,
+            "updated_at": "1700000004"
+          }
+        }
+      },
+      "pass": true
+    },
+    {
+      "category": "record",
+      "expected": {
+        "accepted": false,
+        "creation_accepted": false
+      },
+      "id": "record/reject_v1_record",
+      "implementations_equal": true,
+      "matches_expected": true,
+      "outcomes": {
+        "python": {
+          "accepted": false,
+          "creation_accepted": false,
+          "record": null
+        },
+        "rust": {
+          "accepted": false,
+          "creation_accepted": false,
+          "record": null
+        },
+        "typescript": {
+          "accepted": false,
+          "creation_accepted": false,
+          "record": null
+        }
+      },
+      "pass": true
+    },
+    {
+      "category": "record",
+      "expected": {
+        "accepted": false,
+        "creation_accepted": false
+      },
+      "id": "record/reject_unknown_field",
+      "implementations_equal": true,
+      "matches_expected": true,
+      "outcomes": {
+        "python": {
+          "accepted": false,
+          "creation_accepted": false,
+          "record": null
+        },
+        "rust": {
+          "accepted": false,
+          "creation_accepted": false,
+          "record": null
+        },
+        "typescript": {
+          "accepted": false,
+          "creation_accepted": false,
+          "record": null
+        }
+      },
+      "pass": true
+    },
+    {
+      "category": "record",
+      "expected": {
+        "accepted": false,
+        "creation_accepted": false
+      },
+      "id": "record/reject_numeric_string",
+      "implementations_equal": true,
+      "matches_expected": true,
+      "outcomes": {
+        "python": {
+          "accepted": false,
+          "creation_accepted": false,
+          "record": null
+        },
+        "rust": {
+          "accepted": false,
+          "creation_accepted": false,
+          "record": null
+        },
+        "typescript": {
+          "accepted": false,
+          "creation_accepted": false,
+          "record": null
+        }
+      },
+      "pass": true
+    },
+    {
+      "category": "record",
+      "expected": {
+        "accepted": false,
+        "creation_accepted": false
+      },
+      "id": "record/reject_boolean_coordinate",
+      "implementations_equal": true,
+      "matches_expected": true,
+      "outcomes": {
+        "python": {
+          "accepted": false,
+          "creation_accepted": false,
+          "record": null
+        },
+        "rust": {
+          "accepted": false,
+          "creation_accepted": false,
+          "record": null
+        },
+        "typescript": {
+          "accepted": false,
+          "creation_accepted": false,
+          "record": null
+        }
+      },
+      "pass": true
+    },
+    {
+      "category": "record",
+      "expected": {
+        "accepted": false,
+        "creation_accepted": false
+      },
+      "id": "record/reject_revoked_stream",
+      "implementations_equal": true,
+      "matches_expected": true,
+      "outcomes": {
+        "python": {
+          "accepted": false,
+          "creation_accepted": false,
+          "record": null
+        },
+        "rust": {
+          "accepted": false,
+          "creation_accepted": false,
+          "record": null
+        },
+        "typescript": {
+          "accepted": false,
+          "creation_accepted": false,
+          "record": null
+        }
+      },
+      "pass": true
+    },
+    {
+      "category": "record",
+      "expected": {
+        "accepted": false,
+        "creation_accepted": false
+      },
+      "id": "record/reject_negative_sequence",
+      "implementations_equal": true,
+      "matches_expected": true,
+      "outcomes": {
+        "python": {
+          "accepted": false,
+          "creation_accepted": false,
+          "record": null
+        },
+        "rust": {
+          "accepted": false,
+          "creation_accepted": false,
+          "record": null
+        },
+        "typescript": {
+          "accepted": false,
+          "creation_accepted": false,
+          "record": null
+        }
+      },
+      "pass": true
+    },
+    {
+      "category": "record",
+      "expected": {
+        "accepted": false,
+        "creation_accepted": false
+      },
+      "id": "record/reject_negative_zero_sequence",
+      "implementations_equal": true,
+      "matches_expected": true,
+      "outcomes": {
+        "python": {
+          "accepted": false,
+          "creation_accepted": false,
+          "record": null
+        },
+        "rust": {
+          "accepted": false,
+          "creation_accepted": false,
+          "record": null
+        },
+        "typescript": {
+          "accepted": false,
+          "creation_accepted": false,
+          "record": null
+        }
+      },
+      "pass": true
+    },
+    {
+      "category": "record",
+      "expected": {
+        "accepted": false,
+        "creation_accepted": false
+      },
+      "id": "record/reject_zero_updated_at",
+      "implementations_equal": true,
+      "matches_expected": true,
+      "outcomes": {
+        "python": {
+          "accepted": false,
+          "creation_accepted": false,
+          "record": null
+        },
+        "rust": {
+          "accepted": false,
+          "creation_accepted": false,
+          "record": null
+        },
+        "typescript": {
+          "accepted": false,
+          "creation_accepted": false,
+          "record": null
+        }
+      },
+      "pass": true
+    },
+    {
+      "category": "record",
+      "expected": {
+        "accepted": true,
+        "creation_accepted": false
+      },
+      "id": "record/valid_u64_maximums",
+      "implementations_equal": true,
+      "matches_expected": true,
+      "outcomes": {
+        "python": {
+          "accepted": true,
+          "creation_accepted": false,
+          "record": {
+            "altitude_f64_bits": "0x409c0c0000000000",
+            "capabilities": [
+              "mode-s"
+            ],
+            "latitude_f64_bits": "0xbff4950ca1cef241",
+            "longitude_f64_bits": "0x4042689ac36544fe",
+            "metadata_hash": null,
+            "receiver_id": "RECV_TEST",
+            "schema_version": 2,
+            "sequence": "18446744073709551615",
+            "status": "offline",
+            "stream_endpoint": null,
+            "stream_format": null,
+            "stream_protocol": null,
+            "updated_at": "18446744073709551615"
+          }
+        },
+        "rust": {
+          "accepted": true,
+          "creation_accepted": false,
+          "record": {
+            "altitude_f64_bits": "0x409c0c0000000000",
+            "capabilities": [
+              "mode-s"
+            ],
+            "latitude_f64_bits": "0xbff4950ca1cef241",
+            "longitude_f64_bits": "0x4042689ac36544fe",
+            "metadata_hash": null,
+            "receiver_id": "RECV_TEST",
+            "schema_version": 2,
+            "sequence": "18446744073709551615",
+            "status": "offline",
+            "stream_endpoint": null,
+            "stream_format": null,
+            "stream_protocol": null,
+            "updated_at": "18446744073709551615"
+          }
+        },
+        "typescript": {
+          "accepted": true,
+          "creation_accepted": false,
+          "record": {
+            "altitude_f64_bits": "0x409c0c0000000000",
+            "capabilities": [
+              "mode-s"
+            ],
+            "latitude_f64_bits": "0xbff4950ca1cef241",
+            "longitude_f64_bits": "0x4042689ac36544fe",
+            "metadata_hash": null,
+            "receiver_id": "RECV_TEST",
+            "schema_version": 2,
+            "sequence": "18446744073709551615",
+            "status": "offline",
+            "stream_endpoint": null,
+            "stream_format": null,
+            "stream_protocol": null,
+            "updated_at": "18446744073709551615"
+          }
+        }
+      },
+      "pass": true
+    },
+    {
+      "category": "record",
+      "expected": {
+        "accepted": false,
+        "creation_accepted": false
+      },
+      "id": "record/reject_sequence_above_u64",
+      "implementations_equal": true,
+      "matches_expected": true,
+      "outcomes": {
+        "python": {
+          "accepted": false,
+          "creation_accepted": false,
+          "record": null
+        },
+        "rust": {
+          "accepted": false,
+          "creation_accepted": false,
+          "record": null
+        },
+        "typescript": {
+          "accepted": false,
+          "creation_accepted": false,
+          "record": null
+        }
+      },
+      "pass": true
+    },
+    {
+      "category": "record",
+      "expected": {
+        "accepted": false,
+        "creation_accepted": false
+      },
+      "id": "record/reject_updated_at_above_u64",
+      "implementations_equal": true,
+      "matches_expected": true,
+      "outcomes": {
+        "python": {
+          "accepted": false,
+          "creation_accepted": false,
+          "record": null
+        },
+        "rust": {
+          "accepted": false,
+          "creation_accepted": false,
+          "record": null
+        },
+        "typescript": {
+          "accepted": false,
+          "creation_accepted": false,
+          "record": null
+        }
+      },
+      "pass": true
+    },
+    {
+      "category": "record",
+      "expected": {
+        "accepted": false,
+        "creation_accepted": false
+      },
+      "id": "record/reject_boolean_sequence",
+      "implementations_equal": true,
+      "matches_expected": true,
+      "outcomes": {
+        "python": {
+          "accepted": false,
+          "creation_accepted": false,
+          "record": null
+        },
+        "rust": {
+          "accepted": false,
+          "creation_accepted": false,
+          "record": null
+        },
+        "typescript": {
+          "accepted": false,
+          "creation_accepted": false,
+          "record": null
+        }
+      },
+      "pass": true
+    },
+    {
+      "category": "record",
+      "expected": {
+        "accepted": false,
+        "creation_accepted": false
+      },
+      "id": "record/reject_float_sequence",
+      "implementations_equal": true,
+      "matches_expected": true,
+      "outcomes": {
+        "python": {
+          "accepted": false,
+          "creation_accepted": false,
+          "record": null
+        },
+        "rust": {
+          "accepted": false,
+          "creation_accepted": false,
+          "record": null
+        },
+        "typescript": {
+          "accepted": false,
+          "creation_accepted": false,
+          "record": null
+        }
+      },
+      "pass": true
+    },
+    {
+      "category": "record",
+      "expected": {
+        "accepted": false,
+        "creation_accepted": false
+      },
+      "id": "record/reject_v2_schema_mismatch",
+      "implementations_equal": true,
+      "matches_expected": true,
+      "outcomes": {
+        "python": {
+          "accepted": false,
+          "creation_accepted": false,
+          "record": null
+        },
+        "rust": {
+          "accepted": false,
+          "creation_accepted": false,
+          "record": null
+        },
+        "typescript": {
+          "accepted": false,
+          "creation_accepted": false,
+          "record": null
+        }
+      },
+      "pass": true
+    },
+    {
+      "category": "record",
+      "expected": {
+        "accepted": false,
+        "creation_accepted": false
+      },
+      "id": "record/reject_invalid_status",
+      "implementations_equal": true,
+      "matches_expected": true,
+      "outcomes": {
+        "python": {
+          "accepted": false,
+          "creation_accepted": false,
+          "record": null
+        },
+        "rust": {
+          "accepted": false,
+          "creation_accepted": false,
+          "record": null
+        },
+        "typescript": {
+          "accepted": false,
+          "creation_accepted": false,
+          "record": null
+        }
+      },
+      "pass": true
+    },
+    {
+      "category": "record",
+      "expected": {
+        "accepted": false,
+        "creation_accepted": false
+      },
+      "id": "record/reject_invalid_coordinates",
+      "implementations_equal": true,
+      "matches_expected": true,
+      "outcomes": {
+        "python": {
+          "accepted": false,
+          "creation_accepted": false,
+          "record": null
+        },
+        "rust": {
+          "accepted": false,
+          "creation_accepted": false,
+          "record": null
+        },
+        "typescript": {
+          "accepted": false,
+          "creation_accepted": false,
+          "record": null
+        }
+      },
+      "pass": true
+    },
+    {
+      "category": "record",
+      "expected": {
+        "accepted": false,
+        "creation_accepted": false
+      },
+      "id": "record/reject_malformed_metadata_hash",
+      "implementations_equal": true,
+      "matches_expected": true,
+      "outcomes": {
+        "python": {
+          "accepted": false,
+          "creation_accepted": false,
+          "record": null
+        },
+        "rust": {
+          "accepted": false,
+          "creation_accepted": false,
+          "record": null
+        },
+        "typescript": {
+          "accepted": false,
+          "creation_accepted": false,
+          "record": null
+        }
+      },
+      "pass": true
+    },
+    {
+      "category": "record",
+      "expected": {
+        "accepted": false,
+        "creation_accepted": false
+      },
+      "id": "record/reject_malformed_metadata_type",
+      "implementations_equal": true,
+      "matches_expected": true,
+      "outcomes": {
+        "python": {
+          "accepted": false,
+          "creation_accepted": false,
+          "record": null
+        },
+        "rust": {
+          "accepted": false,
+          "creation_accepted": false,
+          "record": null
+        },
+        "typescript": {
+          "accepted": false,
+          "creation_accepted": false,
+          "record": null
+        }
+      },
+      "pass": true
+    },
+    {
+      "category": "record",
+      "expected": {
+        "accepted": false,
+        "creation_accepted": false
+      },
+      "id": "record/reject_missing_required_field",
+      "implementations_equal": true,
+      "matches_expected": true,
+      "outcomes": {
+        "python": {
+          "accepted": false,
+          "creation_accepted": false,
+          "record": null
+        },
+        "rust": {
+          "accepted": false,
+          "creation_accepted": false,
+          "record": null
+        },
+        "typescript": {
+          "accepted": false,
+          "creation_accepted": false,
+          "record": null
+        }
+      },
+      "pass": true
+    },
+    {
+      "category": "record",
+      "expected": {
+        "accepted": false,
+        "creation_accepted": false
+      },
+      "id": "record/reject_empty_stream_endpoint",
+      "implementations_equal": true,
+      "matches_expected": true,
+      "outcomes": {
+        "python": {
+          "accepted": false,
+          "creation_accepted": false,
+          "record": null
+        },
+        "rust": {
+          "accepted": false,
+          "creation_accepted": false,
+          "record": null
+        },
+        "typescript": {
+          "accepted": false,
+          "creation_accepted": false,
+          "record": null
+        }
+      },
+      "pass": true
+    },
+    {
+      "category": "record",
+      "expected": {
+        "accepted": false,
+        "creation_accepted": false
+      },
+      "id": "record/reject_escaped_stream_endpoint",
+      "implementations_equal": true,
+      "matches_expected": true,
+      "outcomes": {
+        "python": {
+          "accepted": false,
+          "creation_accepted": false,
+          "record": null
+        },
+        "rust": {
+          "accepted": false,
+          "creation_accepted": false,
+          "record": null
+        },
+        "typescript": {
+          "accepted": false,
+          "creation_accepted": false,
+          "record": null
+        }
+      },
+      "pass": true
+    },
+    {
+      "category": "record",
+      "expected": {
+        "accepted": false,
+        "creation_accepted": false
+      },
+      "id": "record/reject_leading_plus_coordinate",
+      "implementations_equal": true,
+      "matches_expected": true,
+      "outcomes": {
+        "python": {
+          "accepted": false,
+          "creation_accepted": false,
+          "record": null
+        },
+        "rust": {
+          "accepted": false,
+          "creation_accepted": false,
+          "record": null
+        },
+        "typescript": {
+          "accepted": false,
+          "creation_accepted": false,
+          "record": null
+        }
+      },
+      "pass": true
+    },
+    {
+      "category": "record",
+      "expected": {
+        "accepted": false,
+        "creation_accepted": false
+      },
+      "id": "record/reject_leading_zero_coordinate",
+      "implementations_equal": true,
+      "matches_expected": true,
+      "outcomes": {
+        "python": {
+          "accepted": false,
+          "creation_accepted": false,
+          "record": null
+        },
+        "rust": {
+          "accepted": false,
+          "creation_accepted": false,
+          "record": null
+        },
+        "typescript": {
+          "accepted": false,
+          "creation_accepted": false,
+          "record": null
+        }
+      },
+      "pass": true
+    },
+    {
+      "category": "record",
+      "expected": {
+        "accepted": false,
+        "creation_accepted": false
+      },
+      "id": "record/reject_duplicate_json_field",
+      "implementations_equal": true,
+      "matches_expected": true,
+      "outcomes": {
+        "python": {
+          "accepted": false,
+          "creation_accepted": false,
+          "record": null
+        },
+        "rust": {
+          "accepted": false,
+          "creation_accepted": false,
+          "record": null
+        },
+        "typescript": {
+          "accepted": false,
+          "creation_accepted": false,
+          "record": null
+        }
+      },
+      "pass": true
+    },
+    {
+      "category": "identity",
+      "expected": {
+        "accepted": true,
+        "normalized": "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "id": "identity/valid_32_byte_identity",
+      "implementations_equal": true,
+      "matches_expected": true,
+      "outcomes": {
+        "python": {
+          "accepted": true,
+          "normalized": "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        },
+        "rust": {
+          "accepted": true,
+          "normalized": "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        },
+        "typescript": {
+          "accepted": true,
+          "normalized": "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        }
+      },
+      "pass": true
+    },
+    {
+      "category": "identity",
+      "expected": {
+        "accepted": true,
+        "normalized": "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "id": "identity/valid_uppercase_identity",
+      "implementations_equal": true,
+      "matches_expected": true,
+      "outcomes": {
+        "python": {
+          "accepted": true,
+          "normalized": "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        },
+        "rust": {
+          "accepted": true,
+          "normalized": "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        },
+        "typescript": {
+          "accepted": true,
+          "normalized": "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        }
+      },
+      "pass": true
+    },
+    {
+      "category": "identity",
+      "expected": {
+        "accepted": false,
+        "normalized": null
+      },
+      "id": "identity/reject_31_byte_identity",
+      "implementations_equal": true,
+      "matches_expected": true,
+      "outcomes": {
+        "python": {
+          "accepted": false,
+          "normalized": null
+        },
+        "rust": {
+          "accepted": false,
+          "normalized": null
+        },
+        "typescript": {
+          "accepted": false,
+          "normalized": null
+        }
+      },
+      "pass": true
+    },
+    {
+      "category": "identity",
+      "expected": {
+        "accepted": false,
+        "normalized": null
+      },
+      "id": "identity/reject_non_hex_identity",
+      "implementations_equal": true,
+      "matches_expected": true,
+      "outcomes": {
+        "python": {
+          "accepted": false,
+          "normalized": null
+        },
+        "rust": {
+          "accepted": false,
+          "normalized": null
+        },
+        "typescript": {
+          "accepted": false,
+          "normalized": null
+        }
+      },
+      "pass": true
+    },
+    {
+      "category": "identity",
+      "expected": {
+        "accepted": false,
+        "normalized": null
+      },
+      "id": "identity/reject_trailing_newline_identity",
+      "implementations_equal": true,
+      "matches_expected": true,
+      "outcomes": {
+        "python": {
+          "accepted": false,
+          "normalized": null
+        },
+        "rust": {
+          "accepted": false,
+          "normalized": null
+        },
+        "typescript": {
+          "accepted": false,
+          "normalized": null
+        }
+      },
+      "pass": true
+    },
+    {
+      "category": "type_id",
+      "expected": {
+        "accepted": true,
+        "value": "0x45d0ccb8d96da425ce73e1f2daa91d46e8d9dabc11293897eabad9f31a513cbd"
+      },
+      "id": "type_id/first_input_index_one_output_zero",
+      "implementations_equal": true,
+      "matches_expected": true,
+      "outcomes": {
+        "python": {
+          "accepted": true,
+          "value": "0x45d0ccb8d96da425ce73e1f2daa91d46e8d9dabc11293897eabad9f31a513cbd"
+        },
+        "rust": {
+          "accepted": true,
+          "value": "0x45d0ccb8d96da425ce73e1f2daa91d46e8d9dabc11293897eabad9f31a513cbd"
+        },
+        "typescript": {
+          "accepted": true,
+          "value": "0x45d0ccb8d96da425ce73e1f2daa91d46e8d9dabc11293897eabad9f31a513cbd"
+        }
+      },
+      "pass": true
+    },
+    {
+      "category": "creation",
+      "expected": {
+        "accepted": true,
+        "receiver_identity": "0x45d0ccb8d96da425ce73e1f2daa91d46e8d9dabc11293897eabad9f31a513cbd"
+      },
+      "id": "creation/valid_create_with_canonical_type_id",
+      "implementations_equal": true,
+      "matches_expected": true,
+      "outcomes": {
+        "python": {
+          "accepted": true,
+          "receiver_identity": "0x45d0ccb8d96da425ce73e1f2daa91d46e8d9dabc11293897eabad9f31a513cbd"
+        },
+        "rust": {
+          "accepted": true,
+          "receiver_identity": "0x45d0ccb8d96da425ce73e1f2daa91d46e8d9dabc11293897eabad9f31a513cbd"
+        },
+        "typescript": {
+          "accepted": true,
+          "receiver_identity": "0x45d0ccb8d96da425ce73e1f2daa91d46e8d9dabc11293897eabad9f31a513cbd"
+        }
+      },
+      "pass": true
+    },
+    {
+      "category": "creation",
+      "expected": {
+        "accepted": false,
+        "receiver_identity": null
+      },
+      "id": "creation/reject_wrong_canonical_type_id_args",
+      "implementations_equal": true,
+      "matches_expected": true,
+      "outcomes": {
+        "python": {
+          "accepted": false,
+          "receiver_identity": null
+        },
+        "rust": {
+          "accepted": false,
+          "receiver_identity": null
+        },
+        "typescript": {
+          "accepted": false,
+          "receiver_identity": null
+        }
+      },
+      "pass": true
+    },
+    {
+      "category": "creation",
+      "expected": {
+        "accepted": false,
+        "receiver_identity": null
+      },
+      "id": "creation/reject_v1_empty_type_id_args",
+      "implementations_equal": true,
+      "matches_expected": true,
+      "outcomes": {
+        "python": {
+          "accepted": false,
+          "receiver_identity": null
+        },
+        "rust": {
+          "accepted": false,
+          "receiver_identity": null
+        },
+        "typescript": {
+          "accepted": false,
+          "receiver_identity": null
+        }
+      },
+      "pass": true
+    },
+    {
+      "category": "transition",
+      "expected": {
+        "accepted": true,
+        "action": "update"
+      },
+      "id": "transition/normal_successor",
+      "implementations_equal": true,
+      "matches_expected": true,
+      "outcomes": {
+        "python": {
+          "accepted": true,
+          "action": "update"
+        },
+        "rust": {
+          "accepted": true,
+          "action": "update"
+        },
+        "typescript": {
+          "accepted": true,
+          "action": "update"
+        }
+      },
+      "pass": true
+    },
+    {
+      "category": "transition",
+      "expected": {
+        "accepted": true,
+        "action": "transfer"
+      },
+      "id": "transition/ownership_transfer_record",
+      "implementations_equal": true,
+      "matches_expected": true,
+      "outcomes": {
+        "python": {
+          "accepted": true,
+          "action": "transfer"
+        },
+        "rust": {
+          "accepted": true,
+          "action": "transfer"
+        },
+        "typescript": {
+          "accepted": true,
+          "action": "transfer"
+        }
+      },
+      "pass": true
+    },
+    {
+      "category": "transition",
+      "expected": {
+        "accepted": true,
+        "action": "revoke"
+      },
+      "id": "transition/permanent_revocation",
+      "implementations_equal": true,
+      "matches_expected": true,
+      "outcomes": {
+        "python": {
+          "accepted": true,
+          "action": "revoke"
+        },
+        "rust": {
+          "accepted": true,
+          "action": "revoke"
+        },
+        "typescript": {
+          "accepted": true,
+          "action": "revoke"
+        }
+      },
+      "pass": true
+    },
+    {
+      "category": "transition",
+      "expected": {
+        "accepted": false,
+        "action": null
+      },
+      "id": "transition/reject_sequence_reuse",
+      "implementations_equal": true,
+      "matches_expected": true,
+      "outcomes": {
+        "python": {
+          "accepted": false,
+          "action": null
+        },
+        "rust": {
+          "accepted": false,
+          "action": null
+        },
+        "typescript": {
+          "accepted": false,
+          "action": null
+        }
+      },
+      "pass": true
+    },
+    {
+      "category": "transition",
+      "expected": {
+        "accepted": false,
+        "action": null
+      },
+      "id": "transition/reject_sequence_jump",
+      "implementations_equal": true,
+      "matches_expected": true,
+      "outcomes": {
+        "python": {
+          "accepted": false,
+          "action": null
+        },
+        "rust": {
+          "accepted": false,
+          "action": null
+        },
+        "typescript": {
+          "accepted": false,
+          "action": null
+        }
+      },
+      "pass": true
+    },
+    {
+      "category": "transition",
+      "expected": {
+        "accepted": false,
+        "action": null
+      },
+      "id": "transition/reject_label_mutation",
+      "implementations_equal": true,
+      "matches_expected": true,
+      "outcomes": {
+        "python": {
+          "accepted": false,
+          "action": null
+        },
+        "rust": {
+          "accepted": false,
+          "action": null
+        },
+        "typescript": {
+          "accepted": false,
+          "action": null
+        }
+      },
+      "pass": true
+    },
+    {
+      "category": "transition",
+      "expected": {
+        "accepted": false,
+        "action": null
+      },
+      "id": "transition/reject_updated_at_rollback",
+      "implementations_equal": true,
+      "matches_expected": true,
+      "outcomes": {
+        "python": {
+          "accepted": false,
+          "action": null
+        },
+        "rust": {
+          "accepted": false,
+          "action": null
+        },
+        "typescript": {
+          "accepted": false,
+          "action": null
+        }
+      },
+      "pass": true
+    },
+    {
+      "category": "transition",
+      "expected": {
+        "accepted": false,
+        "action": null
+      },
+      "id": "transition/reject_resurrection",
+      "implementations_equal": true,
+      "matches_expected": true,
+      "outcomes": {
+        "python": {
+          "accepted": false,
+          "action": null
+        },
+        "rust": {
+          "accepted": false,
+          "action": null
+        },
+        "typescript": {
+          "accepted": false,
+          "action": null
+        }
+      },
+      "pass": true
+    },
+    {
+      "category": "transition",
+      "expected": {
+        "accepted": false,
+        "action": null
+      },
+      "id": "transition/reject_sequence_overflow",
+      "implementations_equal": true,
+      "matches_expected": true,
+      "outcomes": {
+        "python": {
+          "accepted": false,
+          "action": null
+        },
+        "rust": {
+          "accepted": false,
+          "action": null
+        },
+        "typescript": {
+          "accepted": false,
+          "action": null
+        }
+      },
+      "pass": true
+    },
+    {
+      "category": "transition",
+      "expected": {
+        "accepted": false,
+        "action": null
+      },
+      "id": "transition/reject_changed_canonical_type_id",
+      "implementations_equal": true,
+      "matches_expected": true,
+      "outcomes": {
+        "python": {
+          "accepted": false,
+          "action": null
+        },
+        "rust": {
+          "accepted": false,
+          "action": null
+        },
+        "typescript": {
+          "accepted": false,
+          "action": null
+        }
+      },
+      "pass": true
+    },
+    {
+      "category": "script",
+      "expected": {
+        "accepted": true,
+        "receiver_identity": "0x1111111111111111111111111111111111111111111111111111111111111111"
+      },
+      "id": "script/valid_registry_v2_script",
+      "implementations_equal": true,
+      "matches_expected": true,
+      "outcomes": {
+        "python": {
+          "accepted": true,
+          "receiver_identity": "0x1111111111111111111111111111111111111111111111111111111111111111"
+        },
+        "rust": {
+          "accepted": true,
+          "receiver_identity": "0x1111111111111111111111111111111111111111111111111111111111111111"
+        },
+        "typescript": {
+          "accepted": true,
+          "receiver_identity": "0x1111111111111111111111111111111111111111111111111111111111111111"
+        }
+      },
+      "pass": true
+    },
+    {
+      "category": "script",
+      "expected": {
+        "accepted": false,
+        "receiver_identity": null
+      },
+      "id": "script/reject_wrong_registry_script_identity",
+      "implementations_equal": true,
+      "matches_expected": true,
+      "outcomes": {
+        "python": {
+          "accepted": false,
+          "receiver_identity": null
+        },
+        "rust": {
+          "accepted": false,
+          "receiver_identity": null
+        },
+        "typescript": {
+          "accepted": false,
+          "receiver_identity": null
+        }
+      },
+      "pass": true
+    },
+    {
+      "category": "script",
+      "expected": {
+        "accepted": false,
+        "receiver_identity": null
+      },
+      "id": "script/reject_wrong_hash_type",
+      "implementations_equal": true,
+      "matches_expected": true,
+      "outcomes": {
+        "python": {
+          "accepted": false,
+          "receiver_identity": null
+        },
+        "rust": {
+          "accepted": false,
+          "receiver_identity": null
+        },
+        "typescript": {
+          "accepted": false,
+          "receiver_identity": null
+        }
+      },
+      "pass": true
+    },
+    {
+      "category": "script",
+      "expected": {
+        "accepted": false,
+        "receiver_identity": null
+      },
+      "id": "script/reject_malformed_type_id_args",
+      "implementations_equal": true,
+      "matches_expected": true,
+      "outcomes": {
+        "python": {
+          "accepted": false,
+          "receiver_identity": null
+        },
+        "rust": {
+          "accepted": false,
+          "receiver_identity": null
+        },
+        "typescript": {
+          "accepted": false,
+          "receiver_identity": null
+        }
+      },
+      "pass": true
+    },
+    {
+      "category": "discovery",
+      "expected": {
+        "active_identities": [
+          "0x1111111111111111111111111111111111111111111111111111111111111111",
+          "0x2222222222222222222222222222222222222222222222222222222222222222"
+        ],
+        "including_revoked_identities": [
+          "0x1111111111111111111111111111111111111111111111111111111111111111",
+          "0x2222222222222222222222222222222222222222222222222222222222222222"
+        ],
+        "quarantined_identities": []
+      },
+      "id": "discovery/same_label_different_identities",
+      "implementations_equal": true,
+      "matches_expected": true,
+      "outcomes": {
+        "python": {
+          "active_identities": [
+            "0x1111111111111111111111111111111111111111111111111111111111111111",
+            "0x2222222222222222222222222222222222222222222222222222222222222222"
+          ],
+          "including_revoked_identities": [
+            "0x1111111111111111111111111111111111111111111111111111111111111111",
+            "0x2222222222222222222222222222222222222222222222222222222222222222"
+          ],
+          "quarantined_identities": []
+        },
+        "rust": {
+          "active_identities": [
+            "0x1111111111111111111111111111111111111111111111111111111111111111",
+            "0x2222222222222222222222222222222222222222222222222222222222222222"
+          ],
+          "including_revoked_identities": [
+            "0x1111111111111111111111111111111111111111111111111111111111111111",
+            "0x2222222222222222222222222222222222222222222222222222222222222222"
+          ],
+          "quarantined_identities": []
+        },
+        "typescript": {
+          "active_identities": [
+            "0x1111111111111111111111111111111111111111111111111111111111111111",
+            "0x2222222222222222222222222222222222222222222222222222222222222222"
+          ],
+          "including_revoked_identities": [
+            "0x1111111111111111111111111111111111111111111111111111111111111111",
+            "0x2222222222222222222222222222222222222222222222222222222222222222"
+          ],
+          "quarantined_identities": []
+        }
+      },
+      "pass": true
+    },
+    {
+      "category": "discovery",
+      "expected": {
+        "active_identities": [],
+        "including_revoked_identities": [],
+        "quarantined_identities": [
+          "0x1111111111111111111111111111111111111111111111111111111111111111"
+        ]
+      },
+      "id": "discovery/duplicate_live_identity_fails_closed",
+      "implementations_equal": true,
+      "matches_expected": true,
+      "outcomes": {
+        "python": {
+          "active_identities": [],
+          "including_revoked_identities": [],
+          "quarantined_identities": [
+            "0x1111111111111111111111111111111111111111111111111111111111111111"
+          ]
+        },
+        "rust": {
+          "active_identities": [],
+          "including_revoked_identities": [],
+          "quarantined_identities": [
+            "0x1111111111111111111111111111111111111111111111111111111111111111"
+          ]
+        },
+        "typescript": {
+          "active_identities": [],
+          "including_revoked_identities": [],
+          "quarantined_identities": [
+            "0x1111111111111111111111111111111111111111111111111111111111111111"
+          ]
+        }
+      },
+      "pass": true
+    },
+    {
+      "category": "discovery",
+      "expected": {
+        "active_identities": [],
+        "including_revoked_identities": [],
+        "quarantined_identities": [
+          "0x2222222222222222222222222222222222222222222222222222222222222222"
+        ]
+      },
+      "id": "discovery/malformed_duplicate_identity_fails_closed",
+      "implementations_equal": true,
+      "matches_expected": true,
+      "outcomes": {
+        "python": {
+          "active_identities": [],
+          "including_revoked_identities": [],
+          "quarantined_identities": [
+            "0x2222222222222222222222222222222222222222222222222222222222222222"
+          ]
+        },
+        "rust": {
+          "active_identities": [],
+          "including_revoked_identities": [],
+          "quarantined_identities": [
+            "0x2222222222222222222222222222222222222222222222222222222222222222"
+          ]
+        },
+        "typescript": {
+          "active_identities": [],
+          "including_revoked_identities": [],
+          "quarantined_identities": [
+            "0x2222222222222222222222222222222222222222222222222222222222222222"
+          ]
+        }
+      },
+      "pass": true
+    },
+    {
+      "category": "discovery",
+      "expected": {
+        "active_identities": [],
+        "including_revoked_identities": [
+          "0x3333333333333333333333333333333333333333333333333333333333333333"
+        ],
+        "quarantined_identities": []
+      },
+      "id": "discovery/revoked_tombstone_is_historical_only",
+      "implementations_equal": true,
+      "matches_expected": true,
+      "outcomes": {
+        "python": {
+          "active_identities": [],
+          "including_revoked_identities": [
+            "0x3333333333333333333333333333333333333333333333333333333333333333"
+          ],
+          "quarantined_identities": []
+        },
+        "rust": {
+          "active_identities": [],
+          "including_revoked_identities": [
+            "0x3333333333333333333333333333333333333333333333333333333333333333"
+          ],
+          "quarantined_identities": []
+        },
+        "typescript": {
+          "active_identities": [],
+          "including_revoked_identities": [
+            "0x3333333333333333333333333333333333333333333333333333333333333333"
+          ],
+          "quarantined_identities": []
+        }
+      },
+      "pass": true
+    },
+    {
+      "category": "discovery",
+      "expected": {
+        "active_identities": [],
+        "including_revoked_identities": [],
+        "quarantined_identities": []
+      },
+      "id": "discovery/future_updated_at_is_rejected",
+      "implementations_equal": true,
+      "matches_expected": true,
+      "outcomes": {
+        "python": {
+          "active_identities": [],
+          "including_revoked_identities": [],
+          "quarantined_identities": []
+        },
+        "rust": {
+          "active_identities": [],
+          "including_revoked_identities": [],
+          "quarantined_identities": []
+        },
+        "typescript": {
+          "active_identities": [],
+          "including_revoked_identities": [],
+          "quarantined_identities": []
+        }
+      },
+      "pass": true
+    }
+  ],
+  "corpus": "tests/registry/fixtures/registry_v2_conformance.json",
+  "corpus_schema_version": 2,
+  "corpus_sha256": "3ed301fb063cae1fcc858bde3821bcbc05238231c8582af03776d849349622fe",
+  "generated_at": "2026-09-10T23:58:06.241040Z",
+  "implementations": [
+    "rust",
+    "python",
+    "typescript"
+  ],
+  "protocol": "ckb-receiver-registry-v2",
+  "report_schema_version": 1,
+  "source": {
+    "commit": "32e7ca2cad306f4cf2666200ce619c9867a23e05",
+    "tracked_worktree_clean": true,
+    "tree": "ae8d8443edbdae93f86aa8328f1793ef2ea35bc4"
+  },
+  "summary": {
+    "assertion_count": 171,
+    "case_count": 57,
+    "conformant": true,
+    "cross_language_equal": true,
+    "failed_case_count": 0,
+    "implementation_count": 3,
+    "passed_case_count": 57
+  }
+}

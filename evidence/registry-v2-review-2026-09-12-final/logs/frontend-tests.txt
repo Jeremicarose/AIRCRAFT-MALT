@@ -1,0 +1,81 @@
+$ npm test
+cwd: reference/mlat/frontend
+exit_code: 0
+
+STDOUT
+
+> mlat-airspace-console@0.1.0 test
+> node --experimental-transform-types --test test/*.test.mjs
+
+TAP version 13
+# (node:24554) ExperimentalWarning: Transform Types is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: formats the complete u64 range without JavaScript number rounding
+ok 1 - formats the complete u64 range without JavaScript number rounding
+  ---
+  duration_ms: 76.165279
+  type: 'test'
+  ...
+# Subtest: does not round an out-of-range Registry timestamp into a different date
+ok 2 - does not round an out-of-range Registry timestamp into a different date
+  ---
+  duration_ms: 0.243701
+  type: 'test'
+  ...
+# (node:24555) ExperimentalWarning: Transform Types is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: classifies observations inside the freshness window as fresh
+ok 3 - classifies observations inside the freshness window as fresh
+  ---
+  duration_ms: 1.715524
+  type: 'test'
+  ...
+# Subtest: classifies observations outside the freshness window as stale
+ok 4 - classifies observations outside the freshness window as stale
+  ---
+  duration_ms: 0.286703
+  type: 'test'
+  ...
+# Subtest: fails closed for missing, malformed, or non-positive timestamps
+ok 5 - fails closed for missing, malformed, or non-positive timestamps
+  ---
+  duration_ms: 0.250086
+  type: 'test'
+  ...
+# Subtest: rejects observations beyond the allowed future clock skew
+ok 6 - rejects observations beyond the allowed future clock skew
+  ---
+  duration_ms: 0.38543
+  type: 'test'
+  ...
+# (node:24556) ExperimentalWarning: Transform Types is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: matches a replay correlation ID to its namespaced operational receiver
+ok 7 - matches a replay correlation ID to its namespaced operational receiver
+  ---
+  duration_ms: 1.785449
+  type: 'test'
+  ...
+# Subtest: uses only the canonical identity after a receiver is registered
+ok 8 - uses only the canonical identity after a receiver is registered
+  ---
+  duration_ms: 0.301782
+  type: 'test'
+  ...
+# Subtest: prepares static assets beside the nested standalone server
+ok 9 - prepares static assets beside the nested standalone server
+  ---
+  duration_ms: 41.004078
+  type: 'test'
+  ...
+1..9
+# tests 9
+# suites 0
+# pass 9
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 367.489863
+
+STDERR
