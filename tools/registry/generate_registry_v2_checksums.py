@@ -12,7 +12,7 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Hash every public Registry V2 evidence file")
     parser.add_argument(
         "--bundle",
-        default="evidence/registry-v2-testnet-2026-07-30-final",
+        default="evidence/registry-v2-testnet-2026-09-11-data1-final",
     )
     return parser.parse_args()
 

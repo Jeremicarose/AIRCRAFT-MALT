@@ -1,0 +1,40 @@
+{
+  "active_receiver_ids_after": [],
+  "checks": {
+    "canonical_identity_removed_from_active_pool": true,
+    "canonical_identity_removed_from_database": true,
+    "canonical_identity_removed_from_solver_positions": true,
+    "no_feed_task_left_for_revoked_receiver": true,
+    "old_feed_task_cancelled": true,
+    "real_indexer_refresh_succeeded": true,
+    "real_indexer_returned_no_active_receiver": true,
+    "rebind_contains_no_revoked_receiver": true,
+    "rebind_preserved_message_callback": true,
+    "runtime_start_time_unchanged": true,
+    "same_process_without_manual_restart": true,
+    "stream_rebound_automatically_once": true
+  },
+  "database_receiver_ids_after": [],
+  "discovered_active_count": 0,
+  "indexer_url": "https://testnet.ckb.dev/indexer",
+  "network": "CKB testnet",
+  "pass": true,
+  "process_id_after": 3768,
+  "process_id_before": 3768,
+  "receiver_identity": "0x1d6855f20486a023c92df0c613a3141e385f3766c4c844d2935fe18cfcf220ce",
+  "registry_script": {
+    "code_hash": "0x40ebcd7df892234592a97c987faadce70df6bcfb5f7fa24fa78431cc24f3d6fa",
+    "hash_type": "data1"
+  },
+  "revocation_tx_hash": "0x9a34483db911e9238f022dd84a7eb0fafb224a2424d7e646ba29cde10e625626",
+  "rpc_url": "https://testnet.ckb.dev/rpc",
+  "schema_version": 1,
+  "solver_receiver_ids_after": [],
+  "stream_rebind_calls": [
+    {
+      "active_receiver_ids": [],
+      "callback_preserved": true
+    }
+  ],
+  "test_method": "Seeded a running ProductionMLATSystem with the accepted pre-revocation receiver and a pending feed task, then executed its normal registry refresh loop against the real indexer after revocation."
+}

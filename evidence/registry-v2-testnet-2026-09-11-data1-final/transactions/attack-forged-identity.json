@@ -1,0 +1,66 @@
+{
+  "transaction": {
+    "version": "0x0",
+    "cell_deps": [
+      {
+        "out_point": {
+          "tx_hash": "0xf8de3bb47d055cdf460d93a2a6e1b05f7432f9777c8c474abf4eec1d4aee5d37",
+          "index": "0x0"
+        },
+        "dep_type": "dep_group"
+      },
+      {
+        "out_point": {
+          "tx_hash": "0xc2241446c19b61293b0901f801898ebeade7df9f4fd52669fc1eeebebee450bf",
+          "index": "0x0"
+        },
+        "dep_type": "code"
+      }
+    ],
+    "header_deps": [],
+    "inputs": [
+      {
+        "since": "0x0",
+        "previous_output": {
+          "tx_hash": "0xc2241446c19b61293b0901f801898ebeade7df9f4fd52669fc1eeebebee450bf",
+          "index": "0x1"
+        }
+      }
+    ],
+    "outputs": [
+      {
+        "capacity": "0x174876e800",
+        "lock": {
+          "code_hash": "0x9bd7e06f3ecf4be0f2fcd2188b23f1b9fcc88e5d4b65a8637b17723bbda3cce8",
+          "hash_type": "type",
+          "args": "0x1eed21522d7c686da5695111d790c4aab8a2c181"
+        },
+        "type": {
+          "code_hash": "0x40ebcd7df892234592a97c987faadce70df6bcfb5f7fa24fa78431cc24f3d6fa",
+          "hash_type": "data1",
+          "args": "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+        }
+      },
+      {
+        "capacity": "0x19d21872c0",
+        "lock": {
+          "code_hash": "0x9bd7e06f3ecf4be0f2fcd2188b23f1b9fcc88e5d4b65a8637b17723bbda3cce8",
+          "hash_type": "type",
+          "args": "0x1eed21522d7c686da5695111d790c4aab8a2c181"
+        },
+        "type": null
+      }
+    ],
+    "outputs_data": [
+      "0x7b22616c746974756465223a313739352e302c226361706162696c6974696573223a5b226d6f64652d73222c226d6c6174225d2c226c61746974756465223a2d312e3238363338392c226c6f6e676974756465223a33362e3831373232332c2272656365697665725f6964223a22524543565f52454749535452595f56325f45564944454e4345222c22736368656d615f76657273696f6e223a322c2273657175656e6365223a302c22737461747573223a226f6e6c696e65222c2273747265616d5f656e64706f696e74223a227773733a2f2f72656769737472792d76322d65766964656e63652e696e76616c69642f66656564222c2273747265616d5f666f726d6174223a226a736f6e222c2273747265616d5f70726f746f636f6c223a22776562736f636b65742d6a736f6e222c22757064617465645f6174223a313738393039383831317d",
+      "0x"
+    ],
+    "witnesses": []
+  },
+  "multisig_configs": {},
+  "signatures": {
+    "0x1eed21522d7c686da5695111d790c4aab8a2c181": [
+      "0x059d6eb3de1be9fc7e8f166f6596a262adc1e2f61a9994900c4421a826fd8d750c501a6ec2600f312655a0d6653515588cd5ca145cd258ed9b14df9453e609cd01"
+    ]
+  }
+}

@@ -1,0 +1,57 @@
+{
+  "checks": {
+    "canonical_identity_matches": true,
+    "data1_code_binding_matches": true,
+    "duplicate_output_attack_rejected": true,
+    "exact_identity_has_one_live_cell": true,
+    "exact_query_exhausted": true,
+    "exact_query_used_multiple_pages": true,
+    "live_record_is_revoked": true,
+    "prefix_has_one_live_registry_cell": true,
+    "prefix_query_exhausted": true,
+    "prefix_query_used_multiple_pages": true
+  },
+  "code_hash": "0x40ebcd7df892234592a97c987faadce70df6bcfb5f7fa24fa78431cc24f3d6fa",
+  "exact_pages": [
+    {
+      "count": 1,
+      "last_cursor": "0x6040ebcd7df892234592a97c987faadce70df6bcfb5f7fa24fa78431cc24f3d6fa021d6855f20486a023c92df0c613a3141e385f3766c4c844d2935fe18cfcf220ce0000000001557b0b0000000100000000",
+      "out_points": [
+        {
+          "index": "0x0",
+          "tx_hash": "0x9a34483db911e9238f022dd84a7eb0fafb224a2424d7e646ba29cde10e625626"
+        }
+      ],
+      "request_cursor": null
+    },
+    {
+      "count": 0,
+      "last_cursor": "0x",
+      "out_points": [],
+      "request_cursor": "0x6040ebcd7df892234592a97c987faadce70df6bcfb5f7fa24fa78431cc24f3d6fa021d6855f20486a023c92df0c613a3141e385f3766c4c844d2935fe18cfcf220ce0000000001557b0b0000000100000000"
+    }
+  ],
+  "network": "CKB testnet",
+  "page_size": 1,
+  "pass": true,
+  "prefix_pages": [
+    {
+      "count": 1,
+      "last_cursor": "0x6040ebcd7df892234592a97c987faadce70df6bcfb5f7fa24fa78431cc24f3d6fa021d6855f20486a023c92df0c613a3141e385f3766c4c844d2935fe18cfcf220ce0000000001557b0b0000000100000000",
+      "out_points": [
+        {
+          "index": "0x0",
+          "tx_hash": "0x9a34483db911e9238f022dd84a7eb0fafb224a2424d7e646ba29cde10e625626"
+        }
+      ],
+      "request_cursor": null
+    },
+    {
+      "count": 0,
+      "last_cursor": "0x",
+      "out_points": [],
+      "request_cursor": "0x6040ebcd7df892234592a97c987faadce70df6bcfb5f7fa24fa78431cc24f3d6fa021d6855f20486a023c92df0c613a3141e385f3766c4c844d2935fe18cfcf220ce0000000001557b0b0000000100000000"
+    }
+  ],
+  "receiver_identity": "0x1d6855f20486a023c92df0c613a3141e385f3766c4c844d2935fe18cfcf220ce"
+}

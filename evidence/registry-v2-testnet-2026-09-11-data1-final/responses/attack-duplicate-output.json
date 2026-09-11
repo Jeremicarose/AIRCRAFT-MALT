@@ -1,0 +1,9 @@
+{
+  "attempted_at": "2026-09-11T03:54:27.151134Z",
+  "expected": "rejected",
+  "returncode": 1,
+  "signed_tx_file": "attack-duplicate-output.json",
+  "signed_tx_file_sha256": "b1c1607d76849edad335fb2008924f7fc25773f526b4ea2d088cb636bde42741",
+  "stderr": "Send transaction error: jsonrpc error: `Server error: TransactionFailedToVerify: Verification failed Script(TransactionScriptError { source: Inputs[0].Type, cause: ValidationFailure: see error code -4 on page https://nervosnetwork.github.io/ckb-script-error-codes/by-data-hash/40ebcd7df892234592a97c987faadce70df6bcfb5f7fa24fa78431cc24f3d6fa.html#-4 })`",
+  "stdout": ""
+}

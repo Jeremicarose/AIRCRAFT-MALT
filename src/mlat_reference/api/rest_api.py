@@ -140,7 +140,7 @@ def load_app_config() -> Dict[str, object]:
         "BENCHMARK_MAX_REPORT_BYTES": int(os.getenv("BENCHMARK_MAX_REPORT_BYTES", "5242880")),
         "REGISTRY_EVIDENCE_BUNDLE": os.getenv(
             "REGISTRY_EVIDENCE_BUNDLE",
-            "evidence/registry-v2-testnet-2026-07-30-final",
+            "evidence/registry-v2-testnet-2026-09-11-data1-final",
         ),
         "CKB_TESTNET_EXPLORER_TX_URL": os.getenv(
             "CKB_TESTNET_EXPLORER_TX_URL",

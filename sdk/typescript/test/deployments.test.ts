@@ -4,7 +4,12 @@ import test from "node:test";
 
 import { ccc } from "@ckb-ccc/core";
 
-import { REGISTRY_V2_PUDGE_2026_07_30, RegistryV2Sdk } from "../src/index.js";
+import {
+  REGISTRY_V2_PUDGE,
+  REGISTRY_V2_PUDGE_2026_07_30,
+  REGISTRY_V2_PUDGE_2026_09_11,
+  RegistryV2Sdk,
+} from "../src/index.js";
 
 test("historical Pudge deployment matches the signed evidence manifest", () => {
   const manifest = JSON.parse(
@@ -33,12 +38,44 @@ test("historical Pudge deployment matches the signed evidence manifest", () => {
   );
 });
 
-test("testnet factory rejects a mainnet client and uses the documented Pudge deployment", () => {
+test("immutable Pudge deployment matches the current signed evidence manifest", () => {
+  const manifest = JSON.parse(
+    readFileSync(
+      "../../evidence/registry-v2-testnet-2026-09-11-data1-final/manifest.json",
+      "utf8",
+    ),
+  ) as {
+    contract: {
+      out_point: { tx_hash: string; index: string };
+      type_script_hash_for_registry_code_hash: string;
+      registry_script_hash_type: string;
+    };
+  };
+
+  assert.equal(
+    REGISTRY_V2_PUDGE_2026_09_11.contractCodeHash,
+    manifest.contract.type_script_hash_for_registry_code_hash,
+  );
+  assert.equal(
+    REGISTRY_V2_PUDGE_2026_09_11.contractCellDep.outPoint.txHash,
+    manifest.contract.out_point.tx_hash,
+  );
+  assert.equal(
+    REGISTRY_V2_PUDGE_2026_09_11.contractCellDep.outPoint.index,
+    Number.parseInt(manifest.contract.out_point.index, 16),
+  );
+  assert.equal(REGISTRY_V2_PUDGE_2026_09_11.scriptHashType, "data1");
+  assert.equal(REGISTRY_V2_PUDGE_2026_09_11.scriptHashType, manifest.contract.registry_script_hash_type);
+});
+
+test("testnet factory rejects a mainnet client and uses the immutable Pudge deployment", () => {
   const testnetClient = { addressPrefix: "ckt" } as ccc.Client;
   const registry = RegistryV2Sdk.testnet(testnetClient);
 
-  assert.equal(registry.deployment, REGISTRY_V2_PUDGE_2026_07_30);
-  assert.equal(registry.deployment.readOnly, true);
+  assert.equal(REGISTRY_V2_PUDGE, REGISTRY_V2_PUDGE_2026_09_11);
+  assert.equal(registry.deployment, REGISTRY_V2_PUDGE_2026_09_11);
+  assert.equal(registry.deployment.scriptHashType, "data1");
+  assert.equal("readOnly" in registry.deployment, false);
   assert.throws(
     () => RegistryV2Sdk.testnet({ addressPrefix: "ckb" } as ccc.Client),
     /requires a CKB testnet client/,

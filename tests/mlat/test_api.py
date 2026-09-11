@@ -182,7 +182,9 @@ def test_receiver_identity_is_only_exposed_for_a_valid_type_id(monkeypatch, tmp_
 
 def test_registry_evidence_exposes_saved_testnet_lifecycle(monkeypatch, tmp_path):
     bundle = (
-        Path(__file__).resolve().parents[2] / "evidence" / "registry-v2-testnet-2026-07-30-final"
+        Path(__file__).resolve().parents[2]
+        / "evidence"
+        / "registry-v2-testnet-2026-09-11-data1-final"
     )
     module = _load_api_module(
         monkeypatch,
@@ -199,6 +201,7 @@ def test_registry_evidence_exposes_saved_testnet_lifecycle(monkeypatch, tmp_path
     assert payload["source"] == "saved_testnet_evidence"
     assert payload["live_query"] is False
     assert payload["private_keys_included"] is False
+    assert payload["contract"]["code_hash"] == "0x40ebcd7df892234592a97c987faadce70df6bcfb5f7fa24fa78431cc24f3d6fa"
     assert [event["action"] for event in payload["lifecycle"]] == [
         "create",
         "update",

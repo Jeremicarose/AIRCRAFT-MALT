@@ -1,0 +1,10 @@
+{
+  "body": {
+    "count": 0,
+    "receivers": []
+  },
+  "captured_at": "2026-09-11T03:56:24.478217Z",
+  "method": "GET",
+  "path": "/api/receivers",
+  "status_code": 200
+}

@@ -1,0 +1,38 @@
+[
+  {
+    "altitude": 1795.0,
+    "capabilities": [
+      "mode-s",
+      "mlat"
+    ],
+    "ckb_address": "0x37c206d5a2f4939319db9c4078db78333899a3fb",
+    "data_source": "ckb_registry",
+    "last_seen": 0.0,
+    "latitude": -1.286389,
+    "lock_hash": "",
+    "longitude": 36.817223,
+    "metadata": {
+      "block_number": "0x1557b04",
+      "metadata_hash": null,
+      "out_point": {
+        "index": "0x0",
+        "tx_hash": "0xd58ce0337f175fc53152a73b709f4da1a924c082328d3494f3637f7c44ea59a8"
+      },
+      "owner_lock": {
+        "args": "0x37c206d5a2f4939319db9c4078db78333899a3fb",
+        "code_hash": "0x9bd7e06f3ecf4be0f2fcd2188b23f1b9fcc88e5d4b65a8637b17723bbda3cce8",
+        "hash_type": "type"
+      },
+      "schema_version": 2,
+      "sequence": 2,
+      "updated_at": 1789098813
+    },
+    "receiver_id": "RECV_REGISTRY_V2_EVIDENCE",
+    "receiver_identity": "0x1d6855f20486a023c92df0c613a3141e385f3766c4c844d2935fe18cfcf220ce",
+    "registry_updated_at": 1789098813,
+    "status": "online",
+    "stream_endpoint": "wss://registry-v2-evidence.invalid/feed",
+    "stream_format": "json",
+    "stream_protocol": "websocket-json"
+  }
+]

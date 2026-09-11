@@ -1,0 +1,52 @@
+{
+  "transaction": {
+    "version": "0x0",
+    "cell_deps": [
+      {
+        "out_point": {
+          "tx_hash": "0xf8de3bb47d055cdf460d93a2a6e1b05f7432f9777c8c474abf4eec1d4aee5d37",
+          "index": "0x0"
+        },
+        "dep_type": "dep_group"
+      },
+      {
+        "out_point": {
+          "tx_hash": "0xc2241446c19b61293b0901f801898ebeade7df9f4fd52669fc1eeebebee450bf",
+          "index": "0x0"
+        },
+        "dep_type": "code"
+      }
+    ],
+    "header_deps": [],
+    "inputs": [
+      {
+        "since": "0x0",
+        "previous_output": {
+          "tx_hash": "0x3b78cd8aeac8d55ff07a17f7d9f8fca97ca4aaec5824a07d9d54a58cb0dd64a1",
+          "index": "0x0"
+        }
+      }
+    ],
+    "outputs": [
+      {
+        "capacity": "0x174867a5c0",
+        "lock": {
+          "code_hash": "0x9bd7e06f3ecf4be0f2fcd2188b23f1b9fcc88e5d4b65a8637b17723bbda3cce8",
+          "hash_type": "type",
+          "args": "0x1eed21522d7c686da5695111d790c4aab8a2c181"
+        },
+        "type": null
+      }
+    ],
+    "outputs_data": [
+      "0x"
+    ],
+    "witnesses": []
+  },
+  "multisig_configs": {},
+  "signatures": {
+    "0x1eed21522d7c686da5695111d790c4aab8a2c181": [
+      "0xf61e4898b517fa09a234b8074314e4f847bb3b87df36539336aeb99f5cdba3051947c0ce007e27f853073d583dea38113f337a67ca76fe7c29ed79966bdb537e01"
+    ]
+  }
+}

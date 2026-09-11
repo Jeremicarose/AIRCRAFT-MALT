@@ -17,3 +17,22 @@ export const REGISTRY_V2_PUDGE_2026_07_30 = {
     depType: "code",
   },
 } as const satisfies RegistryDeployment;
+
+/**
+ * Current immutable Pudge deployment used by the signed 2026-09-11 lifecycle.
+ * The binary is bound directly by its CKB data hash. It is testnet-only and
+ * has not received an independent security audit.
+ */
+export const REGISTRY_V2_PUDGE_2026_09_11 = {
+  contractCodeHash: "0x40ebcd7df892234592a97c987faadce70df6bcfb5f7fa24fa78431cc24f3d6fa",
+  scriptHashType: "data1",
+  contractCellDep: {
+    outPoint: {
+      txHash: "0xc2241446c19b61293b0901f801898ebeade7df9f4fd52669fc1eeebebee450bf",
+      index: 0,
+    },
+    depType: "code",
+  },
+} as const satisfies RegistryDeployment;
+
+export const REGISTRY_V2_PUDGE = REGISTRY_V2_PUDGE_2026_09_11;

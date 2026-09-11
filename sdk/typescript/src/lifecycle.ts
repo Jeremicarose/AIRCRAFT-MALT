@@ -5,7 +5,7 @@ import {
   type DiscoveredReceiver,
   type RegistryDeployment,
 } from "./discovery.js";
-import { REGISTRY_V2_PUDGE_2026_07_30 } from "./deployments.js";
+import { REGISTRY_V2_PUDGE } from "./deployments.js";
 import { RegistryV2History } from "./history.js";
 import {
   calculateTypeId,
@@ -102,7 +102,7 @@ export class RegistryV2Sdk {
         `Registry V2 testnet requires a CKB testnet client with address prefix ckt; received ${client.addressPrefix}`,
       );
     }
-    return new RegistryV2Sdk(client, REGISTRY_V2_PUDGE_2026_07_30);
+    return new RegistryV2Sdk(client, REGISTRY_V2_PUDGE);
   }
 
   static writableTestnet(

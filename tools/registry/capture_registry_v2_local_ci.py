@@ -19,7 +19,7 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Capture Registry V2 local CI evidence")
     parser.add_argument(
         "--evidence-dir",
-        default="evidence/registry-v2-testnet-2026-07-30-final",
+        default="evidence/registry-v2-testnet-2026-09-11-data1-final",
     )
     return parser.parse_args()
 

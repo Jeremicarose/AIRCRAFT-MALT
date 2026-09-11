@@ -1,0 +1,70 @@
+{
+  "accepted_transactions": {
+    "create": "0x3b78cd8aeac8d55ff07a17f7d9f8fca97ca4aaec5824a07d9d54a58cb0dd64a1",
+    "deployment": "0xc2241446c19b61293b0901f801898ebeade7df9f4fd52669fc1eeebebee450bf",
+    "revoke": "0x9a34483db911e9238f022dd84a7eb0fafb224a2424d7e646ba29cde10e625626",
+    "transfer": "0xd58ce0337f175fc53152a73b709f4da1a924c082328d3494f3637f7c44ea59a8",
+    "update": "0x33f02d9d9c2dada3d3473014492c39c1fe344fd5d3c887a465fbaf72191f0597"
+  },
+  "contract": {
+    "binary_bytes": 67008,
+    "binary_ckb_data_hash": "0x40ebcd7df892234592a97c987faadce70df6bcfb5f7fa24fa78431cc24f3d6fa",
+    "binary_sha256": "087a8b19ca99170d8d1e8c018b749259ce067ad3cb1cc8cef3b4a490ccae0465",
+    "deployment_tx_hash": "0xc2241446c19b61293b0901f801898ebeade7df9f4fd52669fc1eeebebee450bf",
+    "out_point": {
+      "index": "0x0",
+      "tx_hash": "0xc2241446c19b61293b0901f801898ebeade7df9f4fd52669fc1eeebebee450bf"
+    },
+    "registry_script_hash_type": "data1",
+    "type_script_hash_for_registry_code_hash": "0x40ebcd7df892234592a97c987faadce70df6bcfb5f7fa24fa78431cc24f3d6fa"
+  },
+  "generated_at": "2026-09-11T03:56:36.096442Z",
+  "github_ci": null,
+  "indexer_url": "https://testnet.ckb.dev/indexer",
+  "lifecycle_funding": {
+    "capacity_shannons": 210900000000,
+    "data_hash": "0x25e6a20f0beef7bf929d72e39e90247a5d1a8b2e1bf4515144f41079ca751afa",
+    "out_point": {
+      "index": "0x1",
+      "tx_hash": "0xc2241446c19b61293b0901f801898ebeade7df9f4fd52669fc1eeebebee450bf"
+    }
+  },
+  "network": "CKB testnet",
+  "private_keys_included": false,
+  "receiver": {
+    "label": "RECV_REGISTRY_V2_EVIDENCE",
+    "owner_a": {
+      "lock_arg": "0x1eed21522d7c686da5695111d790c4aab8a2c181",
+      "testnet_address": "ckt1qzda0cr08m85hc8jlnfp3zer7xulejywt49kt2rr0vthywaa50xwsqg7a5s4yttudpk62623z8tep392hz3vrqgfjgt20"
+    },
+    "owner_b": {
+      "lock_arg": "0x37c206d5a2f4939319db9c4078db78333899a3fb",
+      "testnet_address": "ckt1qzda0cr08m85hc8jlnfp3zer7xulejywt49kt2rr0vthywaa50xwsqfhcgrdtgh5jwf3nkuugpudk7pn8zv687c4n2ypz"
+    },
+    "receiver_identity": "0x1d6855f20486a023c92df0c613a3141e385f3766c4c844d2935fe18cfcf220ce"
+  },
+  "rejected_attacks": [
+    "forged-identity",
+    "sequence-jump",
+    "label-mutation",
+    "duplicate-output",
+    "burn",
+    "resurrection",
+    "tombstone-burn"
+  ],
+  "rpc_url": "https://testnet.ckb.dev/rpc",
+  "schema_version": 1,
+  "source": {
+    "branch": "registry-v2-testnet-evidence",
+    "contract_review": {
+      "bundle": "evidence/registry-v2-review-2026-09-11-final",
+      "manifest_sha256": "1568c7dd7cf72ecd5b5c5504a348fcb4a37357667fe8a88ec455c2673734b7a0",
+      "source_commit": "e7cb2af97a3e095e5e07e593d13d5dba968a9bcd",
+      "source_tree": "89817cc868cb5275f5c83e5a0b5928cbe5834ab6"
+    },
+    "contract_source_commit": "e7cb2af97a3e095e5e07e593d13d5dba968a9bcd",
+    "lifecycle_tooling_commit": "13662bfd2d7a6e6162d551b2982fe3e61fca4f23",
+    "repository": "https://github.com/Jeremicarose/AIRCRAFT-MALT"
+  },
+  "status": "complete"
+}

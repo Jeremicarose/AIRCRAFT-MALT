@@ -1,7 +1,7 @@
 'use client';
 
 import {
-  REGISTRY_V2_PUDGE_2026_07_30,
+  REGISTRY_V2_PUDGE,
   RegistryV2Sdk,
   type DiscoveredReceiver,
   type RegistryDeployment,
@@ -19,7 +19,7 @@ function configuredTestnetDeployment(): RegistryDeployment {
   const contractIndex = process.env.NEXT_PUBLIC_REGISTRY_CONTRACT_INDEX?.trim();
   const configuredValues = [contractCodeHash, contractTransactionHash, contractIndex];
 
-  if (configuredValues.every((value) => !value)) return REGISTRY_V2_PUDGE_2026_07_30;
+  if (configuredValues.every((value) => !value)) return REGISTRY_V2_PUDGE;
   if (configuredValues.some((value) => !value)) {
     throw new Error(
       'Immutable Registry deployment configuration is incomplete; set code hash, contract transaction hash, and contract index together',

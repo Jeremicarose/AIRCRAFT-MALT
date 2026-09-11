@@ -1,0 +1,38 @@
+{
+  "body": {
+    "count": 1,
+    "receivers": [
+      {
+        "altitude": 1795.0,
+        "capabilities": [
+          "mode-s",
+          "mlat"
+        ],
+        "data_source": "ckb_registry",
+        "last_seen": 0.0,
+        "latitude": -1.286389,
+        "longitude": 36.817223,
+        "receiver_id": "0x1d6855f20486a023c92df0c613a3141e385f3766c4c844d2935fe18cfcf220ce",
+        "receiver_identity": "0x1d6855f20486a023c92df0c613a3141e385f3766c4c844d2935fe18cfcf220ce",
+        "receiver_label": "RECV_REGISTRY_V2_EVIDENCE",
+        "registry": {
+          "metadata_hash": null,
+          "out_point": {
+            "index": "0x0",
+            "tx_hash": "0x33f02d9d9c2dada3d3473014492c39c1fe344fd5d3c887a465fbaf72191f0597"
+          },
+          "owner_lock": {},
+          "owner_lock_args": "0x1eed21522d7c686da5695111d790c4aab8a2c181",
+          "sequence": "1",
+          "updated_at": "0"
+        },
+        "status": "online",
+        "updated_at": "2026-09-11T06:55:07.336027"
+      }
+    ]
+  },
+  "captured_at": "2026-09-11T03:55:07.374917Z",
+  "method": "GET",
+  "path": "/api/receivers",
+  "status_code": 200
+}
