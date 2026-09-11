@@ -6,7 +6,7 @@ import { createColumnHelper, type ColumnDef } from '@tanstack/react-table';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowUpRight, Check, CircleAlert, Download, RadioTower, RefreshCw, UserRound } from 'lucide-react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ReceiverInspector } from '@/components/receiver-inspector';
 import { SignalMarquee, Timeline, WorkspaceHeader, WorkspacePanel, WorkspaceSplit } from '@/components/operations-ui';
@@ -96,6 +96,7 @@ export function ReceiversPage({
   perspective?: 'receivers' | 'registry';
 }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const queryClient = useQueryClient();
   const { client, signerInfo, open } = ccc.useCcc();
   const sdk = useMemo(() => createRegistrySdk(client), [client]);
@@ -109,6 +110,10 @@ export function ReceiversPage({
   const [view, setView] = useState<DirectoryView>(perspective === 'registry' ? 'active' : 'all');
   const [walletLocks, setWalletLocks] = useState<ccc.Script[]>([]);
   const basePath = perspective === 'registry' ? '/app/registry' : '/app/receivers';
+  const sourceAircraftCandidate = returnAircraftId ?? searchParams.get('fromAircraft');
+  const sourceAircraftId = sourceAircraftCandidate && /^[0-9A-F]{6}$/.test(sourceAircraftCandidate)
+    ? sourceAircraftCandidate
+    : null;
 
   const directoryQuery = useQuery({
     queryKey: ['registry-v2-directory', sdk.discovery.contractCodeHash],
@@ -227,7 +232,7 @@ export function ReceiversPage({
     setInvestigationContext({ focus: selectedUi.key, query: search, timeRange: perspective === 'registry' ? 'lifecycle' : 'recent' });
     const dock = receiverDockState(selectedUi, {
       includeRegistryAction: perspective !== 'registry',
-      returnAircraftId,
+      returnAircraftId: sourceAircraftId,
     });
     if (historyQuery.data?.length) {
       dock.timeline = [
@@ -247,7 +252,7 @@ export function ReceiversPage({
     }
     setDock(dock);
     return () => setDock(null);
-  }, [historyQuery.data, perspective, returnAircraftId, search, selected, selectedUi, setDock, setInvestigationContext, setStoreSelectedReceiverId, storeHydrated]);
+  }, [historyQuery.data, perspective, search, selected, selectedUi, setDock, setInvestigationContext, setStoreSelectedReceiverId, sourceAircraftId, storeHydrated]);
 
   const refreshAfterTransaction = async (receiverIdentity: string) => {
     await queryClient.invalidateQueries({ queryKey: ['registry-v2-directory'] });
@@ -271,7 +276,7 @@ export function ReceiversPage({
     ...selectedUi,
     ownerLockArgs: selected ? ownerAddress(selected, client) : selectedUi.ownerLockArgs,
   } : null;
-  const returnToAircraft = returnAircraftId ? <Link href={`/app/aircraft?aircraft=${encodeURIComponent(returnAircraftId)}`} className={buttonVariants({ variant: 'secondary', size: 'sm' })}>Return to {returnAircraftId}<ArrowUpRight className="size-3.5" /></Link> : null;
+  const returnToAircraft = sourceAircraftId ? <Link href={`/app/aircraft?aircraft=${encodeURIComponent(sourceAircraftId)}`} className={buttonVariants({ variant: 'secondary', size: 'sm' })}>Return to {sourceAircraftId}<ArrowUpRight className="size-3.5" /></Link> : null;
   const currentPoolDetail = replayMode
     ? `${summary.currentRuntimePool} current replay or hybrid receivers`
     : `${summary.currentRuntimePool} receivers in current pool`;
