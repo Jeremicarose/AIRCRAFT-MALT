@@ -1,6 +1,6 @@
 # Pilot Readiness
 
-Status date: 2026-09-09
+Status date: 2026-09-11
 Overall status: `NOT READY`
 
 ## What happened
@@ -11,23 +11,24 @@ MLAT refreshes Registry state while running, rejects identity mismatch, rejects
 ambiguous shared WebSocket identities, and fails closed when discovery becomes
 incomplete.
 
-The only deployed Registry V2 evidence is tied to an older contract whose
-`hash_type=type` binding permits the implementation cell to change under the
-same script hash. It is preserved as historical evidence and marked read-only.
-The current hardened contract source has not been independently reviewed or
-deployed with an immutable `data1` code hash.
+The older `hash_type=type` deployment remains historical and read-only. A fresh
+Pudge testnet bundle now records an immutable `data1` deployment and signed
+create-update-transfer-revoke lifecycle for the current contract binary.
+Its saved chain data passes the offline verifier, and saved live RPC and indexer
+reports pass. Clean local/GitHub CI provenance and an independent security
+review are still missing; the stable release gate must repeat the live check.
 
 ## Readiness by area
 
 | Area | Status | Evidence | Required next action |
 |---|---|---|---|
 | Registry source | Prepared | 5 Rust host and 11 CKB-VM tests pass | Independent review |
-| Registry deployment | Blocked | Historical evidence verifies but is mutable and read-only | Deploy reviewed binary with `data1` |
-| Python discovery | Prepared | Pagination, duplicate, schema, and binding tests pass | Exercise new testnet deployment |
-| TypeScript SDK | Prepared | 69 SDK tests pass | Configure immutable deployment and run funded browser lifecycle |
+| Registry deployment | Partial | Fresh evidence binds the deployed binary with `data1`, records the signed lifecycle, and includes passing live RPC/indexer reports | Add clean CI provenance, repeat the live check at release, and obtain independent review of the exact binary hashes |
+| Python discovery | Prepared | Pagination, duplicate, schema, and binding tests pass; the fresh revoked identity is excluded by live verification | Keep monitoring the public indexer during pilot runs |
+| TypeScript SDK | Prepared | 70 SDK tests pass and the current testnet factory uses the immutable deployment | Run a funded CCC wallet lifecycle through the browser |
 | MLAT replay | Prepared | Python integration suite passes | Keep replay labels visible |
 | MLAT live field use | Blocked | Harness exists; no synchronized physical run | Obtain four qualified receiver feeds |
-| UI | Prepared locally | Type check and production build pass | Complete updated browser and wallet checks |
+| UI | Partial | 13 unit/contract tests, type check, and production build pass; nine browser checks exist, but no clean passing report certifies the current source | Run the complete browser suite from a clean commit, preserve its report, then complete a funded wallet-signed lifecycle |
 | Public deployment | Blocked | No verified complete hosted URL | Deploy frontend, API, and processor |
 | Recruitment | Prepared, not executed | 13 public leads; messages and tracker exist | Send authorized permission requests and invitations |
 | Pilot | Not started | 0 contacted, 0 confirmed, 0 completed | Clear P0 gates before inviting |
@@ -36,7 +37,7 @@ deployed with an immutable `data1` code hash.
 
 | Finding | Status | Meaning |
 |---|---|---|
-| H-01 mutable contract implementation | Blocked safely | Strict live mode rejects `type`; a new `data1` deployment is still required |
+| H-01 mutable contract implementation | Mitigated on the fresh testnet deployment | The new lifecycle uses `data1`; strict mode still rejects the historical `type` deployment, and independent review remains required |
 | H-02 runtime Registry changes | Fixed in code | Successful refresh applies removal and owner changes; failed refresh removes Registry receivers |
 | H-03 feed impersonation | Fixed for supported paths | Bound identity mismatch is rejected; shared WebSocket identity is rejected; local Beast bridge uses endpoint configuration |
 | M-01 self-declared `updated_at` authority | Fixed | Capacity selection uses canonical identity ordering, not record time |
@@ -44,23 +45,32 @@ deployed with an immutable `data1` code hash.
 | M-03 independent evidence derivation | Fixed for saved evidence | Verifier recalculates transaction hashes, Type ID, spend chain, locks, records, and binary hashes |
 | M-04 V2 schema mismatch | Fixed in current source | Rust, Python, and TypeScript share corpus version 2 and pass 171 assertions |
 | `u64` precision | Fixed | Python bounds and TypeScript `bigint` preserve exact values |
-| Testnet evidence generation | Tested locally | Tool tests pass; no new funded testnet execution occurred |
+| Testnet evidence generation | Executed, provenance incomplete | A funded immutable lifecycle, seven rejected attacks, checksums, and passing live RPC/indexer reports are saved without CI provenance |
 | Ownership provenance | Fixed in current data path | Owner lock and change history are preserved and verified |
-| Audited-revision reproducibility | Partial | Source-bound generation and verification are implemented; the final bundle must be regenerated after the latest source fixes | A fresh deployment bundle still requires external signing |
+| Audited-revision reproducibility | Partial | The deployment manifest links the binary to a source-bound review candidate | Add clean local/GitHub CI evidence and an independent review attesting the same binary SHA-256 and CKB data hash |
 
-No security finding is hidden. The contract remains unaudited, the Flask API has
-no built-in rate limiter, and the supported CKB JavaScript dependency chain has
-a documented low-severity upstream advisory.
+No security finding is hidden. The contract remains unaudited. The Flask API's
+rate limiter is process-local and therefore only suitable for the documented
+single-worker deployment. The supported CKB JavaScript dependency chain has a
+documented low-severity upstream advisory.
 
 ## Verification results
 
-- Python: 168 passed with `python -m pytest` and direct `pytest`.
+- Python: 188 passed with `python -m pytest`.
 - Registry contract: 16 tests passed.
-- TypeScript SDK: 69 tests passed.
+- TypeScript SDK: 70 tests passed.
 - Cross-language conformance: 57 cases, 171 assertions, zero failures.
 - Historical offline evidence verifier: passed all checks.
 - Frontend type check: passed.
-- Frontend production build before final browser pass: passed.
+- Frontend: 13 unit/contract tests, type check, and production build passed.
+- Browser: nine Playwright checks cover the Registry landing route and the
+  secondary MLAT reference navigation, the
+  aircraft-receiver return path, production assets, mobile width, security
+  headers, and WCAG scans. The retained report does not certify the current
+  source from a clean worktree, so browser readiness remains unproven.
+- Fresh immutable lifecycle: 48 bundled files and 100 live-chain checks passed
+  with CI provenance explicitly excluded. The normal release verifier still
+  fails closed until clean local and GitHub CI records exist.
 
 ## Recruitment status
 
@@ -87,11 +97,12 @@ a documented low-severity upstream advisory.
 
 ## Next actions
 
-1. Freeze the current contract candidate and obtain independent review.
-2. Deploy the reviewed binary to CKB testnet with `hash_type=data1`.
-3. Generate and verify a source-bound deployment and lifecycle evidence bundle.
-4. Configure the SDK, backend, and UI to the immutable deployment.
-5. Run the clean-checkout and funded browser acceptance test.
+1. Commit the current source and add clean local/GitHub CI provenance to the
+   immutable lifecycle evidence.
+2. Obtain independent review attesting the deployed binary SHA-256 and CKB data hash.
+3. Repeat live verification at release time using normal TLS verification.
+4. Run the clean-checkout browser suite and preserve its source-bound report.
+5. Complete the funded CCC wallet acceptance lifecycle in the browser.
 6. Deploy a complete pilot environment.
 7. Send permission requests and direct invitations from the maintainer's named
    public account, then update the tracker with actual responses.

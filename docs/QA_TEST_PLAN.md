@@ -1,17 +1,23 @@
 # Production Readiness Test Plan
 
-Last run: 2026-09-09
+Latest automated browser and repository checks: 2026-09-11. The broader
+exploratory interaction review in the table was performed on 2026-09-09.
 
 `PASS` means the workflow was executed successfully in this session. `PARTIAL`
 means a real part of the workflow works, but an end-to-end requirement remains.
 `NOT RUN` means the required external access or user-owned wallet was not
 available.
 
+The repeatable Chromium and automated WCAG checks run with `npm run test:e2e`
+from `reference/mlat/frontend`. Failure traces, screenshots, video, and the
+machine-readable release report are written under ignored `test-results/` and
+`tmp/` directories.
+
 | Test | Expected result | Status | Verification |
 |---|---|---|---|
-| Open application | Receiver directory is the first screen | PASS | Root, `/app`, and legacy `/dashboard` redirect to `/app/registry`; MLAT remains available as a reference consumer |
-| Direct route and refresh | Every major URL renders without client navigation | PASS | Registry, MLAT overview, map, aircraft, receivers, pipeline, metrics, diagnostics, and settings returned HTTP 200 |
-| Navigate with browser history | Back and forward restore the expected route | PASS | Settings and Live Map restored in order |
+| Open application | Receiver directory is the first operational screen | PASS | Root, `/app`, and legacy `/dashboard` redirect to `/app/registry`; MLAT tools remain reachable in the secondary `MLAT reference` navigation group |
+| Direct route and refresh | Every major URL renders without client navigation | PASS | Registry, overview, Live Map, aircraft, receivers, pipeline, metrics, environment, and settings returned HTTP 200 |
+| Navigate with browser history | Back and forward restore the expected route | PASS | Settings and Registry routes restored in order |
 | Load map | Geographic base map, controls, markers, and attribution render | PASS | OpenStreetMap context plus 3 aircraft and 5 receiver markers rendered |
 | Zoom map | Map camera changes without resizing the layout | PASS | Selected marker screen position changed after zoom |
 | Select receiver marker | Map, URL, context bar, and inspector select the same receiver | PASS | New York marker selected `RECV_NYC_001` everywhere |
@@ -31,17 +37,19 @@ available.
 | Backend unavailable | Page remains usable and explains recovery | PASS | Clear 503 message and retry action; no raw error exposed |
 | Backend recovery | Existing page resumes without full reload | PASS | Polling restored 3 aircraft and 5 receivers; alert cleared |
 | Connect CKB wallet | Real connector opens on clearly labeled testnet | PARTIAL | CCC dialog listed six wallets; no user wallet was connected in this session |
-| Create receiver in browser | Build, sign, submit, confirm, and refresh state | BLOCKED | SDK-backed form is read-only on the historical mutable deployment; a reviewed data1 deployment and funded signer are required |
-| Update receiver in browser | Sign successor cell and increment sequence | BLOCKED | Requires the reviewed data1 deployment and a funded owner signer |
-| Transfer receiver in browser | Current owner signs and owner lock changes | BLOCKED | Requires the reviewed data1 deployment and two funded test owner signers |
-| Revoke receiver in browser | Owner signs terminal tombstone | BLOCKED | Requires the reviewed data1 deployment and a disposable owner identity |
-| Verify lifecycle evidence | Create, update, transfer, and revoke hashes resolve | PASS | Offline verifier passed; CKB testnet explorer loaded the create transaction |
+| Create receiver in browser | Build, sign, submit, confirm, and refresh state | BLOCKED | The form targets the immutable data1 deployment, but no funded CCC wallet was connected in this session |
+| Update receiver in browser | Sign successor cell and increment sequence | BLOCKED | Requires the funded owner wallet created in the browser rehearsal |
+| Transfer receiver in browser | Current owner signs and owner lock changes | BLOCKED | Requires two funded testnet wallet users and their explicit approvals |
+| Revoke receiver in browser | Owner signs terminal tombstone | BLOCKED | Requires the transferred owner wallet and a disposable test identity |
+| Verify lifecycle evidence | Create, update, transfer, and revoke hashes resolve | PASS | The CKB CLI-signed immutable lifecycle passed 100 checks including fresh public-RPC verification; this is not an SDK-driven lifecycle |
 | Contract lifecycle | Valid transitions pass and invalid transitions fail | PASS | 5 host and 11 CKB-VM tests passed after the CKB target build |
-| Cross-language SDK | Protocol vectors and transaction preparation agree | PASS | 69 TypeScript SDK tests and 171 shared runtime assertions passed |
-| Frontend receiver state | Invalid, future, and stale observations fail closed; exact `u64` values are not rounded | PASS | 10 focused precision, freshness, receiver-reference, and standalone-asset tests passed |
-| Python application | Registry, API, MLAT, database, and evidence tests pass | PASS | 180 tests passed |
+| Cross-language SDK | Protocol vectors and transaction preparation agree | PASS | 70 TypeScript SDK tests and 171 shared runtime assertions passed |
+| Frontend unit and harness behavior | Invalid, future, and stale observations fail closed; exact `u64` values are not rounded; production and browser harnesses are isolated | PASS | 13 precision, freshness, receiver-reference, standalone-runtime, reporter, and Playwright-config tests passed |
+| Browser evidence report | Failed tests and axe findings make the machine-readable report fail closed | PASS | 1 reporter contract test passed |
+| Automated production browser suite | Registry-first navigation, MLAT reference context, assets, accessibility, mobile width, and headers work together | PARTIAL | All 9 Playwright tests passed locally; they must pass again from one clean source-bound run before the report becomes release evidence |
+| Python application | Registry, API, MLAT, database, and evidence tests pass | PASS | 188 tests passed on 2026-09-11 |
 | Production build | Optimized Node 22 build completes | PASS | Next.js 16.3.4 Webpack build generated all 16 routes |
-| Production console | No critical browser errors or development overlay | PASS | Desktop and mobile production console/error checks were empty |
+| Production console | No critical browser errors or development overlay | BLOCKED | Confirm this again in the required clean production-browser run |
 | Production response security | Basic security headers present; framework hidden | PASS | `nosniff`, `DENY`, referrer, and permissions policies present; no `X-Powered-By` |
 | Production dependency audit | No critical, high, or moderate advisories | PASS | Updated Next.js to 16.3.4, MapLibre to 6.8.0, and Sharp to 0.35.4; npm then reported only 21 low findings in the current CCC transitive chain |
 | Public deployment | Shareable hosted frontend URL is live | NOT RUN | Render blueprint is configured, but no Render account/deployment access was provided |

@@ -44,7 +44,8 @@ python3 tools/check_environment_documentation.py
 python3 tools/check_release_readiness.py --profile repository
 python3 tools/mlat/run_reproducible_benchmark.py --verify-only
 python3 tools/registry/verify_registry_v2_evidence.py \
-  --bundle evidence/registry-v2-testnet-2026-07-30-final
+  --bundle evidence/registry-v2-testnet-2026-09-11-data1-final \
+  --saved-chain-only
 python3 tools/registry/generate_registry_v2_conformance_report.py
 ```
 

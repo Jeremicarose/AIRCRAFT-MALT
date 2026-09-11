@@ -15,13 +15,12 @@ install -> configure signer -> create -> discover -> update -> transfer
 The review used CKB Pudge testnet only. It did not request, read, store, or expose
 a private key or seed phrase.
 
-A fresh signed write lifecycle was not submitted. That would require a funded,
-user-controlled testnet wallet and explicit approvals in that wallet. Review
-also found that the historical deployment uses a mutable type-hash code binding,
-so it is now discovery-only. A fresh write additionally requires a reviewed
-immutable `data1` deployment. The repository's historical signed lifecycle and
-a live read-only indexer query were used to verify the on-chain behavior without
-crossing that safety boundary.
+This SDK review did not submit a signed write lifecycle. That still requires a
+funded, user-controlled testnet wallet and explicit approvals in that wallet.
+The historical mutable type-hash deployment is discovery-only. Since the
+review, the current contract has been deployed immutably with `data1` and
+exercised through a separate CKB CLI-signed lifecycle. That proves the contract
+path, but does not turn this review into an SDK-driven transaction run.
 
 ## Problems found and resolved
 
@@ -52,7 +51,7 @@ crossing that safety boundary.
 | Live verifier | A TLS certificate failure produced a long Python traceback. | The developer had to decode Python networking internals to learn that the RPC was never reached. | The verifier now fails closed with a short RPC and certificate explanation, covered by a regression test. |
 | Low-level tooling | The integration guide placed manual Python transaction assembly near the main workflow. | SDK users could conclude that `ckb-cli` or hand-built transactions were still required. | Reclassified those commands as contract-maintainer tooling and made the SDK path primary. |
 | Tests | Lifecycle builders were tested separately against one static cell, not as one changing owner/state journey. | Sequence, signer handoff, confirmation, and final filtering could regress independently. | Added a stateful create-to-revoke test that follows the documented journey in order. |
-| Reference app | The wallet screen manually rebuilt records, lifecycle counters, timestamps, and recipient lock scripts. | The real browser path could drift away from the SDK journey even while the SDK tests passed. | The screen now passes create/update fields and the public recipient address to the SDK, waits for the exact indexed transaction before refreshing, and disables writes on the historical mutable deployment. |
+| Reference app | The wallet screen manually rebuilt records, lifecycle counters, timestamps, and recipient lock scripts. | The real browser path could drift away from the SDK journey even while the SDK tests passed. | The screen now passes create/update fields and the public recipient address to the SDK, waits for the exact indexed transaction before refreshing, uses the current immutable deployment, and rejects the historical mutable deployment. |
 
 ## Verification evidence
 
@@ -65,10 +64,9 @@ crossing that safety boundary.
   `0xcca658ee811707def01d466b16b9b3ee133c3f6952388c78a5f90a5c273749e8`
   only when revoked records were requested. It returned `status: revoked` and
   `sequence: 3`; normal active discovery did not return it.
-- The Python live verifier could not validate the RPC certificate chain on this
-  machine and emitted a long TLS traceback. The Node SDK query succeeded, so
-  this was an environment/tooling failure rather than evidence of a Registry
-  state failure.
+- The original Python live-verifier attempt exposed a local CA-store problem.
+  The corrected command later passed 100 checks against the public RPC with TLS
+  verification enabled; certificate verification was not disabled.
 
 The deterministic SDK, Python, Rust, documentation, and clean-package checks are
 listed in the final review result and should remain CI requirements.

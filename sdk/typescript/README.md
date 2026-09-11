@@ -17,18 +17,16 @@ fixtures.
 - Dependency status: the current CCC chain has the low-severity upstream
   `elliptic` advisory documented in the repository's `SECURITY.md`.
 
-The bundled `REGISTRY_V2_PUDGE_2026_07_30` deployment is the historical
-deployment proven by the repository's signed evidence. It was built from
-contract commit `61ab011de58397cb8d6ca3cecb5c659c69e2fc8c`. Its type-hash code
-binding allows the implementation cell to be replaced without changing the
-receiver type hash, so `RegistryV2Sdk.testnet()` supports discovery but rejects
-all writes. Do not bypass that guard.
+`RegistryV2Sdk.testnet()` uses `REGISTRY_V2_PUDGE`, an alias for the immutable
+`REGISTRY_V2_PUDGE_2026_09_11` deployment. Its `data1` code hash and contract
+outpoint match the repository's signed create-update-transfer-revoke evidence.
+The deployment is testnet-only and has not received an independent security
+review.
 
-The current contract source is a stricter, undeployed review candidate. The
-create-to-revoke journey requires that binary to be independently reviewed and
-deployed on Pudge with an immutable `data1` code hash. The SDK then needs only
-the deployment's three public manifest values: binary code hash, deployment
-transaction hash, and output index.
+`REGISTRY_V2_PUDGE_2026_07_30` remains available for historical discovery. Its
+type-hash binding allows the implementation cell to be replaced without
+changing the receiver type hash, so every write rejects it before wallet
+approval. Do not bypass that guard.
 
 ## 1. Install
 
@@ -80,12 +78,11 @@ npm ci
 npm test
 ```
 
-The reference application at `/app/registry` exposes public historical
-discovery by default. Start it from `reference/mlat/frontend` with `npm run dev`
-and open the route. Owner actions remain disabled until the application is
-configured with a reviewed immutable deployment. Once configured, it uses the
-SDK for lifecycle rules and waits for public-indexer visibility before it shows
-a write as complete.
+The reference application at `/app/registry` uses the immutable deployment by
+default. Start it from `reference/mlat/frontend` with `npm run dev` and open the
+route. Owner actions use the SDK and remain unavailable until a supported Pudge
+wallet is connected. A write is not shown as complete until its exact output is
+visible through the public indexer.
 
 ## 2. Configure a testnet signer
 
@@ -146,9 +143,9 @@ The first write verifies that the dependency is still live and hashes its cell
 data to confirm that it contains the configured binary. Applications can run
 the same check earlier with `await registry.verifyWritableDeployment()`.
 
-For historical read-only discovery, use `RegistryV2Sdk.testnet(client)` without
-a deployment. Any lifecycle method on that instance fails before asking the
-wallet to sign.
+For historical read-only discovery, construct `RegistryV2Sdk` with
+`REGISTRY_V2_PUDGE_2026_07_30`. Any lifecycle method on that instance fails
+before asking the wallet to sign.
 
 The owner wallet needs a plain testnet CKB cell for storage capacity and fees.
 Fund the public testnet address shown by the wallet, then wait for that funding
@@ -356,6 +353,7 @@ This is useful for a transaction review screen. Application developers do not
 need to manually construct the Registry type script, derive the Type ID, balance
 capacity, add dependencies, or invoke `ckb-cli`.
 
-The sequential SDK journey is regression-tested in
-`test/lifecycle.test.ts`. The historical signed testnet lifecycle is stored in
-`../../evidence/registry-v2-testnet-2026-07-30-final/`.
+The sequential SDK journey is regression-tested in `test/lifecycle.test.ts`.
+The current immutable CKB CLI-signed lifecycle is stored in
+`../../evidence/registry-v2-testnet-2026-09-11-data1-final/`. It proves the
+contract lifecycle, but it is not presented as an SDK-driven transaction run.

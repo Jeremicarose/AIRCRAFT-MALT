@@ -1,6 +1,6 @@
 # Repository Audit And Cleanup Ledger
 
-Audit date: 2026-07-31; refreshed 2026-08-17
+Audit date: 2026-07-31; refreshed 2026-09-11
 
 Scope: all tracked files; untracked frontend/source work; ignored databases,
 deployment scratch, caches, compiler output, dependency trees, and nested
@@ -43,7 +43,10 @@ Registry V2 currently consists of:
 - `src/ckb_registry`: canonical record/Type-ID helpers and read-only discovery
 - `tools/registry`: deployment, lifecycle, and evidence tools
 - `tests/registry`: off-chain contract-mirror and tooling tests
-- `evidence/registry-v2-testnet-2026-07-30-final`: signed lifecycle package
+- `evidence/registry-v2-testnet-2026-09-11-data1-final`: current immutable
+  signed lifecycle package
+- `evidence/registry-v2-testnet-2026-07-30-final`: historical mutable-deployment
+  lifecycle package
 
 ### Supporting Components
 
@@ -116,8 +119,8 @@ The exact path-by-path transition is maintained in
    responsibilities and limited migration abstraction.
 5. CodeQL, dependency review, SBOM, and release attestation workflows are
    configured but have not yet produced public results for the current tree.
-6. A fresh SDK-driven testnet lifecycle still requires external signer access;
-   only the older `ckb-cli` lifecycle is signed and committed.
+6. The immutable deployment has a fresh `ckb-cli`-signed lifecycle, but a
+   browser/SDK-driven lifecycle still requires external CCC wallet approval.
 
 ### Medium-Priority Findings
 
@@ -127,8 +130,9 @@ The exact path-by-path transition is maintained in
 4. The frontend image base is now digest-pinned; digest updates still require a
    reviewed build and frontend regression run.
 5. The contract CI installs RISC-V GCC from mutable Ubuntu repositories.
-6. The TypeScript frontend has no automated accessibility, responsive, or
-   browser-level regression suite; the retained screenshots are desktop-only.
+6. The Registry directory has automated desktop/mobile accessibility and
+   overflow checks. Other MLAT reference workflows still lack broad
+   browser-level regression coverage.
 7. Render deploys only replay API/processor, not the reference frontend.
 
 ## Stale And Incorrect Content
@@ -277,6 +281,7 @@ workspace state where useful.
 - `src/ckb_registry/**`
 - `tools/registry/**`
 - `tests/registry/**`
+- `evidence/registry-v2-testnet-2026-09-11-data1-final/**`
 - `evidence/registry-v2-testnet-2026-07-30-final/**`
 - `src/mlat_reference/**` as an example Registry V2 consumer
 - `reference/mlat/**` excluding generated dependencies/build caches
@@ -325,6 +330,7 @@ This is the implemented target tree (generated/ignored state omitted):
 |   |-- benchmarks/fixtures/
 |   `-- config/
 |-- evidence/
+|   |-- registry-v2-testnet-2026-09-11-data1-final/
 |   |-- registry-v2-testnet-2026-07-30-final/
 |   `-- mlat-reference/{reproducible-benchmark-v1,experimental}
 |-- docs/

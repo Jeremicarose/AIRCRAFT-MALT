@@ -201,7 +201,10 @@ def test_registry_evidence_exposes_saved_testnet_lifecycle(monkeypatch, tmp_path
     assert payload["source"] == "saved_testnet_evidence"
     assert payload["live_query"] is False
     assert payload["private_keys_included"] is False
-    assert payload["contract"]["code_hash"] == "0x40ebcd7df892234592a97c987faadce70df6bcfb5f7fa24fa78431cc24f3d6fa"
+    assert (
+        payload["contract"]["code_hash"]
+        == "0x40ebcd7df892234592a97c987faadce70df6bcfb5f7fa24fa78431cc24f3d6fa"
+    )
     assert [event["action"] for event in payload["lifecycle"]] == [
         "create",
         "update",

@@ -30,6 +30,12 @@ Use CKB Pudge testnet and a reviewed Registry V2 deployment with
 `hash_type=data1`. The historical 2026-07-30 deployment is read-only because its
 type-hash binding allows mutable code. Do not use it for participant writes.
 
+The repository currently defaults to the immutable deployment recorded in
+`evidence/registry-v2-testnet-2026-09-11-data1-final`. Its lifecycle is
+chain-verified but its contract has not been independently reviewed. Use the
+public identifiers already pinned in `.env.example`; do not substitute the
+historical July values.
+
 Configure the backend with the immutable binary data hash and configure the
 frontend build with the same hash and contract outpoint:
 
@@ -63,10 +69,11 @@ A participant session may start only when all of these are true:
 - participant consent, privacy rules, and task IDs are prepared;
 - support and recovery steps have been rehearsed.
 
-The browser transaction flow is implemented and passes local type and production
-build checks. It is currently read-only because no reviewed `data1` deployment
-has been configured, and it has not been executed with a funded external signer.
-Both are readiness dependencies, not participant evidence.
+The browser transaction flow is implemented and points to the immutable
+`data1` deployment. Type checking and the production build pass, but the
+current source still needs one complete clean browser run. It has not been
+executed with a funded CCC signer, and the deployed contract is still unaudited.
+All three are readiness dependencies, not participant evidence.
 
 ## 4. Run and preserve the session
 

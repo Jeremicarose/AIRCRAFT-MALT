@@ -26,8 +26,8 @@ testnet on 2026-07-30:
 
 The TypeScript SDK exports these exact deployment values as
 `REGISTRY_V2_PUDGE_2026_07_30`. Its deployment test compares the constant with
-the signed evidence manifest, and the frontend uses the SDK constant instead of
-maintaining a second copy.
+the signed evidence manifest. This historical constant is retained for
+read-only review; it is not the SDK's current testnet default.
 
 The create, update, transfer, and revoke transactions plus all signed rejected
 attacks are indexed in
@@ -44,12 +44,25 @@ The saved evidence bundle is immutable and remains valid evidence for source
 commit `61ab011de58397cb8d6ca3cecb5c659c69e2fc8c`. The deployment itself uses
 `hash_type=type`, so its contract implementation cell can be replaced under the
 same type hash. It is therefore historical and read-only in the current SDK and
-frontend. The current contract source is a stricter, undeployed review candidate.
-It adds bounded cell-data loading and stricter JSON text validation, so it
-produces a different binary and code hash. Do not use the historical deployment
-outpoint as the dependency for a future deployment of the current binary. A
-fresh immutable `data1` deployment and signer-driven lifecycle are external
-steps that have not been completed.
+frontend. Do not use the historical deployment outpoint as the dependency for
+the current binary.
+
+## Current immutable public testnet deployment
+
+The current contract candidate was deployed on Pudge with an immutable `data1`
+binding and exercised through a CKB CLI-signed lifecycle:
+
+- deployment transaction: `0xc2241446c19b61293b0901f801898ebeade7df9f4fd52669fc1eeebebee450bf`
+- contract output index: `0x0`
+- registry `code_hash`: `0x40ebcd7df892234592a97c987faadce70df6bcfb5f7fa24fa78431cc24f3d6fa`
+- binary SHA-256: `087a8b19ca99170d8d1e8c018b749259ce067ad3cb1cc8cef3b4a490ccae0465`
+- evidence Receiver Identity: `0x1d6855f20486a023c92df0c613a3141e385f3766c4c844d2935fe18cfcf220ce`
+
+The evidence in `evidence/registry-v2-testnet-2026-09-11-data1-final`
+contains create, update, transfer, revoke, and seven signed rejected attacks.
+It passes fresh public-RPC verification without containing private keys. This
+proves the deployed lifecycle, but it is not a TypeScript SDK or browser-signer
+run and the contract has not been independently audited.
 
 ## Identity model
 
@@ -137,10 +150,9 @@ identity from `output.type.args`. It:
 - retains owner lock, outpoint, sequence, block number, and metadata hash as
   provenance
 
-Set `RECEIVER_REGISTRY_HASH_TYPE=type` with the historical 2026-07-30
-deployment. A future deployment that binds directly to immutable binary data
-may use `data1`; the configured hash type must match the deployed receiver-cell
-script exactly.
+Use `RECEIVER_REGISTRY_HASH_TYPE=data1` with the current deployment. Set `type`
+only when deliberately inspecting the historical 2026-07-30 cells. The
+configured hash type must match the deployed receiver-cell script exactly.
 
 Live feed adapters must put the immutable `0x...` Receiver Identity in their
 `receiver_id` field. The Receiver Label is display metadata only.
@@ -160,8 +172,9 @@ wallet signer and a recipient's public Pudge address. It derives Type IDs and
 lifecycle fields, builds and balances transactions, adds the contract
 dependency, submits through the wallet, and waits for public indexer visibility.
 This path does not require `ckb-cli`, a raw private key, or manual transaction
-JSON. The bundled historical deployment is discovery-only and every SDK write
-method rejects it before wallet approval.
+JSON. The current SDK default uses the immutable deployment. The historical
+July deployment remains discovery-only and every SDK write method rejects it
+before wallet approval.
 
 The first-use problems and their verification evidence are recorded in the
 [SDK developer journey review](SDK_DEVELOPER_JOURNEY_REVIEW.md).
@@ -171,8 +184,10 @@ The reference frontend exposes this exact testnet workflow at
 submits the prepared transaction through the connected CCC wallet, and waits
 for the exact output to become visible through the public indexer. It does not
 derive sequences, timestamps, Type IDs, or recipient lock scripts itself. The
-owner actions remain disabled until all three `NEXT_PUBLIC_REGISTRY_*`
-deployment values identify the reviewed immutable deployment.
+bundled defaults identify the current immutable deployment. Owner actions
+remain unavailable until a supported Pudge wallet is connected. Deployers may
+override the defaults only by supplying all three `NEXT_PUBLIC_REGISTRY_*`
+values together.
 
 ## Build and verify
 

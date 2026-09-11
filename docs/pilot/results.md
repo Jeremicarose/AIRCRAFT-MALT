@@ -1,6 +1,6 @@
 # Live Pilot Status
 
-Status date: 2026-09-09
+Status date: 2026-09-11
 
 ## Product readiness
 
@@ -9,15 +9,20 @@ Status date: 2026-09-09
 - MLAT: replay workflow is implemented. Live field validation with four
   physically synchronized receivers has not happened.
 - Security: code-level P0 feed binding and refresh propagation fixes pass. H-01
-  still requires an independently reviewed immutable testnet deployment.
-- UI: production build passes. The Receiver directory is the first screen,
-  MLAT remains a separate reference area, and Registry versus replay provenance
-  is visible. A funded browser lifecycle has not run.
-- Deployment: local/reference deployment only. No complete public frontend URL
-  has been verified.
-- Known blockers: immutable testnet deployment, funded wallet rehearsal,
-  independent contract review, clean-checkout acceptance test, hosted frontend,
-  and real participants.
+  now has immutable `data1` testnet lifecycle evidence, but the exact deployed
+  binary still requires independent review and clean CI provenance.
+- UI: production build passes. The Receiver Registry is the first operational
+  screen. MLAT tools are grouped under a secondary `MLAT reference` area, and
+  Registry versus replay provenance is visible. Registry identity and history
+  remain available through receiver drill-down. Nine production browser checks
+  are implemented, but the retained report does not certify the current source
+  from a clean worktree. A funded browser lifecycle has not run.
+- Deployment: an immutable Pudge contract lifecycle is saved and verifies
+  offline, through saved RPC/indexer reports, and through a fresh public-RPC
+  recheck without CI provenance. No complete public frontend URL has been
+  verified.
+- Known blockers: clean evidence CI, funded browser-wallet rehearsal,
+  independent review, public frontend, and real participants.
 
 ## Recruitment
 
@@ -34,6 +39,11 @@ Status date: 2026-09-09
 - Failed participant workflows: none
 - Critical usability problems from participants: no evidence yet
 - Technical problems during participant sessions: no evidence yet
+
+Maintainer browser QA found and resolved one pre-pilot functional issue: replay
+aircraft contribution IDs were not resolving to receiver buttons. The corrected
+Live Map now lists all four replay contributors and opens a receiver inspector.
+This is maintainer evidence, not participant evidence.
 
 ## User evidence
 
@@ -55,9 +65,11 @@ contacted or expressed interest.
 
 ### P0
 
-- Obtain independent review of the current contract candidate.
-- Deploy it on CKB testnet with `hash_type=data1` and publish source-bound evidence.
-- Configure the browser SDK and MLAT runtime to that deployment.
+- Obtain independent review of the exact deployed contract binary.
+- Publish clean CI provenance for the existing `data1` lifecycle and a public
+  CI result for the final source revision.
+- Verify that the final hosted browser build and MLAT runtime both use the
+  pinned immutable deployment values.
 - Complete a funded browser create, update, transfer, history, and revoke rehearsal.
 
 ### P1
@@ -68,8 +80,8 @@ contacted or expressed interest.
 
 ### P2
 
-- Generate an immutable evidence bundle for the final pilot commit.
-- Add automated browser accessibility and end-to-end regression coverage.
+- Generate clean source-bound evidence for the final pilot commit.
+- Run the automated browser accessibility and end-to-end suite in clean CI.
 - Recheck the remaining low-severity upstream npm advisory before deployment.
 
 ## Commercial or partnership opportunities
@@ -83,7 +95,7 @@ contacted or expressed interest.
 
 `NOT READY`
 
-The software preparation has advanced, but the defined pilot requires real
-wallet lifecycle tasks against an immutable deployment and real external users.
-Neither condition exists yet, so the pilot is not running, completed, validated,
-or producing traction.
+The immutable contract lifecycle now exists, but the defined pilot still
+requires a funded browser-wallet rehearsal, clean source-bound CI evidence, and
+real external users. Those conditions do not exist yet, so the pilot is not
+running, completed, validated, or producing traction.

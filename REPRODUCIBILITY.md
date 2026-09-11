@@ -53,7 +53,8 @@ saved bundle:
 
 ```bash
 python3 tools/registry/verify_registry_v2_evidence.py \
-  --bundle evidence/registry-v2-testnet-2026-07-30-final
+  --bundle evidence/registry-v2-testnet-2026-09-11-data1-final \
+  --saved-chain-only
 ```
 
 Live verification performs public RPC requests and is sensitive to external
@@ -61,12 +62,13 @@ node availability:
 
 ```bash
 python3 tools/registry/verify_registry_v2_evidence.py \
-  --bundle evidence/registry-v2-testnet-2026-07-30-final \
-  --live
+  --bundle evidence/registry-v2-testnet-2026-09-11-data1-final \
+  --live-chain-only
 ```
 
-The historical package must remain unchanged. Its README intentionally refers
-to the source paths at its recorded commit.
+The July package remains historical and unchanged. The September package binds
+the hardened binary directly through `data1`; its normal release verification
+also requires clean local and GitHub CI provenance.
 
 ## Deterministic MLAT Benchmark
 
@@ -126,8 +128,10 @@ MLAT performance/reliability files are explicitly experimental.
 
 `.github/workflows/security.yml` creates an SPDX JSON SBOM and attests a source
 archive on pushed commits. `.github/workflows/release.yml` is tag-gated and
-refuses to publish without `LICENSE`; it rebuilds tests and release artifacts,
-generates checksums, and creates GitHub provenance/SBOM attestations.
+refuses to publish without the required independent review, immutable lifecycle,
+clean browser evidence, hardened settings, and healthy public deployment. It
+then rebuilds tests and release artifacts, generates checksums, and creates
+GitHub provenance/SBOM attestations.
 
 The workflows use commit-pinned actions. A configured workflow is not evidence
 until its public run passes; release consumers must verify the resulting

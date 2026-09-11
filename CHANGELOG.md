@@ -18,8 +18,9 @@ This project follows a pre-release changelog until the first tagged release.
   TypeScript consume its protocol, identity, script-binding, transition, and
   discovery cases.
 - Bounded on-chain cell-data loading at 16 KiB before allocation and added a
-  CKB-VM regression for oversized records. This changes the current contract
-  binary; it is an undeployed review candidate, not the historical July binary.
+  CKB-VM regression for oversized records. This changed the contract binary;
+  that hardened binary is now bound by the immutable September Pudge deployment,
+  not the historical July deployment.
 - Added the workspace `@aircraft-malt/registry-v2` TypeScript SDK with strict
   codec, Type ID calculation, paginated discovery, provenance, duplicate
   quarantine, and CKB-CCC signer lifecycle builders.
@@ -32,8 +33,10 @@ This project follows a pre-release changelog until the first tagged release.
 - Marked the historical mutable type-hash deployment discovery-only, required
   immutable `data1` binding for every lifecycle write, and added a
   `writableTestnet()` factory for public deployment manifest values.
-- Bound the SDK and reference frontend to one manifest-tested historical Pudge
-  deployment constant and documented the repository-only first-use review.
+- Bound the SDK and reference frontend to the manifest-tested immutable Pudge
+  deployment while retaining the historical constant for read-only review.
+- Added fresh CKB CLI-signed immutable deployment, create, update, transfer,
+  revoke, and rejected-attack evidence with public-RPC verification.
 - Added source-bound review evidence generation and offline verification, plus
   CI and release artifacts for the three-language conformance report.
 - Added pilot readiness, operator task, feedback, and privacy-safe evidence

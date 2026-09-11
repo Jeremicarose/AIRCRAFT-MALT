@@ -67,11 +67,11 @@ bound to `0.0.0.0` by default; use `HOSTNAME=127.0.0.1` when it should only be
 reachable from the local machine.
 
 Open `http://localhost:3000/app/registry` for the Pudge testnet Registry V2
-journey. Public historical discovery works without a wallet. The bundled July
-deployment is intentionally read-only. After the application is configured
-with the reviewed immutable deployment values described in the SDK guide,
-create, update, transfer, and revoke open the CCC wallet for explicit approval.
-The application never accepts a private key or seed phrase.
+journey. Discovery works without a wallet against the current immutable
+deployment. Create, update, transfer, and revoke open a connected CCC wallet for
+explicit approval. The bundled July deployment remains available only for
+historical read-only inspection. The application never accepts a private key or
+seed phrase, and no browser-signed lifecycle is claimed until one is executed.
 
 Or run the complete stack:
 

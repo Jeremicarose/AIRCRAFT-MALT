@@ -9,7 +9,32 @@ capture authoritative.
 Evidence does not replace an independent security audit or prove physical-world
 metadata.
 
-## Registry V2 Testnet Package
+## Current Registry V2 Testnet Package
+
+Path: `evidence/registry-v2-testnet-2026-09-11-data1-final`
+
+Status: immutable `data1` deployment and signed CKB CLI lifecycle verified from
+saved evidence and the public CKB testnet RPC. Clean local/GitHub CI provenance
+and independent review are still missing.
+
+It contains the exact hardened contract binary, deployment and lifecycle
+transactions, seven signed rejected attacks, exhaustive indexer pagination,
+API snapshots, and same-process removal of the revoked identity from the MLAT
+runtime. It does not contain private keys and is not presented as a browser or
+TypeScript-SDK signed run.
+
+Verify the saved package offline:
+
+```bash
+python3 tools/registry/verify_registry_v2_evidence.py \
+  --bundle evidence/registry-v2-testnet-2026-09-11-data1-final \
+  --saved-chain-only
+```
+
+Use `--live-chain-only` for the public RPC recheck. The full verifier remains
+fail-closed until clean local and GitHub CI records are added.
+
+## Historical Registry V2 Testnet Package
 
 Path: `evidence/registry-v2-testnet-2026-07-30-final`
 
@@ -96,6 +121,8 @@ expanding its claim scope.
 ## Missing Evidence
 
 - independent Registry V2 audit report
+- funded CCC browser/TypeScript-SDK lifecycle
+- clean public CI and browser evidence for the final source revision
 - generalized physical-infrastructure integration
 - synchronized physical four-receiver MLAT input
 - aligned trusted reference dataset

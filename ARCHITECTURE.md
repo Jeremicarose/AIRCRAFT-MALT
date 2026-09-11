@@ -134,6 +134,11 @@ Next frontend and must not be presented as a complete hosted product.
 package tied to source commit `61ab011` and a CI-built Ubuntu binary. Current
 source moves do not rewrite that package.
 
+`evidence/registry-v2-testnet-2026-09-11-data1-final` binds the hardened binary
+directly through its CKB data hash. It records a signed Pudge lifecycle, attack
+rejections, paginated indexer observations, and runtime revocation removal. It
+is testnet evidence, not an independent audit or production deployment.
+
 `evidence/mlat-reference/reproducible-benchmark-v2` is deterministic synthetic
 regression evidence. Experimental local performance and reliability captures are
 kept separately so they cannot be mistaken for live accuracy evidence.

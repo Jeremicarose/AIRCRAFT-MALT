@@ -5,10 +5,11 @@
 Security fixes target the current default branch. No released version is yet
 supported because the project has not published a tagged release.
 
-The testnet evidence package is historical and must not be rewritten. The
-current source includes contract hardening that postdates that package and is
-not deployed. A security fix that changes the contract requires a new binary,
-deployment, and evidence package.
+The July testnet evidence package is historical and must not be rewritten. The
+hardened binary is deployed separately on Pudge with immutable `data1` binding
+and a new evidence package. It is still unaudited and testnet-only. A security
+fix that changes the contract requires another binary, deployment, and evidence
+package.
 
 ## Reporting A Vulnerability
 
@@ -33,7 +34,7 @@ Registry V2 relies on CKB lock scripts for authorization. The type script checks
 identity and lifecycle continuity; it does not authenticate physical hardware or
 validate real-world metadata.
 
-Enforced by the current contract source candidate:
+Enforced by the current deployed testnet binary and matching contract source:
 
 - Type-ID-derived creation identity
 - exact input/output group cardinality
@@ -56,7 +57,7 @@ Not guaranteed:
 ## Current Security Posture
 
 - No private-key, common provider-token, or literal secret-assignment pattern
-  was found in tracked project files during the audit refreshed on 2026-09-08.
+  was found in tracked project files during the audit refreshed on 2026-09-11.
 - `.env`, databases, deployment scratch files, `ckb-cli`, build targets, Python
   bytecode, Next caches, and `node_modules` are ignored.
 - GitHub Actions use `contents: read` and full commit-SHA action pins.

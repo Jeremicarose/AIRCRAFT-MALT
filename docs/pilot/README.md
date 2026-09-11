@@ -32,11 +32,11 @@ Aircraft -> Contributing receivers -> Registry identity
 - Participant evidence: none
 - Qualified client or partner opportunities: none
 
-The main blocker is an immutable CKB testnet deployment. The historical Pudge
-deployment uses a mutable type-hash code binding and is now read-only in the
-SDK and UI. The current contract candidate must be independently reviewed,
-deployed with `hash_type=data1`, and exercised through the browser before an
-external participant is asked to perform lifecycle transactions.
+The immutable Pudge `data1` deployment and a complete CKB CLI-signed lifecycle
+now exist. The historical mutable type-hash deployment remains read-only. Before
+external participants are asked to transact, the exact deployed binary still
+needs independent review, the browser flow needs a funded CCC wallet rehearsal,
+and clean source-bound CI evidence must be published.
 
 ## Working documents
 
@@ -49,6 +49,8 @@ external participant is asked to perform lifecycle transactions.
 - [Lessons learned](lessons-learned.md): confirmed pre-pilot findings only
 - [Follow-up](follow-up.md): seven-day follow-up and opportunity qualification
 - [Quick start](QUICK_START.md): maintainer setup and readiness gate
+- [Implementation status](IMPLEMENTATION_STATUS_2026-09-11.md): verified
+  repository changes and remaining external gates
 - [Evidence template](EVIDENCE_TEMPLATE.md): technical artifact manifest
 
 The working recruitment tracker is

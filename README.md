@@ -4,9 +4,9 @@ CKB Registry V2 is a verifiable identity and lifecycle registry for physical
 infrastructure. It uses CKB cells to bind an immutable identity to an
 owner-authorized, ordered record lifecycle with permanent revocation.
 
-The MLAT aviation stack in this repository is the primary reference
-implementation, validation environment, and field-trial harness. It is not the
-primary product.
+The MLAT aviation stack in this repository is one reference consumer,
+validation environment, and field-trial harness. It is not the primary
+product.
 
 ## Current Status
 
@@ -35,10 +35,11 @@ The contract has not received an independent security audit. The repository is
 open source under the MIT License, but testnet status and the absence of an audit
 must be considered before any third-party deployment.
 
-The signed July testnet lifecycle is historical evidence for its pinned binary.
-The current contract source adds stricter parsing and bounded cell-data loading,
-so it is an undeployed review candidate with different binary hashes. The
-repository does not claim that the historical deployment runs the current code.
+The signed July testnet lifecycle is historical evidence for its pinned mutable
+deployment. The hardened contract was later deployed separately with immutable
+`data1` binding and exercised through a fresh signed lifecycle. Its evidence is
+in `evidence/registry-v2-testnet-2026-09-11-data1-final`. The new deployment is
+testnet-only and unaudited; it is not presented as a production deployment.
 
 See [Project Status](docs/PROJECT_STATUS.md) for the complete status matrix and
 [Repository Audit](docs/audit/REPOSITORY_AUDIT.md) for cleanup decisions and
@@ -126,18 +127,20 @@ Verify the committed testnet evidence without network access:
 
 ```bash
 python3 tools/registry/verify_registry_v2_evidence.py \
-  --bundle evidence/registry-v2-testnet-2026-07-30-final
+  --bundle evidence/registry-v2-testnet-2026-09-11-data1-final \
+  --saved-chain-only
 ```
 
-Add `--live` to re-query the accepted transactions from the configured public
-CKB RPC endpoint.
+Use `--live-chain-only` instead to re-query the accepted transactions and
+immutable contract cell from the configured public CKB RPC endpoint.
 
 The evidence package records:
 
-- deployment transaction `0x070820e96a268635edfd0ecdffc2c2d07061ce2cd79e16a8d159a86d472cc3b3`
-- deployed registry code hash `0x1efe03c91687a43e8f8fc24d2fbb911e7071761ec4eaba06281cb52d8b505b6c`
+- deployment transaction `0xc2241446c19b61293b0901f801898ebeade7df9f4fd52669fc1eeebebee450bf`
+- immutable registry code hash `0x40ebcd7df892234592a97c987faadce70df6bcfb5f7fa24fa78431cc24f3d6fa`
 - accepted create, update, transfer, and revoke transactions
-- seven signed transactions rejected by CKB-VM
+- seven signed transactions rejected by the deployed CKB contract
+- real-indexer pagination and same-process revocation-removal reports
 
 See [Evidence](EVIDENCE.md) for claim boundaries.
 

@@ -33,7 +33,7 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Verify Registry V2 evidence")
     parser.add_argument(
         "--bundle",
-        default="evidence/registry-v2-testnet-2026-07-30-final",
+        default="evidence/registry-v2-testnet-2026-09-11-data1-final",
         help="Evidence bundle directory",
     )
     parser.add_argument("--live", action="store_true", help="Re-query the public CKB RPC")
