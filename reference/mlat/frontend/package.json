@@ -12,6 +12,8 @@
     "build": "next build --webpack",
     "start": "node scripts/start-standalone.mjs",
     "test": "node --experimental-transform-types --test test/*.test.mjs",
+    "test:e2e": "npm run build && playwright test",
+    "test:e2e:prepared": "playwright test",
     "lint": "tsc --noEmit",
     "typecheck": "tsc --noEmit"
   },
@@ -46,5 +48,9 @@
   },
   "overrides": {
     "nanoid": "3.3.18"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "4.13.0",
+    "@playwright/test": "1.63.0"
   }
 }

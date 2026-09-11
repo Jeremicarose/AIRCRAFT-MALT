@@ -283,9 +283,9 @@ export function receiverDockState(
 ): InvestigationDockState {
   const registryState = registryStatusPresentation(receiver.registryStatus);
   const mlatState = mlatStatusPresentation(receiver.mlatStatus);
-  const receiverHref = receiver.identity
-    ? `/app/receivers?receiver=${encodeURIComponent(receiver.identity)}`
-    : `/app/receivers?receiver=${encodeURIComponent(receiver.key)}`;
+  const receiverQuery = new URLSearchParams({ receiver: receiver.identity ?? receiver.key });
+  if (options.returnAircraftId) receiverQuery.set('fromAircraft', options.returnAircraftId);
+  const receiverHref = `/app/receivers?${receiverQuery.toString()}`;
   const actions: InvestigationDockState['actions'] = [
     { label: 'Open receiver details', href: receiverHref, tone: 'primary' },
   ];

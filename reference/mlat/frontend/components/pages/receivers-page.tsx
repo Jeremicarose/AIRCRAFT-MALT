@@ -54,7 +54,14 @@ function recordStatusTone(status: string | null): StatusTone {
 }
 
 function DirectoryLoading() {
-  return <div className="space-y-px bg-line" aria-label="Loading the CKB testnet receiver directory"><Skeleton className="h-12 rounded-none" /><Skeleton className="h-12 rounded-none" /><Skeleton className="h-12 rounded-none" /></div>;
+  return (
+    <div className="space-y-px bg-line" role="status">
+      <span className="sr-only">Loading the CKB testnet receiver directory</span>
+      <Skeleton className="h-12 rounded-none" />
+      <Skeleton className="h-12 rounded-none" />
+      <Skeleton className="h-12 rounded-none" />
+    </div>
+  );
 }
 
 function RegistryHistory({ history, loading, error }: { history?: RegistryHistoryEvent[]; loading: boolean; error?: Error | null }) {
@@ -74,6 +81,7 @@ function RegistryHistory({ history, loading, error }: { history?: RegistryHistor
 export function ReceiversPage({
   receiverData,
   selectedReceiverId,
+  returnAircraftId,
   modeData,
   registryEvidence,
   positionsData,
@@ -81,6 +89,7 @@ export function ReceiversPage({
 }: {
   receiverData: ReceiversResponse | null;
   selectedReceiverId?: string | null;
+  returnAircraftId?: string | null;
   modeData: ModeData | null;
   registryEvidence: RegistryEvidenceData | null;
   positionsData?: PositionsResponse;
@@ -216,7 +225,10 @@ export function ReceiversPage({
     if (!storeHydrated || !selectedUi) return;
     setStoreSelectedReceiverId(selectedUi.key);
     setInvestigationContext({ focus: selectedUi.key, query: search, timeRange: perspective === 'registry' ? 'lifecycle' : 'recent' });
-    const dock = receiverDockState(selectedUi, { includeRegistryAction: perspective !== 'registry' });
+    const dock = receiverDockState(selectedUi, {
+      includeRegistryAction: perspective !== 'registry',
+      returnAircraftId,
+    });
     if (historyQuery.data?.length) {
       dock.timeline = [
         ...(dock.timeline ?? []),
@@ -235,7 +247,7 @@ export function ReceiversPage({
     }
     setDock(dock);
     return () => setDock(null);
-  }, [historyQuery.data, perspective, search, selected, selectedUi, setDock, setInvestigationContext, setStoreSelectedReceiverId, storeHydrated]);
+  }, [historyQuery.data, perspective, returnAircraftId, search, selected, selectedUi, setDock, setInvestigationContext, setStoreSelectedReceiverId, storeHydrated]);
 
   const refreshAfterTransaction = async (receiverIdentity: string) => {
     await queryClient.invalidateQueries({ queryKey: ['registry-v2-directory'] });
@@ -259,6 +271,7 @@ export function ReceiversPage({
     ...selectedUi,
     ownerLockArgs: selected ? ownerAddress(selected, client) : selectedUi.ownerLockArgs,
   } : null;
+  const returnToAircraft = returnAircraftId ? <Link href={`/app/aircraft?aircraft=${encodeURIComponent(returnAircraftId)}`} className={buttonVariants({ variant: 'secondary', size: 'sm' })}>Return to {returnAircraftId}<ArrowUpRight className="size-3.5" /></Link> : null;
   const currentPoolDetail = replayMode
     ? `${summary.currentRuntimePool} current replay or hybrid receivers`
     : `${summary.currentRuntimePool} receivers in current pool`;
@@ -344,7 +357,7 @@ export function ReceiversPage({
           receiver={selectedInspector}
           perspective={perspective}
           lifecycle={perspective === 'registry' && selected ? <RegistryHistory history={historyQuery.data} loading={historyQuery.isLoading} error={historyQuery.error} /> : undefined}
-          actions={selected ? <><Button size="sm" variant="secondary" onClick={exportSelected}><Download className="size-3.5" />Export record</Button><a href={explorerTransactionUrl(selected.provenance.outPoint.txHash)} target="_blank" rel="noreferrer" className={buttonVariants({ variant: 'secondary', size: 'sm' })}>Verify transaction<ArrowUpRight className="size-3.5" /></a></> : selectedUi ? <Link href={`/app/localization?receiver=${encodeURIComponent(selectedUi.key)}`} className={buttonVariants({ variant: 'secondary', size: 'sm' })}>Open live map<ArrowUpRight className="size-3.5" /></Link> : undefined}
+          actions={selected ? <>{returnToAircraft}<Button size="sm" variant="secondary" onClick={exportSelected}><Download className="size-3.5" />Export record</Button><a href={explorerTransactionUrl(selected.provenance.outPoint.txHash)} target="_blank" rel="noreferrer" className={buttonVariants({ variant: 'secondary', size: 'sm' })}>Verify transaction<ArrowUpRight className="size-3.5" /></a></> : selectedUi ? <><Link href={`/app/localization?receiver=${encodeURIComponent(selectedUi.key)}`} className={buttonVariants({ variant: 'secondary', size: 'sm' })}>Open live map<ArrowUpRight className="size-3.5" /></Link>{returnToAircraft}</> : returnToAircraft}
           className="self-start xl:sticky xl:top-20"
         />}
       />

@@ -74,6 +74,13 @@ export function AircraftPage({ positionsData, positionsError, selectedAircraftId
   const inspectReceiver = (receiverKey: string) => {
     setInspectedReceiverKey(receiverKey);
     setStoreSelectedReceiverId(receiverKey);
+    const receiver = receiverModels.find((item) => item.key === receiverKey);
+    if (receiver && selected?.aircraft_id) {
+      setDock(receiverDockState(receiver, {
+        returnAircraftId: selected.aircraft_id,
+        includeRegistryAction: true,
+      }));
+    }
     setRightDockOpen(true);
   };
 

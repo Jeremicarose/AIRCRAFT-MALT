@@ -255,7 +255,7 @@ export default function AirspaceMap({ aircraft, receivers, selectedAircraftId, s
 
   return (
     <div className={`relative ${className ?? 'h-full min-h-[420px] w-full'}`} role="region" aria-label="Interactive aircraft and receiver map" aria-busy={!ready && !mapError}>
-      <div ref={containerRef} className="absolute inset-0" aria-hidden="true" />
+      <div ref={containerRef} className="absolute inset-0" />
       {!ready && !mapError ? <div className="pointer-events-none absolute inset-0 z-overlay grid place-items-center bg-[#090c10] text-xs text-ink-quiet">Loading the network map...</div> : null}
       {mapError ? <div className="absolute inset-0 z-overlay grid place-items-center bg-[#090c10]/95 p-6 text-center"><div><p className="text-sm font-semibold text-ink">Map unavailable</p><p className="mt-2 max-w-sm text-xs leading-5 text-ink-quiet">{mapError}</p><button type="button" onClick={retryMap} className="mt-4 min-h-10 rounded-md border border-line px-4 text-xs font-semibold text-ink transition-colors hover:bg-graphite-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal-blue">Retry map</button></div></div> : null}
     </div>

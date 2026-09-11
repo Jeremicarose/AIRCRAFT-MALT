@@ -7,6 +7,7 @@ import {
   prepareStandaloneAssets,
   PRODUCTION_DIST_DIR,
   resolveStandalonePaths,
+  stageStandaloneBuild,
 } from '../lib/standalone.mjs';
 
 test('keeps production output separate from the development build', () => {
@@ -31,6 +32,32 @@ test('prepares static assets beside the nested standalone server', async () => {
     await prepareStandaloneAssets({ projectRoot, tracingRoot: repositoryRoot });
 
     assert.equal(await readFile(path.join(paths.standaloneStatic, 'app.css'), 'utf8'), 'body { color: red; }');
+  } finally {
+    await rm(repositoryRoot, { recursive: true, force: true });
+  }
+});
+
+test('stages an immutable server and asset snapshot before startup', async () => {
+  const repositoryRoot = await mkdtemp(path.join(os.tmpdir(), 'mlat-runtime-'));
+  const projectRoot = path.join(repositoryRoot, 'reference', 'mlat', 'frontend');
+  const paths = resolveStandalonePaths({ projectRoot, tracingRoot: repositoryRoot });
+
+  try {
+    await mkdir(paths.staticSource, { recursive: true });
+    await mkdir(paths.standaloneProjectRoot, { recursive: true });
+    await writeFile(path.join(paths.distDir, 'BUILD_ID'), 'build-one');
+    await writeFile(paths.server, 'server-one');
+    await writeFile(path.join(paths.staticSource, 'webpack.js'), 'runtime-one');
+
+    const staged = await stageStandaloneBuild({ projectRoot, tracingRoot: repositoryRoot });
+
+    await writeFile(paths.server, 'server-two');
+    await writeFile(path.join(paths.staticSource, 'webpack.js'), 'runtime-two');
+
+    assert.equal(await readFile(staged.server, 'utf8'), 'server-one');
+    assert.equal(await readFile(path.join(staged.standaloneStatic, 'webpack.js'), 'utf8'), 'runtime-one');
+
+    await rm(staged.runtimeContainer, { recursive: true, force: true });
   } finally {
     await rm(repositoryRoot, { recursive: true, force: true });
   }
