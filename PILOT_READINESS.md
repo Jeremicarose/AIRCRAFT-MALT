@@ -75,8 +75,9 @@ documented low-severity upstream advisory.
   0 serious or critical accessibility findings. That report does not certify
   later frontend commits.
 - Fresh immutable lifecycle: 50 bundled files, local CI, and 100 live-chain
-  checks passed. The normal release verifier now fails closed only because the
-  GitHub CI record is missing.
+  checks passed. The lifecycle-bundle verifier now fails closed only because
+  its GitHub CI record is missing. The stable release gate separately requires
+  a final manifest and tag, independent review, and a healthy public deployment.
 
 ## Recruitment status
 

@@ -59,8 +59,10 @@ validated by external users.
   clean browser report and exact deployed binary hashes.
 - The fresh `data1` lifecycle bundle verifies 50 checksummed files, a passing
   local CI rebuild, and 100 chain, binary, lifecycle, rejection, discovery, API,
-  live RPC, and indexer checks. Full release verification now fails only on the
-  missing GitHub CI record.
+  live RPC, and indexer checks. The lifecycle-bundle verifier now fails only on
+  its missing GitHub CI record. The separate stable release gate also requires
+  a final release manifest and tag, independent review, and a healthy public
+  deployment.
 These are local results. Public CI results must be checked after the commits are
 pushed.
 
