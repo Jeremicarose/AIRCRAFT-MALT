@@ -139,7 +139,7 @@ class CKBReceiverNetworkClient:
         return candidates[: self.config.max_receivers]
 
     async def refresh_registry_receivers(self) -> bool:
-        """Refresh Registry receivers while preserving the last verified pool on failure."""
+        """Refresh Registry receivers and exclude Registry-backed entries on failure."""
         if not self.config.receiver_registry_type_hash:
             return False
 

@@ -287,7 +287,7 @@ export function ReceiversPage({
   const flowNodes = [
     { id: 'receiver', label: 'Receivers', detail: `${summary.registryIdentities} registered identities`, tone: summary.registryIdentities ? 'trust' as const : 'attention' as const, href: '/app/receivers' },
     { id: 'registry', label: 'Registry', detail: directoryQuery.error ? 'CKB refresh failed' : directoryQuery.isLoading ? 'Querying CKB testnet' : registryDirectoryEmpty ? 'No cells returned; check indexer freshness' : 'Connected to CKB testnet', tone: directoryQuery.error ? 'failure' as const : registryConnected ? 'trust' as const : 'attention' as const, href: '/app/registry' },
-    { id: 'discovery', label: 'Discovery', detail: directoryQuery.error ? 'Using last MLAT inventory' : `${summary.mlatEligible} eligible identities`, tone: directoryQuery.error ? 'attention' as const : summary.mlatEligible ? 'healthy' as const : 'attention' as const, href: '/app/receivers' },
+    { id: 'discovery', label: 'Discovery', detail: directoryQuery.error ? 'Eligibility unverified; Registry receivers excluded' : `${summary.mlatEligible} eligible identities`, tone: directoryQuery.error ? 'failure' as const : summary.mlatEligible ? 'healthy' as const : 'attention' as const, href: '/app/receivers' },
     { id: 'mlat', label: 'MLAT', detail: runtimePoolDetail, tone: summary.currentRuntimePool ? replayMode ? 'replay' as const : 'healthy' as const : 'attention' as const, href: '/app/pipeline' },
     { id: 'aircraft', label: 'Aircraft', detail: `${aircraftCount} localized in five minutes`, tone: aircraftCount ? 'healthy' as const : 'attention' as const, href: '/app/aircraft' },
   ];
