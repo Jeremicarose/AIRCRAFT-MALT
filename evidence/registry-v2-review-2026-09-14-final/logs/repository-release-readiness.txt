@@ -1,0 +1,42 @@
+$ /Users/jeremicarose/Downloads/mlat-system 2/.venv/bin/python tools/check_release_readiness.py --profile repository
+cwd: .
+exit_code: 0
+
+STDOUT
+{
+  "checks": [
+    {
+      "detail": "present",
+      "name": "required release files",
+      "passed": true
+    },
+    {
+      "detail": "all local links resolve",
+      "name": "local documentation links",
+      "passed": true
+    },
+    {
+      "detail": "all discovered variables documented",
+      "name": "environment documentation",
+      "passed": true
+    },
+    {
+      "detail": "artifacts/ ignored",
+      "name": "generated artifact policy",
+      "passed": true
+    },
+    {
+      "detail": "no forbidden tracked paths",
+      "name": "generated and private files are untracked",
+      "passed": true
+    },
+    {
+      "detail": "no high-confidence secret patterns",
+      "name": "high-confidence secret scan",
+      "passed": true
+    }
+  ],
+  "pass": true
+}
+
+STDERR
