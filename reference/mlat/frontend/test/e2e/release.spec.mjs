@@ -92,8 +92,8 @@ test('shows the selected aircraft contributing receivers', async ({ page }) => {
   expect(pageErrors).toEqual([]);
 });
 
+if (process.env.RUN_EXTERNAL_MAP_TEST === 'true') {
 test('loads real OpenStreetMap tiles and keeps MLAT overlays usable', async ({ page }) => {
-  test.skip(process.env.RUN_EXTERNAL_MAP_TEST !== 'true', 'Set RUN_EXTERNAL_MAP_TEST=true for the controlled external tile test.');
 
   const tileRequests = [];
   const tileResponses = [];
@@ -163,6 +163,7 @@ test('loads real OpenStreetMap tiles and keeps MLAT overlays usable', async ({ p
     await expect.poll(async () => mapRegion.getAttribute('data-map-center')).not.toBe(centerBefore);
   }
 });
+}
 
 test('shows a map-only failure state when the tile provider is unavailable', async ({ page }) => {
   await page.route('https://tile.openstreetmap.org/**', (route) => route.abort('failed'));
