@@ -7,5 +7,6 @@ The included contract binary matches the immutable `data1` Pudge deployment and 
 Verify this bundle from the repository with:
 
 ```bash
-python tools/registry/verify_registry_v2_review_evidence.py --bundle artifacts/registry-v2-review-final-4fc8fce
+python tools/registry/verify_registry_v2_review_evidence.py \
+  --bundle evidence/registry-v2-review-2026-09-14-final
 ```
