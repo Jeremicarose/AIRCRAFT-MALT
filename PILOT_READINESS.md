@@ -1,6 +1,6 @@
 # Pilot Readiness
 
-Status date: 2026-09-11
+Status date: 2026-09-14
 Overall status: `NOT READY`
 
 ## What happened
@@ -15,7 +15,8 @@ The older `hash_type=type` deployment remains historical and read-only. A fresh
 Pudge testnet bundle now records an immutable `data1` deployment and signed
 create-update-transfer-revoke lifecycle for the current contract binary.
 Its saved chain data passes the offline verifier, and saved live RPC and indexer
-reports pass. Clean local/GitHub CI provenance and an independent security
+reports pass. Local CI now rebuilds the exact deployed binary and passes. GitHub
+CI provenance and an independent security
 review are still missing; the stable release gate must repeat the live check.
 
 ## Readiness by area
@@ -23,12 +24,12 @@ review are still missing; the stable release gate must repeat the live check.
 | Area | Status | Evidence | Required next action |
 |---|---|---|---|
 | Registry source | Prepared | 5 Rust host and 11 CKB-VM tests pass | Independent review |
-| Registry deployment | Partial | Fresh evidence binds the deployed binary with `data1`, records the signed lifecycle, and includes passing live RPC/indexer reports | Add clean CI provenance, repeat the live check at release, and obtain independent review of the exact binary hashes |
+| Registry deployment | Partial | Fresh evidence binds the deployed binary with `data1`, records the signed lifecycle, and includes passing live RPC/indexer and local CI reports | Add GitHub CI provenance, repeat the live check at release, and obtain independent review of the exact binary hashes |
 | Python discovery | Prepared | Pagination, duplicate, schema, and binding tests pass; the fresh revoked identity is excluded by live verification | Keep monitoring the public indexer during pilot runs |
 | TypeScript SDK | Prepared | 70 SDK tests pass and the current testnet factory uses the immutable deployment | Run a funded CCC wallet lifecycle through the browser |
 | MLAT replay | Prepared | Python integration suite passes | Keep replay labels visible |
 | MLAT live field use | Blocked | Harness exists; no synchronized physical run | Obtain four qualified receiver feeds |
-| UI | Partial | 13 unit/contract tests, type check, and production build pass; nine browser checks exist, but no clean passing report certifies the current source | Run the complete browser suite from a clean commit, preserve its report, then complete a funded wallet-signed lifecycle |
+| UI | Partial | 13 unit/contract tests, the Node 22 production build, and nine browser checks pass locally; the report was invalidated when the shared worktree changed after the run | Preserve a passing browser report from the final canonical commit in CI, then complete a funded wallet-signed lifecycle |
 | Public deployment | Blocked | No verified complete hosted URL | Deploy frontend, API, and processor |
 | Recruitment | Prepared, not executed | 13 public leads; messages and tracker exist | Send authorized permission requests and invitations |
 | Pilot | Not started | 0 contacted, 0 confirmed, 0 completed | Clear P0 gates before inviting |
@@ -37,17 +38,17 @@ review are still missing; the stable release gate must repeat the live check.
 
 | Finding | Status | Meaning |
 |---|---|---|
-| H-01 mutable contract implementation | Mitigated on the fresh testnet deployment | The new lifecycle uses `data1`; strict mode still rejects the historical `type` deployment, and independent review remains required |
-| H-02 runtime Registry changes | Fixed in code | Successful refresh applies removal and owner changes; failed refresh removes Registry receivers |
+| H-01 mutable contract implementation | Fixed on the fresh testnet deployment | The new lifecycle uses `data1`, which binds the script to the deployed bytes; strict mode still rejects the historical `type` deployment, and independent review remains required |
+| H-02 runtime Registry changes | Fixed and verified | A real testnet revocation was removed without restarting the process; a focused regression test proves owner transfer updates the running inventory |
 | H-03 feed impersonation | Fixed for supported paths | Bound identity mismatch is rejected; shared WebSocket identity is rejected; local Beast bridge uses endpoint configuration |
 | M-01 self-declared `updated_at` authority | Fixed | Capacity selection uses canonical identity ordering, not record time |
 | M-02 pagination completeness | Fixed | Empty terminal page is required; missing, repeated, or excessive cursors fail closed |
 | M-03 independent evidence derivation | Fixed for saved evidence | Verifier recalculates transaction hashes, Type ID, spend chain, locks, records, and binary hashes |
 | M-04 V2 schema mismatch | Fixed in current source | Rust, Python, and TypeScript share corpus version 2 and pass 171 assertions |
 | `u64` precision | Fixed | Python bounds and TypeScript `bigint` preserve exact values |
-| Testnet evidence generation | Executed, provenance incomplete | A funded immutable lifecycle, seven rejected attacks, checksums, and passing live RPC/indexer reports are saved without CI provenance |
+| Testnet evidence generation | Executed, provenance incomplete | A funded immutable lifecycle, seven rejected attacks, checksums, live RPC/indexer reports, and a passing local CI record are saved; GitHub CI is missing |
 | Ownership provenance | Fixed in current data path | Owner lock and change history are preserved and verified |
-| Audited-revision reproducibility | Partial | The deployment manifest links the binary to a source-bound review candidate | Add clean local/GitHub CI evidence and an independent review attesting the same binary SHA-256 and CKB data hash |
+| Audited-revision reproducibility | Partial | The deployment manifest links the binary to a source-bound review candidate, and local CI rebuilt the exact deployed hashes | Add GitHub CI evidence and an independent review attesting the same binary SHA-256 and CKB data hash |
 
 No security finding is hidden. The contract remains unaudited. The Flask API's
 rate limiter is process-local and therefore only suitable for the documented
@@ -56,21 +57,22 @@ documented low-severity upstream advisory.
 
 ## Verification results
 
-- Python: 194 passed with `python -m pytest`.
+- Python: 195 passed with `python -m pytest`.
 - Registry contract: 16 tests passed.
 - TypeScript SDK: 70 tests passed.
 - Cross-language conformance: 57 cases, 171 assertions, zero failures.
 - Historical offline evidence verifier: passed all checks.
 - Frontend type check: passed.
-- Frontend: 13 unit/contract tests, type check, and production build passed.
-- Browser: nine Playwright checks cover the Registry landing route and the
-  secondary MLAT reference navigation, the
-  aircraft-receiver return path, production assets, mobile width, security
-  headers, and WCAG scans. The retained report does not certify the current
-  source from a clean worktree, so browser readiness remains unproven.
-- Fresh immutable lifecycle: 48 bundled files and 100 live-chain checks passed
-  with CI provenance explicitly excluded. The normal release verifier still
-  fails closed until clean local and GitHub CI records exist.
+- Frontend: 13 unit/contract tests, type check, and a Node 22 production build
+  passed and generated all 16 routes.
+- Browser: nine Playwright checks cover the Registry landing route, the
+  secondary MLAT reference navigation, the aircraft-receiver return path,
+  production assets, mobile width, security headers, and WCAG scans. The clean
+  run passed locally, but its report was invalidated when the shared worktree
+  changed after the run, so CI must preserve a source-bound report.
+- Fresh immutable lifecycle: 50 bundled files, local CI, and 100 live-chain
+  checks passed. The normal release verifier now fails closed only because the
+  GitHub CI record is missing.
 
 ## Recruitment status
 
@@ -97,11 +99,12 @@ documented low-severity upstream advisory.
 
 ## Next actions
 
-1. Commit the current source and add clean local/GitHub CI provenance to the
+1. Commit the current source and add GitHub CI provenance to the
    immutable lifecycle evidence.
 2. Obtain independent review attesting the deployed binary SHA-256 and CKB data hash.
 3. Repeat live verification at release time using normal TLS verification.
-4. Run the clean-checkout browser suite and preserve its source-bound report.
+4. Repeat the passing browser suite on the final canonical commit in CI and
+   preserve its source-bound report.
 5. Complete the funded CCC wallet acceptance lifecycle in the browser.
 6. Deploy a complete pilot environment.
 7. Send permission requests and direct invitations from the maintainer's named

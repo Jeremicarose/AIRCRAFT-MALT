@@ -67,8 +67,8 @@ python3 tools/registry/verify_registry_v2_evidence.py \
 ```
 
 The July package remains historical and unchanged. The September package binds
-the hardened binary directly through `data1`; its normal release verification
-also requires clean local and GitHub CI provenance.
+the hardened binary directly through `data1`; its local CI provenance now
+passes, while normal release verification still requires GitHub CI provenance.
 
 ## Source-Bound Review Bundle
 

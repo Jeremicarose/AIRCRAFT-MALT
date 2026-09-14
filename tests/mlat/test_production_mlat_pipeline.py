@@ -148,6 +148,69 @@ def test_registry_refresh_removes_receiver_from_solver_and_inventory(tmp_path):
     system.database.close()
 
 
+def test_registry_transfer_refresh_updates_running_inventory_owner(monkeypatch, tmp_path):
+    identity = "0x" + "b2" * 32
+    system = ProductionMLATSystem(
+        NetworkConfig(
+            receiver_registry_type_hash="0x" + "4" * 64,
+            fourdsky_transport="command-jsonl",
+        ),
+        db_path=str(tmp_path / "mlat.db"),
+    )
+    system.database.connect()
+    owner_a = ReceiverInfo(
+        receiver_id="RECEIVER_TRANSFER",
+        receiver_identity=identity,
+        data_source="ckb_registry",
+        latitude=1.0,
+        longitude=36.0,
+        altitude=1_700.0,
+        status="online",
+        last_seen=1_700_000_000.0,
+        capabilities=["mode-s", "mlat"],
+        ckb_address="0xowner-a",
+        lock_hash="0xlock-a",
+        metadata={"sequence": 1},
+    )
+    owner_b = ReceiverInfo(
+        receiver_id="RECEIVER_TRANSFER",
+        receiver_identity=identity,
+        data_source="ckb_registry",
+        latitude=1.0,
+        longitude=36.0,
+        altitude=1_700.0,
+        status="online",
+        last_seen=1_700_000_001.0,
+        capabilities=["mode-s", "mlat"],
+        ckb_address="0xowner-b",
+        lock_hash="0xlock-b",
+        metadata={"sequence": 2},
+    )
+    system.network_client.active_receivers[identity] = owner_a
+    system._cache_receiver_positions()
+
+    async def refreshed_receivers():
+        return [owner_b]
+
+    monkeypatch.setattr(
+        system.network_client.peer_discovery,
+        "discover_peers",
+        refreshed_receivers,
+    )
+
+    try:
+        assert asyncio.run(system.network_client.refresh_registry_receivers()) is True
+        system._cache_receiver_positions()
+        stored = system.database.get_receivers()
+    finally:
+        system.database.close()
+
+    assert len(stored) == 1
+    assert stored[0].receiver_identity == identity
+    assert stored[0].owner_lock_args == "0xowner-b"
+    assert stored[0].registry_sequence == 2
+
+
 def test_initial_discovery_removes_stale_registry_rows_but_keeps_simulation(tmp_path):
     system = ProductionMLATSystem(
         NetworkConfig(fourdsky_transport="command-jsonl"),

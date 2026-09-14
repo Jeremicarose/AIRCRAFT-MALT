@@ -1,0 +1,96 @@
+{
+  "commands": [
+    {
+      "command": [
+        "cargo",
+        "fmt",
+        "--",
+        "--check"
+      ],
+      "name": "rust-format",
+      "pass": true,
+      "returncode": 0,
+      "stderr": "",
+      "stdout": "",
+      "working_directory": "contracts/registry-v2"
+    },
+    {
+      "command": [
+        "make",
+        "test"
+      ],
+      "name": "rust-unit-and-ckb-vm",
+      "pass": true,
+      "returncode": 0,
+      "stderr": "    Finished `release` profile [optimized] target(s) in 0.55s\n    Finished `test` profile [unoptimized + debuginfo] target(s) in 1.49s\n     Running unittests src/lib.rs (target/debug/deps/receiver_registry-013e39f40198928f)\n     Running tests/lifecycle.rs (target/debug/deps/lifecycle-6f2cf4721340e499)\n",
+      "stdout": "cargo build --locked --release --target riscv64imac-unknown-none-elf --features contract-bin\ncargo test --locked --lib --test lifecycle\n\nrunning 5 tests\ntest record::tests::validates_creation_and_successor ... ok\ntest record::tests::rejects_identity_label_change_and_sequence_jump ... ok\ntest record::tests::revocation_is_terminal ... ok\ntest record::tests::rejects_duplicate_capabilities ... ok\ntest record::tests::matches_shared_registry_v2_conformance_corpus ... ok\n\ntest result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n\nrunning 11 tests\ntest type_id_matches_off_chain_tooling_vector ... ok\ntest duplicate_registry_outputs_fail ... ok\ntest creation_rejects_oversized_record_without_unbounded_loading ... ok\ntest creation_rejects_forged_identity ... ok\ntest sequence_jump_fails ... ok\ntest valid_creation_uses_type_id_identity ... ok\ntest revoked_identity_cannot_be_resurrected ... ok\ntest receiver_label_change_fails ... ok\ntest wrong_owner_signature_cannot_update ... ok\ntest valid_update_and_owner_transfer_pass ... ok\ntest burn_fails_and_tombstone_revocation_passes ... ok\n\ntest result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.35s\n\n",
+      "working_directory": "contracts/registry-v2"
+    },
+    {
+      "command": [
+        "make",
+        "check"
+      ],
+      "name": "rust-riscv-check",
+      "pass": true,
+      "returncode": 0,
+      "stderr": "    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.35s\n",
+      "stdout": "cargo check --locked --target riscv64imac-unknown-none-elf --features contract-bin --bin receiver-registry\n",
+      "working_directory": "contracts/registry-v2"
+    },
+    {
+      "command": [
+        "python3",
+        "-m",
+        "pytest",
+        "-q",
+        "tests/registry"
+      ],
+      "name": "python-registry",
+      "pass": true,
+      "returncode": 0,
+      "stderr": "",
+      "stdout": "........................................................................ [ 98%]\n.                                                                        [100%]\n73 passed in 11.76s\n",
+      "working_directory": "."
+    },
+    {
+      "command": [
+        "python3",
+        "-m",
+        "pytest",
+        "-q"
+      ],
+      "name": "python-full-suite",
+      "pass": true,
+      "returncode": 0,
+      "stderr": "",
+      "stdout": "........................................................................ [ 36%]\n........................................................................ [ 73%]\n...................................................                      [100%]\n195 passed in 53.51s\n",
+      "working_directory": "."
+    },
+    {
+      "command": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "name": "git-diff-check",
+      "pass": true,
+      "returncode": 0,
+      "stderr": "",
+      "stdout": "",
+      "working_directory": "."
+    }
+  ],
+  "contract_binary": {
+    "bytes": 67008,
+    "ckb_data_hash": "0x40ebcd7df892234592a97c987faadce70df6bcfb5f7fa24fa78431cc24f3d6fa",
+    "path": "evidence/registry-v2-testnet-2026-09-11-data1-final/contract/receiver-registry-local-darwin",
+    "sha256": "087a8b19ca99170d8d1e8c018b749259ce067ad3cb1cc8cef3b4a490ccae0465"
+  },
+  "contract_source_clean": true,
+  "contract_source_status": "",
+  "generated_at": "2026-09-14T07:21:09.975101Z",
+  "pass": true,
+  "schema_version": 1,
+  "source_commit": "064b5d3f91239f8d9083ab61e47336652e0c185a"
+}

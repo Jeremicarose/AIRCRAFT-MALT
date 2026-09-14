@@ -30,21 +30,20 @@ physical receiver hardware exists.
 
 | Check | Result |
 |---|---|
-| Python backend, Registry, MLAT, and readiness tests | 194 passed |
+| Python backend, Registry, MLAT, and readiness tests | 195 passed |
 | Rust Registry unit/lifecycle tests | 16 passed |
 | Rust RISC-V target check | passed |
 | TypeScript SDK build and tests | 70 passed |
 | Frontend typecheck | passed |
-| Frontend production build | passed |
-| Frontend unit and evidence-contract tests on the required Node 22 runtime | 13 passed |
-| Registry, MLAT reference, investigation, accessibility, mobile, asset, and header browser checks | 9 checks implemented; no retained clean passing report certifies the current source |
+| Frontend production build | Node 22 production build passed and generated all 16 routes |
+| Frontend unit and evidence-contract tests | 13 passed under Node 22 |
+| Registry, MLAT reference, investigation, accessibility, mobile, asset, and header browser checks | 9 checks passed in a clean Node 22 run; the report was invalidated by a later shared-worktree change |
 | Documentation and environment checks | passed |
 
 The fresh `data1` bundle records a funded deployment and complete signed
-lifecycle. It verifies 48 checksummed files and passes 100 chain and semantic
-checks, including a fresh public-RPC query, when CI provenance is explicitly
-excluded. Full release evidence verification remains blocked on missing
-local/GitHub CI records.
+lifecycle. It verifies 50 checksummed files, the exact locally rebuilt binary,
+and 100 chain and semantic checks, including a fresh public-RPC query. Full
+release evidence verification remains blocked on the missing GitHub CI record.
 
 The locally built current contract binary was also fingerprinted:
 
@@ -59,7 +58,7 @@ in the immutable testnet deployment bundle.
 ## Not Verified
 
 - The immutable deployment and signed lifecycle are recorded, but their bundle
-  still needs clean local/GitHub CI provenance and an independent review tied to
+  now has passing local CI provenance but still needs GitHub CI and an independent review tied to
   the deployed binary hashes.
 - No real create/update/transfer/revoke browser lifecycle was performed in
   this environment because no wallet was connected. The fresh CKB CLI-signed
@@ -75,7 +74,7 @@ in the immutable testnet deployment bundle.
 
 ## External Completion Sequence
 
-1. Commit the source and publish clean local/GitHub CI provenance for the
+1. Commit the source and publish GitHub CI provenance for the
    existing immutable lifecycle bundle.
 2. Obtain independent review of the exact deployed binary hashes.
 3. Configure all three frontend deployment variables from that verified

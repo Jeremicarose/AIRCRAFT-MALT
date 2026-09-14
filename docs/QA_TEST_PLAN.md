@@ -1,6 +1,6 @@
 # Production Readiness Test Plan
 
-Latest automated browser and repository checks: 2026-09-11. The broader
+Latest automated browser and repository checks: 2026-09-14. The broader
 exploratory interaction review in the table was performed on 2026-09-09.
 
 `PASS` means the workflow was executed successfully in this session. `PARTIAL`
@@ -46,12 +46,12 @@ machine-readable release report are written under ignored `test-results/` and
 | Cross-language SDK | Protocol vectors and transaction preparation agree | PASS | 70 TypeScript SDK tests and 171 shared runtime assertions passed |
 | Frontend unit and harness behavior | Invalid, future, and stale observations fail closed; exact `u64` values are not rounded; production and browser harnesses are isolated | PASS | 13 precision, freshness, receiver-reference, standalone-runtime, reporter, and Playwright-config tests passed |
 | Browser evidence report | Failed tests and axe findings make the machine-readable report fail closed | PASS | 1 reporter contract test passed |
-| Automated production browser suite | Registry-first navigation, MLAT reference context, assets, accessibility, mobile width, and headers work together | BLOCKED | All 9 Playwright tests are defined, but the retained report completed 0 tests and does not certify the current source |
-| Python application | Registry, API, MLAT, database, and evidence tests pass | PASS | 194 tests passed on 2026-09-11 |
-| Production build | Optimized Node 22 build completes | PASS | Next.js 16.3.4 Webpack build generated all 16 routes |
-| Production console | No critical browser errors or development overlay | BLOCKED | Confirm this again in the required clean production-browser run |
+| Automated production browser suite | Registry-first navigation, MLAT reference context, assets, accessibility, mobile width, and headers work together | PASS | Clean Node 22 run passed all 9 Playwright tests on commit `064b5d3`; the report was invalidated when the shared worktree changed during finalization |
+| Python application | Registry, API, MLAT, database, and evidence tests pass | PASS | 195 tests passed on 2026-09-14 |
+| Production build | Optimized Node 22 build completes | PASS | Clean Node 22 build generated all 16 routes |
+| Production console | No critical browser errors or development overlay | PASS | Clean browser suite completed without page errors or failed asset requests |
 | Production response security | Basic security headers present; framework hidden | PASS | `nosniff`, `DENY`, referrer, and permissions policies present; no `X-Powered-By` |
-| Production dependency audit | No critical, high, or moderate advisories | PASS | Updated Next.js to 16.3.4, MapLibre to 6.8.0, and Sharp to 0.35.4; npm then reported only 21 low findings in the current CCC transitive chain |
+| Production dependency audit | No critical, high, or moderate advisories | PASS | Both npm projects passed the configured moderate threshold; the documented low-severity upstream `elliptic` advisory remains |
 | Public deployment | Shareable hosted frontend URL is live | NOT RUN | Render blueprint is configured, but no Render account/deployment access was provided |
 
 ## Performance Sample

@@ -14,8 +14,9 @@ metadata.
 Path: `evidence/registry-v2-testnet-2026-09-11-data1-final`
 
 Status: immutable `data1` deployment and signed CKB CLI lifecycle verified from
-saved evidence and the public CKB testnet RPC. Clean local/GitHub CI provenance
-and independent review are still missing.
+saved evidence and the public CKB testnet RPC. Local CI now rebuilds the exact
+deployed binary and passes. GitHub CI provenance and independent review are
+still missing.
 
 It contains the exact hardened contract binary, deployment and lifecycle
 transactions, seven signed rejected attacks, exhaustive indexer pagination,
@@ -32,7 +33,7 @@ python3 tools/registry/verify_registry_v2_evidence.py \
 ```
 
 Use `--live-chain-only` for the public RPC recheck. The full verifier remains
-fail-closed until clean local and GitHub CI records are added.
+fail-closed until the GitHub CI record is added.
 
 ## Historical Registry V2 Testnet Package
 

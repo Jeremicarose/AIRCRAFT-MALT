@@ -1,6 +1,6 @@
 # Live Pilot Status
 
-Status date: 2026-09-11
+Status date: 2026-09-14
 
 ## Product readiness
 
@@ -10,18 +10,17 @@ Status date: 2026-09-11
   physically synchronized receivers has not happened.
 - Security: code-level P0 feed binding and refresh propagation fixes pass. H-01
   now has immutable `data1` testnet lifecycle evidence, but the exact deployed
-  binary still requires independent review and clean CI provenance.
-- UI: production build passes. The Receiver Registry is the first operational
-  screen. MLAT tools are grouped under a secondary `MLAT reference` area, and
-  Registry versus replay provenance is visible. Registry identity and history
-  remain available through receiver drill-down. Nine production browser checks
-  are implemented, but the retained report does not certify the current source
-  from a clean worktree. A funded browser lifecycle has not run.
+  binary still requires independent review and GitHub CI provenance.
+- UI: the Receiver Registry is the first operational screen. MLAT tools are
+  grouped under a secondary `MLAT reference` area, and Registry versus replay
+  provenance is visible. Registry identity and lifecycle history remain
+  available through receiver drill-down. Nine production browser checks passed
+  on the clean source commit, but no browser-wallet lifecycle has run.
 - Deployment: an immutable Pudge contract lifecycle is saved and verifies
   offline, through saved RPC/indexer reports, and through a fresh public-RPC
-  recheck without CI provenance. No complete public frontend URL has been
-  verified.
-- Known blockers: clean evidence CI, funded browser-wallet rehearsal,
+  recheck with passing local CI provenance. GitHub CI is missing, and no
+  complete public frontend URL has been verified.
+- Known blockers: GitHub evidence CI, funded browser-wallet rehearsal,
   independent review, public frontend, and real participants.
 
 ## Recruitment
@@ -66,7 +65,7 @@ contacted or expressed interest.
 ### P0
 
 - Obtain independent review of the exact deployed contract binary.
-- Publish clean CI provenance for the existing `data1` lifecycle and a public
+- Publish GitHub CI provenance for the existing `data1` lifecycle and a public
   CI result for the final source revision.
 - Verify that the final hosted browser build and MLAT runtime both use the
   pinned immutable deployment values.
@@ -75,7 +74,7 @@ contacted or expressed interest.
 ### P1
 
 - Run the clean external-user installation and recovery plan.
-- Verify the updated desktop and mobile flow in a production browser.
+- Repeat the passing desktop and mobile flow on the final canonical commit.
 - Deploy a complete shareable frontend, API, and processor environment.
 
 ### P2

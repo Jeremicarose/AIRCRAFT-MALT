@@ -17,10 +17,10 @@ validated by external users.
 | Cross-language corpus | COMPLETE | Corpus version 2 passes 171 Rust/Python/TypeScript assertions across 57 record, identity, Type ID, creation, transition, script, and discovery cases | Add vectors only when protocol scope changes |
 | TypeScript SDK | COMPLETE | 70 tests cover codec, discovery, pagination, Type ID, history, immutable deployment binding and binary preflight, mutable-deployment write rejection, CCC-signer lifecycle assembly, the complete documented journey, and public package metadata | Claim the npm scope and approve the first protected release |
 | Historical CKB testnet lifecycle | COMPLETE | Frozen 2026-07-30 create-update-transfer-revoke and seven rejected attacks pass the offline verifier | Evidence is historical and uses the older tooling |
-| Fresh immutable testnet lifecycle | COMPLETE | The CKB CLI-signed `data1` deployment, create, update, transfer, revoke, seven rejected attacks, source-review linkage, and 100 live-chain checks are preserved without private keys | Clean CI provenance and independent review are still required for a stable release, but not for the factual testnet lifecycle claim |
+| Fresh immutable testnet lifecycle | COMPLETE | The CKB CLI-signed `data1` deployment, create, update, transfer, revoke, seven rejected attacks, source-review linkage, local CI, and 100 live-chain checks are preserved without private keys | GitHub CI provenance and independent review are still required for a stable release, but not for the factual testnet lifecycle claim |
 | Browser/SDK-driven lifecycle | BLOCKED | The SDK and browser journey use the fresh immutable deployment and mutable deployments still fail closed | Connect a funded CCC testnet wallet and approve a new create-update-transfer-revoke rehearsal; no SDK-driven transaction is claimed yet |
-| MLAT reference software | PARTIAL | Full 194-test repository Python suite passes; strict live gates and evidence verifier exist | Physical synchronized receiver run and independent reference data are absent |
-| Operator frontend | PARTIAL | The shell starts with the Receiver Registry, places MLAT under a secondary reference group, preserves aircraft-receiver return context, and uses the SDK for discovery, export, history, and signer-based lifecycle actions; 13 unit tests and type checking pass | Complete a clean production build, run all 9 browser checks on the current source, preserve the source-bound report, and complete a funded wallet-signed browser run |
+| MLAT reference software | PARTIAL | Full 195-test repository Python suite passes; strict live gates and evidence verifier exist | Physical synchronized receiver run and independent reference data are absent |
+| Operator frontend | PARTIAL | The shell starts on the Receiver Registry, places MLAT under a secondary reference group, preserves aircraft-receiver return context, and uses the SDK for Registry discovery, export, history, and signer-based lifecycle actions; 13 unit tests, type checking, the Node 22 production build, and 9 browser checks pass | Preserve the browser report from a clean final commit in CI and complete a funded wallet-signed browser run |
 | Review evidence bundle | PARTIAL | Source-bound generation and verification are implemented; earlier bundles were invalidated by later source fixes | Regenerate and verify the bundle after the final source commit |
 | Pilot materials | PARTIAL | Browser workflow, readiness gate, owner/coordinator tasks, feedback form, evidence template, proposal, and recruitment research exist | Consent materials, a maintainer wallet rehearsal, recruitment, and observed sessions remain |
 | Security/release baseline | PARTIAL | CodeQL, dependency review, SBOM, attestations, locked dependencies, MIT license, protected general release, and protected provenance-backed SDK release workflows exist | The npm organization and first package release need maintainer approval; workflows need a public green run; independent audit is absent; one low upstream npm advisory remains |
@@ -28,7 +28,7 @@ validated by external users.
 
 ## Verification on this tree
 
-- `python3 -m pytest -q`: 194 passed.
+- `python3 -m pytest -q`: 195 passed.
 - `python3 -m black --check src/ckb_registry src/mlat_reference tools tests`:
   passed.
 - `python3 -m flake8 src tools tests`: passed.
@@ -38,30 +38,27 @@ validated by external users.
   compilation passed.
 - `npm test` in the frontend: 13 precision, freshness, receiver-reference,
   standalone-asset, and browser-evidence contract tests passed.
-- `npm run test:e2e:prepared` in the frontend defines 9 Registry, MLAT
-  reference, investigation-flow, accessibility, responsive-layout, asset, and
-  security-header checks. A complete clean run against the current source is
-  still required before release.
+- `npm run test:e2e` from the clean Node 22 source commit passed all 9 Registry,
+  MLAT reference, investigation-flow, accessibility, responsive-layout, asset,
+  and security-header checks. The report was invalidated when the shared
+  worktree changed during finalization; CI must preserve a clean report.
 - `python3 tools/registry/generate_registry_v2_conformance_report.py`: 57
   shared cases, 171 runtime assertions, and zero failures.
-- `npm run typecheck` and `next build --webpack` in the frontend: passed and
-  generated all 16 routes. Turbopack could not run in the restricted local
-  environment because its CSS worker was denied permission to bind a helper
-  port; the CI environment still uses the normal Next build.
+- `npm run typecheck` and `next build --webpack` in the frontend passed under
+  Node 22 and generated all 16 routes.
 - `python3 tools/check_documentation.py`: all checked Markdown links passed.
-- `npm audit --audit-level=moderate`: both npm projects passed the configured
-  threshold. The current upstream CKB dependency chain retains the low-severity
-  `elliptic` advisory documented in `SECURITY.md`.
+- `npm audit --audit-level=moderate` passed for both npm projects; the known
+  low-severity `elliptic` advisory remains documented in `SECURITY.md`.
 - `python3 -m pip check`: no broken Python requirements.
 - `python3 tools/registry/verify_registry_v2_review_evidence.py --bundle
   evidence/registry-v2-review-2026-09-12-final`: 17 checks passed for its pinned
   source commit/tree, candidate binary hashes, conformance report, and external
   signer blocker. It predates the current frontend and immutable deployment
   defaults, so a replacement bundle is still required for this tree.
-- The fresh `data1` lifecycle bundle verifies 48 checksummed files and passes
-  100 chain, binary, lifecycle, rejection, discovery, API, live RPC, and
-  indexer checks when CI provenance is explicitly excluded. Full release
-  verification still fails on the missing local and GitHub CI records.
+- The fresh `data1` lifecycle bundle verifies 50 checksummed files, a passing
+  local CI rebuild, and 100 chain, binary, lifecycle, rejection, discovery, API,
+  live RPC, and indexer checks. Full release verification now fails only on the
+  missing GitHub CI record.
 These are local results. Public CI results must be checked after the commits are
 pushed.
 
@@ -82,7 +79,7 @@ pushed.
 
 - A browser/SDK lifecycle needs a connected funded CCC wallet and explicit
   approvals from the current and recipient owners.
-- The immutable deployment bundle needs clean CI provenance, a release-time live
+- The immutable deployment bundle needs GitHub CI provenance, a release-time live
   recheck, and independent review attesting the exact deployed binary hashes.
 - The first npm release needs ownership of the `aircraft-malt` npm scope and a
   maintainer-approved `npm-release` environment run.
