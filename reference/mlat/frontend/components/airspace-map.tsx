@@ -24,12 +24,16 @@ interface AirspaceMapProps {
   className?: string;
 }
 
+const OSM_TILE_URL = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
+const MAP_LOAD_TIMEOUT_MS = 12_000;
+const MAP_UNAVAILABLE_DETAIL = 'The OpenStreetMap background is unavailable. Aircraft and receiver information remains available, but geographic context is temporarily unavailable.';
+
 const baseStyle: StyleSpecification = {
   version: 8,
   sources: {
     openstreetmap: {
       type: 'raster',
-      tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
+      tiles: [OSM_TILE_URL],
       tileSize: 256,
       maxzoom: 19,
       attribution: '&copy; OpenStreetMap contributors',
@@ -51,6 +55,11 @@ const baseStyle: StyleSpecification = {
     },
   ],
 };
+
+function isBaseMapError(message: string, sourceId?: string): boolean {
+  if (sourceId === 'openstreetmap') return true;
+  return /tile\.openstreetmap\.org|\b(?:status|code|http)\s*[:=]?\s*[45]\d\d\b|failed to (?:load|fetch).*(?:tile|image)|network|ERR_(?:FAILED|CONNECTION|TIMED_OUT)/i.test(message);
+}
 
 function validReceiverCoordinates(receiver: Receiver): Coordinates | null {
   const latitude = Number(receiver.latitude);
@@ -115,6 +124,7 @@ export default function AirspaceMap({ aircraft, receivers, selectedAircraftId, s
   const [ready, setReady] = useState(false);
   const [mapError, setMapError] = useState<string | null>(null);
   const [mapAttempt, setMapAttempt] = useState(0);
+  const [viewport, setViewport] = useState({ center: '', zoom: '' });
 
   const selectedAircraft = useMemo(() => aircraft.find((item) => item.aircraft_id === selectedAircraftId) ?? aircraft[0] ?? null, [aircraft, selectedAircraftId]);
   const selectedReceiver = useMemo(() => receivers.find((item) => item.receiver_id === selectedReceiverId) ?? null, [receivers, selectedReceiverId]);
@@ -139,16 +149,29 @@ export default function AirspaceMap({ aircraft, receivers, selectedAircraftId, s
     });
     map.addControl(new maplibregl.NavigationControl({ showCompass: true, visualizePitch: true }), 'top-right');
     map.addControl(new maplibregl.AttributionControl({ compact: true }), 'bottom-right');
+    const updateViewport = () => {
+      const center = map.getCenter();
+      setViewport({
+        center: `${center.lng.toFixed(5)},${center.lat.toFixed(5)}`,
+        zoom: map.getZoom().toFixed(3),
+      });
+    };
     const loadTimeout = window.setTimeout(() => {
-      setMapError('The base map took too long to load. Check the network connection and try again.');
-    }, 12_000);
+      setMapError(MAP_UNAVAILABLE_DETAIL);
+    }, MAP_LOAD_TIMEOUT_MS);
     map.on('style.load', () => {
       window.clearTimeout(loadTimeout);
       setMapError(null);
       setReady(true);
+      updateViewport();
     });
-    map.on('error', () => {
-      if (!map.isStyleLoaded()) setMapError('The base map could not be loaded. Check the network connection and try again.');
+    map.on('moveend', updateViewport);
+    map.on('error', (event) => {
+      const message = event.error?.message ?? '';
+      const sourceId = 'sourceId' in event && typeof event.sourceId === 'string' ? event.sourceId : undefined;
+      if (!map.isStyleLoaded() || isBaseMapError(message, sourceId)) {
+        setMapError(MAP_UNAVAILABLE_DETAIL);
+      }
     });
     map.on('contextmenu', (event: MapMouseEvent) => {
       new maplibregl.Popup({ closeButton: false, offset: 10 })
@@ -254,10 +277,10 @@ export default function AirspaceMap({ aircraft, receivers, selectedAircraftId, s
   };
 
   return (
-    <div className={`relative ${className ?? 'h-full min-h-[420px] w-full'}`} role="region" aria-label="Interactive aircraft and receiver map" aria-busy={!ready && !mapError}>
+    <div className={`relative ${className ?? 'h-full min-h-[420px] w-full'}`} role="region" aria-label="Interactive aircraft and receiver map" aria-busy={!ready && !mapError} data-map-state={mapError ? 'unavailable' : ready ? 'ready' : 'loading'} data-map-tile-provider="openstreetmap" data-map-center={viewport.center} data-map-zoom={viewport.zoom}>
       <div ref={containerRef} className="absolute inset-0" />
       {!ready && !mapError ? <div className="pointer-events-none absolute inset-0 z-overlay grid place-items-center bg-[#090c10] text-xs text-ink-quiet">Loading the network map...</div> : null}
-      {mapError ? <div className="absolute inset-0 z-overlay grid place-items-center bg-[#090c10]/95 p-6 text-center"><div><p className="text-sm font-semibold text-ink">Map unavailable</p><p className="mt-2 max-w-sm text-xs leading-5 text-ink-quiet">{mapError}</p><button type="button" onClick={retryMap} className="mt-4 min-h-10 rounded-md border border-line px-4 text-xs font-semibold text-ink transition-colors hover:bg-graphite-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal-blue">Retry map</button></div></div> : null}
+      {mapError ? <div className="absolute inset-0 z-overlay grid place-items-center bg-[#090c10]/95 p-6 text-center" role="alert"><div><p className="text-sm font-semibold text-ink">Map unavailable</p><p className="mt-2 max-w-sm text-xs leading-5 text-ink-quiet">{mapError}</p><button type="button" onClick={retryMap} className="mt-4 min-h-10 rounded-md border border-line px-4 text-xs font-semibold text-ink transition-colors hover:bg-graphite-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal-blue">Retry map</button></div></div> : null}
     </div>
   );
 }

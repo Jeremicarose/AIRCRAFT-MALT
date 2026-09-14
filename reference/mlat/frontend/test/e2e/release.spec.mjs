@@ -92,6 +92,90 @@ test('shows the selected aircraft contributing receivers', async ({ page }) => {
   expect(pageErrors).toEqual([]);
 });
 
+test('loads real OpenStreetMap tiles and keeps MLAT overlays usable', async ({ page }) => {
+  test.skip(process.env.RUN_EXTERNAL_MAP_TEST !== 'true', 'Set RUN_EXTERNAL_MAP_TEST=true for the controlled external tile test.');
+
+  const tileRequests = [];
+  const tileResponses = [];
+  const tileFailures = [];
+  page.on('request', (request) => {
+    if (request.url().includes('tile.openstreetmap.org')) tileRequests.push(request);
+  });
+  page.on('response', (response) => {
+    if (response.url().includes('tile.openstreetmap.org')) tileResponses.push(response);
+  });
+  page.on('requestfailed', (request) => {
+    if (!request.url().includes('tile.openstreetmap.org')) return;
+    const reason = request.failure()?.errorText ?? 'unknown tile request failure';
+    // MapLibre cancels tiles that leave the viewport during automatic fit,
+    // zoom, and pan. Those cancellations are expected browser behavior.
+    if (reason !== 'net::ERR_ABORTED') tileFailures.push(reason);
+  });
+
+  await page.goto('/app/localization');
+  await expect(page.getByRole('heading', { level: 1, name: 'Live map' })).toBeVisible();
+  await expect(page.locator('[data-map-tile-provider="openstreetmap"]')).toHaveAttribute('data-map-state', 'ready');
+  const aircraftMarker = page.locator('.aircraft-map-marker').first();
+  await expect(aircraftMarker).toBeVisible();
+  await expect(page.locator('.receiver-map-marker').first()).toBeVisible();
+  await expect.poll(() => tileResponses.length, { timeout: 30_000 }).toBeGreaterThan(0);
+
+  const applicationOrigin = new URL(page.url()).origin;
+  const requestHeaders = await Promise.all(tileRequests.map((request) => request.allHeaders()));
+  for (const headers of requestHeaders) {
+    expect(headers.referer).toBeTruthy();
+    const referer = new URL(headers.referer);
+    expect(referer.origin).toBe(applicationOrigin);
+    expect(referer.pathname).toBe('/');
+  }
+  expect(tileFailures).toEqual([]);
+  expect(tileResponses.every((response) => response.status() >= 200 && response.status() < 400)).toBe(true);
+  for (const response of tileResponses) {
+    expect(response.headers()['content-type'] ?? '').toMatch(/^image\//i);
+    const body = await response.body();
+    expect(body.toString('utf8')).not.toContain('Access blocked');
+  }
+  await expect(page.getByText('Map unavailable', { exact: true })).toHaveCount(0);
+
+  const aircraftLabel = await aircraftMarker.getAttribute('aria-label');
+  await aircraftMarker.click();
+  expect(aircraftLabel).toMatch(/^Select aircraft [0-9A-F]{6}$/);
+  await expect(page).toHaveURL(/aircraft=[0-9A-F]{6}/);
+  const contributingReceiver = page.getByRole('button', { name: /^RECV_[A-Z]+_001 / }).first();
+  await expect(contributingReceiver).toBeVisible();
+  await contributingReceiver.click();
+  await expect(page).toHaveURL(/receiver=/);
+  await expect(page.getByText('Canonical identity', { exact: true })).toBeVisible();
+
+  const mapRegion = page.getByRole('region', { name: 'Interactive aircraft and receiver map' });
+  const zoomBefore = Number(await mapRegion.getAttribute('data-map-zoom'));
+  await page.locator('.maplibregl-ctrl-zoom-in').last().click();
+  await expect.poll(async () => Number(await mapRegion.getAttribute('data-map-zoom'))).toBeGreaterThan(zoomBefore);
+
+  const mapBounds = await page.locator('.maplibregl-canvas').last().boundingBox();
+  expect(mapBounds).not.toBeNull();
+  if (mapBounds) {
+    const centerBefore = await mapRegion.getAttribute('data-map-center');
+    await page.mouse.move(mapBounds.x + mapBounds.width * 0.65, mapBounds.y + mapBounds.height * 0.5);
+    await page.mouse.down();
+    await page.mouse.move(mapBounds.x + mapBounds.width * 0.25, mapBounds.y + mapBounds.height * 0.5, { steps: 8 });
+    await page.mouse.up();
+    await expect.poll(async () => mapRegion.getAttribute('data-map-center')).not.toBe(centerBefore);
+  }
+});
+
+test('shows a map-only failure state when the tile provider is unavailable', async ({ page }) => {
+  await page.route('https://tile.openstreetmap.org/**', (route) => route.abort('failed'));
+  await page.goto('/app/localization');
+
+  await expect(page.getByRole('heading', { level: 1, name: 'Live map' })).toBeVisible();
+  await expect(page.getByRole('alert').getByText('Map unavailable', { exact: true })).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByText(/Aircraft and receiver information remains available/)).toBeVisible();
+  await expect(page.locator('.aircraft-map-marker').first()).toBeVisible();
+  await expect(page.locator('.receiver-map-marker').first()).toBeVisible();
+  await expect(page.getByText('Contributing receivers', { exact: true })).toBeVisible();
+});
+
 for (const route of ['/app/localization', '/app/environment']) {
   test(`has no automated WCAG A or AA violations on ${route}`, async ({ page }) => {
     await page.goto(route);
@@ -113,6 +197,10 @@ test('fits the Live Map in a narrow mobile viewport', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/app/localization');
   await expect(page.getByRole('heading', { level: 1, name: 'Live map' })).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Interactive aircraft and receiver map' })).toBeVisible();
+  await expect(page.locator('.aircraft-map-marker').first()).toBeVisible();
+  await expect(page.locator('.receiver-map-marker').first()).toBeVisible();
+  await expect(page.locator('.maplibregl-ctrl-zoom-in').last()).toBeVisible();
 
   const width = await page.evaluate(() => ({
     client: document.documentElement.clientWidth,
@@ -127,6 +215,6 @@ test('returns the required browser security headers', async ({ request }) => {
   expect(response.status()).toBe(200);
   expect(response.headers()['x-content-type-options']).toBe('nosniff');
   expect(response.headers()['x-frame-options']).toBe('DENY');
-  expect(response.headers()['referrer-policy']).toBe('no-referrer');
+  expect(response.headers()['referrer-policy']).toBe('strict-origin-when-cross-origin');
   expect(response.headers()['permissions-policy']).toContain('camera=()');
 });

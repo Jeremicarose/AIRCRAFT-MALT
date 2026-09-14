@@ -115,6 +115,7 @@ immutable deployment. Never use the historical mutable hash for writes.
 | `GITHUB_SHA` | GitHub-managed | Binds browser QA evidence to the checked-out source commit. Local runs derive the commit from Git. |
 | `CI` | CI-managed | Enables Playwright retries. Browser checks always start fresh repository servers. |
 | `BROWSER_QA_REPORT` | `tmp/browser-qa-report.json` | Optional output path for the Playwright Live Map and Registry accessibility evidence report. |
+| `RUN_EXTERNAL_MAP_TEST` | unset | Set to `true` only for the opt-in Playwright check that reaches the public OpenStreetMap tile service; it is not required for the offline/browser release suite. |
 
 The built-in rate limiter is correct only for the documented single-worker API.
 A multi-worker or multi-node deployment needs a shared limiter at the ingress or

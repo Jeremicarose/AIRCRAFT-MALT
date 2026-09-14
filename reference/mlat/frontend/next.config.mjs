@@ -18,7 +18,9 @@ const nextConfig = {
       headers: [
         { key: 'X-Content-Type-Options', value: 'nosniff' },
         { key: 'X-Frame-Options', value: 'DENY' },
-        { key: 'Referrer-Policy', value: 'no-referrer' },
+        // The map's cross-origin tile provider requires a standards-compliant
+        // Referer. Keep the full path private while sending only the origin.
+        { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
         { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=()' },
       ],
     }];
