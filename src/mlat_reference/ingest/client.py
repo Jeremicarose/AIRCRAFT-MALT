@@ -32,7 +32,7 @@ class NetworkConfig:
     ckb_rpc_url: str = "https://testnet.ckb.dev/rpc"
     ckb_indexer_url: str = "https://testnet.ckb.dev/indexer"
     receiver_registry_type_hash: str = ""
-    receiver_registry_hash_type: str = "type"
+    receiver_registry_hash_type: str = "data1"
     allow_mutable_registry_code: bool = False
 
     # 4DSky Configuration

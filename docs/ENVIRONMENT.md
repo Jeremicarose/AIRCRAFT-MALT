@@ -17,7 +17,7 @@ specific command says otherwise.
 | `CKB_API_TIMEOUT` | `15` | Timeout in seconds for the live-ingest readiness RPC/indexer probe. |
 | `CKB_TESTNET_EXPLORER_TX_URL` | Pudge transaction explorer | Base URL used for evidence links. |
 | `RECEIVER_REGISTRY_TYPE_HASH` | empty | Registry contract code hash used for discovery. |
-| `RECEIVER_REGISTRY_HASH_TYPE` | `type` in code | Historical compatibility uses `type`; reviewed writable deployments must use immutable `data1`. The example fails closed with `data1`. |
+| `RECEIVER_REGISTRY_HASH_TYPE` | `data1` | Immutable contract-code binding used by the current deployment. Historical `type` discovery requires explicit `ALLOW_MUTABLE_REGISTRY_CODE=true`; strict production still rejects it. |
 | `ALLOW_MUTABLE_REGISTRY_CODE` | `false` | Allows historical reads from a mutable code binding. Strict production still rejects it. |
 | `CKB_SSL_VERIFY` | `true` | Verifies RPC and indexer TLS certificates. Strict production rejects `false`. |
 | `CKB_MAX_RECORD_AGE_SECONDS` | `86400` | Maximum age accepted for an active Registry record. |

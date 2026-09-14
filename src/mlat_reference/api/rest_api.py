@@ -1513,8 +1513,8 @@ def get_system_mode():
             "receiver_registry_type_hash": (
                 registry_code_hash if _valid_registry_code_hash(registry_code_hash) else ""
             ),
-            "receiver_registry_hash_type": os.getenv("RECEIVER_REGISTRY_HASH_TYPE", "type"),
-            "registry_code_immutable": os.getenv("RECEIVER_REGISTRY_HASH_TYPE", "type") == "data1",
+            "receiver_registry_hash_type": os.getenv("RECEIVER_REGISTRY_HASH_TYPE", "data1"),
+            "registry_code_immutable": os.getenv("RECEIVER_REGISTRY_HASH_TYPE", "data1") == "data1",
             "registry_discovery_live": bool(runtime_state.get("registry_discovery_live")),
             "registry_last_refresh_at": runtime_state.get("registry_last_refresh_at"),
             "registry_refresh_error": runtime_state.get("registry_refresh_error"),

@@ -34,7 +34,14 @@ def receiver_record(**overrides):
     return ReceiverRegistryRecord(**values)
 
 
-def receiver_cell(record, receiver_identity, *, lock_arg="0xowner", tx_hash=None):
+def receiver_cell(
+    record,
+    receiver_identity,
+    *,
+    lock_arg="0xowner",
+    tx_hash=None,
+    hash_type="data1",
+):
     output_data = (
         "0x" + record.encode("utf-8").hex()
         if isinstance(record, str)
@@ -50,7 +57,7 @@ def receiver_cell(record, receiver_identity, *, lock_arg="0xowner", tx_hash=None
             },
             "type": {
                 "code_hash": "0x" + "44" * 32,
-                "hash_type": "type",
+                "hash_type": hash_type,
                 "args": receiver_identity,
             },
         },
@@ -220,7 +227,13 @@ def test_registry_v2_record_conformance_corpus():
             code_hash=case["code_hash"],
             hash_type=case["hash_type"],
         )
-        discovery = CKBPeerDiscovery(CKBConfig(receiver_registry_type_hash="0x" + "44" * 32))
+        discovery = CKBPeerDiscovery(
+            CKBConfig(
+                receiver_registry_type_hash="0x" + "44" * 32,
+                receiver_registry_hash_type=corpus["registry_script"]["hash_type"],
+                allow_mutable_registry_code=True,
+            )
+        )
         parsed = asyncio.run(discovery._parse_receiver_cell(cell))
         assert (parsed is not None) is case["valid"], case["name"]
 

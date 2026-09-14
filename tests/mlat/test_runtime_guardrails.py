@@ -48,13 +48,13 @@ def test_strict_production_rejects_demo_mode(monkeypatch):
         load_runtime_settings(max_receivers_default=10)
 
 
-def test_historical_registry_defaults_to_its_type_hash_binding(monkeypatch):
+def test_registry_defaults_to_immutable_data1_binding(monkeypatch):
     monkeypatch.setenv("RECEIVER_REGISTRY_TYPE_HASH", "0x" + "12" * 32)
     monkeypatch.delenv("RECEIVER_REGISTRY_HASH_TYPE", raising=False)
 
     settings = load_runtime_settings(max_receivers_default=10)
 
-    assert settings.network_config.receiver_registry_hash_type == "type"
+    assert settings.network_config.receiver_registry_hash_type == "data1"
 
 
 def test_strict_production_accepts_explicit_data1_registry_binding(monkeypatch):

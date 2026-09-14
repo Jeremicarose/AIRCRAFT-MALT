@@ -154,6 +154,7 @@ discovery = CKBPeerDiscovery(
         ckb_rpc_url="https://testnet.ckb.dev/rpc",
         ckb_indexer_url="https://testnet.ckb.dev/indexer",
         receiver_registry_type_hash="0x...",
+        receiver_registry_hash_type="data1",
     )
 )
 ```

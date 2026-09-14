@@ -96,7 +96,7 @@ def load_runtime_settings(
         ckb_rpc_url=os.getenv("CKB_RPC_URL", "https://testnet.ckb.dev/rpc"),
         ckb_indexer_url=os.getenv("CKB_INDEXER_URL", "https://testnet.ckb.dev/indexer"),
         receiver_registry_type_hash=os.getenv("RECEIVER_REGISTRY_TYPE_HASH", ""),
-        receiver_registry_hash_type=os.getenv("RECEIVER_REGISTRY_HASH_TYPE", "type"),
+        receiver_registry_hash_type=os.getenv("RECEIVER_REGISTRY_HASH_TYPE", "data1"),
         allow_mutable_registry_code=env_bool("ALLOW_MUTABLE_REGISTRY_CODE", False),
         api_key=fourdsky_api_key,
         fourdskyendpoint=fourdsky_endpoint,

@@ -66,7 +66,7 @@ class CKBConfig:
     ckb_rpc_url: str = "https://testnet.ckb.dev/rpc"
     ckb_indexer_url: str = "https://testnet.ckb.dev/indexer"
     receiver_registry_type_hash: str = ""  # Type script hash for receiver registry
-    receiver_registry_hash_type: str = "type"  # Historical deployments use type; new ones use data1
+    receiver_registry_hash_type: str = "data1"
     allow_mutable_registry_code: bool = False
     api_timeout: int = 30
     ssl_verify: bool = True

@@ -169,7 +169,11 @@ async def _script_outcome(
         hash_type=case["hash_type"],
     )
     discovery = CKBPeerDiscovery(
-        CKBConfig(receiver_registry_type_hash=registry_script["code_hash"])
+        CKBConfig(
+            receiver_registry_type_hash=registry_script["code_hash"],
+            receiver_registry_hash_type=registry_script["hash_type"],
+            allow_mutable_registry_code=registry_script["hash_type"] == "type",
+        )
     )
     receiver = await discovery._parse_receiver_cell(cell)
     if receiver is None:
@@ -188,6 +192,7 @@ async def _discovery_outcome(
             record_cases[definition["record_case"]]["payload"],
             definition["receiver_identity"],
             code_hash=registry_script["code_hash"],
+            hash_type=registry_script["hash_type"],
             index=index,
         )
         for index, definition in enumerate(case["cells"])
@@ -199,6 +204,8 @@ async def _discovery_outcome(
     active_discovery = CKBPeerDiscovery(
         CKBConfig(
             receiver_registry_type_hash=registry_script["code_hash"],
+            receiver_registry_hash_type=registry_script["hash_type"],
+            allow_mutable_registry_code=registry_script["hash_type"] == "type",
             max_future_record_skew_seconds=discovery_policy["max_future_skew_seconds"],
             time_provider=lambda: float(discovery_policy["observed_at"]),
         )
@@ -209,6 +216,8 @@ async def _discovery_outcome(
     historical_discovery = CKBPeerDiscovery(
         CKBConfig(
             receiver_registry_type_hash=registry_script["code_hash"],
+            receiver_registry_hash_type=registry_script["hash_type"],
+            allow_mutable_registry_code=registry_script["hash_type"] == "type",
             max_future_record_skew_seconds=discovery_policy["max_future_skew_seconds"],
             time_provider=lambda: float(discovery_policy["observed_at"]),
         )
