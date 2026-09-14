@@ -5,7 +5,8 @@ import type { GeoJSONSource, LayerSpecification, Map as MapLibreMap, MapMouseEve
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Position, Receiver } from '@/lib/types';
 import { formatCoordinate, percent, positionCoordinates } from '@/lib/format';
-import { receiverIdentity } from '@/lib/receiver-state';
+import { receiverReferenceIds, receiverReferencesInclude } from '@/lib/receiver-reference';
+import { receiverIdentity, receiverOperationalKey } from '@/lib/receiver-state';
 
 type Coordinates = [number, number];
 
@@ -127,10 +128,16 @@ export default function AirspaceMap({ aircraft, receivers, selectedAircraftId, s
   const [viewport, setViewport] = useState({ center: '', zoom: '' });
 
   const selectedAircraft = useMemo(() => aircraft.find((item) => item.aircraft_id === selectedAircraftId) ?? aircraft[0] ?? null, [aircraft, selectedAircraftId]);
-  const selectedReceiver = useMemo(() => receivers.find((item) => item.receiver_id === selectedReceiverId) ?? null, [receivers, selectedReceiverId]);
+  const selectedReceiver = useMemo(() => receivers.find((item) => {
+    const references = receiverReferenceIds(receiverOperationalKey(item), receiverIdentity(item), item.receiver_id);
+    return selectedReceiverId ? receiverReferencesInclude(references, selectedReceiverId) : false;
+  }) ?? null, [receivers, selectedReceiverId]);
   const contributingReceivers = useMemo(() => {
     const ids = selectedAircraft?.correlation?.receiver_ids ?? [];
-    return receivers.filter((receiver) => ids.includes(receiver.receiver_id));
+    return receivers.filter((receiver) => {
+      const references = receiverReferenceIds(receiverOperationalKey(receiver), receiverIdentity(receiver), receiver.receiver_id);
+      return ids.some((id) => receiverReferencesInclude(references, id));
+    });
   }, [receivers, selectedAircraft]);
 
   useEffect(() => {
@@ -199,11 +206,13 @@ export default function AirspaceMap({ aircraft, receivers, selectedAircraftId, s
       if (!coordinates) return;
       const element = document.createElement('button');
       element.type = 'button';
-      element.className = `receiver-map-marker${selectedReceiverId === receiver.receiver_id ? ' is-selected' : ''}`;
+      const operationalKey = receiverOperationalKey(receiver);
+      const references = receiverReferenceIds(operationalKey, receiverIdentity(receiver), receiver.receiver_id);
+      element.className = `receiver-map-marker${selectedReceiverId && receiverReferencesInclude(references, selectedReceiverId) ? ' is-selected' : ''}`;
       const receiverLabel = receiver.receiver_label || receiver.receiver_id;
       const identity = receiverIdentity(receiver);
       element.setAttribute('aria-label', `Select receiver ${receiverLabel}`);
-      element.addEventListener('click', () => onSelectReceiver?.(receiver.receiver_id));
+      element.addEventListener('click', () => onSelectReceiver?.(operationalKey));
       const marker = new maplibregl.Marker({ element, anchor: 'center' }).setLngLat(coordinates).setPopup(new maplibregl.Popup({ offset: 12, closeButton: false }).setDOMContent(popupContent(receiverLabel, [identity ? `Identity ${identity.slice(0, 10)}...${identity.slice(-6)}` : 'No Registry identity', formatCoordinate(receiver.latitude, receiver.longitude), receiver.status || 'Status unknown']))).addTo(map);
       markersRef.current.push(marker);
     });

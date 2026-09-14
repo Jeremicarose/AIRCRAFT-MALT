@@ -19,7 +19,7 @@ import { SearchField } from '@/components/ui/search-field';
 import { Skeleton } from '@/components/ui/skeleton';
 import { StatusChip } from '@/components/ui/status-chip';
 import { WalletControl } from '@/components/wallet-control';
-import { fetchJson, PUBLIC_POSITIONS_PATH } from '@/lib/api';
+import { apiQueryKeys, fetchJson, presentApiError, PUBLIC_POSITIONS_PATH } from '@/lib/api';
 import { formatDateTime, number, titleCase, truncateMiddle, u64 } from '@/lib/format';
 import { useOperatorStore } from '@/lib/operator-store';
 import { createRegistrySdk, discoveredReceiverToUi, downloadJson, explorerTransactionUrl, registryDirectoryExport, receiverExport, withRegistryTimeout } from '@/lib/registry';
@@ -107,7 +107,7 @@ export function ReceiversPage({
   const setInvestigationContext = useOperatorStore((state) => state.setInvestigationContext);
   const [selectedId, setSelectedId] = useState<string | null>(selectedReceiverId ?? null);
   const [search, setSearch] = useState('');
-  const [view, setView] = useState<DirectoryView>(perspective === 'registry' ? 'active' : 'all');
+  const [view, setView] = useState<DirectoryView>(perspective === 'registry' && !selectedReceiverId ? 'active' : 'all');
   const [walletLocks, setWalletLocks] = useState<ccc.Script[]>([]);
   const basePath = perspective === 'registry' ? '/app/registry' : '/app/receivers';
   const sourceAircraftCandidate = returnAircraftId ?? searchParams.get('fromAircraft');
@@ -128,19 +128,29 @@ export function ReceiversPage({
   const discovered = directoryQuery.data?.receivers ?? [];
   const registryReceivers = useMemo(() => discovered.map(discoveredReceiverToUi), [discovered]);
   const positionsQuery = useQuery({
-    queryKey: ['positions', 'receiver-directory'],
+    queryKey: apiQueryKeys.positions,
     queryFn: () => fetchJson<PositionsResponse>(PUBLIC_POSITIONS_PATH),
     initialData: positionsData,
     enabled: perspective !== 'registry',
     refetchInterval: 15_000,
   });
+  const runtimeReceiversQuery = useQuery({
+    queryKey: apiQueryKeys.receivers,
+    queryFn: () => fetchJson<ReceiversResponse>('/api/receivers'),
+    initialData: receiverData ?? undefined,
+    enabled: perspective !== 'registry',
+    refetchInterval: 15_000,
+  });
+  const runtimeInventoryAvailable = Boolean(runtimeReceiversQuery.data) && !runtimeReceiversQuery.error;
+  const registryDirectoryAvailable = directoryQuery.isSuccess && !directoryQuery.error;
   const unifiedReceivers = useMemo(() => reconcileReceivers({
     registryReceivers,
-    runtimeReceivers: receiverData?.receivers ?? [],
+    runtimeReceivers: runtimeReceiversQuery.data?.receivers ?? [],
     positions: positionsQuery.data?.positions ?? [],
     conflictIdentities: directoryQuery.data?.quarantinedIdentities ?? [],
-    runtimeInventoryAvailable: receiverData !== null,
-  }), [directoryQuery.data?.quarantinedIdentities, positionsQuery.data?.positions, receiverData, registryReceivers]);
+    runtimeInventoryAvailable,
+    registryDirectoryAvailable,
+  }), [directoryQuery.data?.quarantinedIdentities, positionsQuery.data?.positions, registryDirectoryAvailable, registryReceivers, runtimeInventoryAvailable, runtimeReceiversQuery.data?.receivers]);
   const directoryReceivers = useMemo(
     () => perspective === 'registry'
       ? unifiedReceivers.filter((receiver) => receiver.identity !== null)
@@ -161,6 +171,12 @@ export function ReceiversPage({
   }, [signerInfo]);
 
   useEffect(() => {
+    if (!selectedReceiverId || selectedReceiverId === selectedId) return;
+    setSelectedId(selectedReceiverId);
+    if (perspective === 'registry') setView('all');
+  }, [perspective, selectedId, selectedReceiverId]);
+
+  useEffect(() => {
     if (!directoryReceivers.length || selectedId) return;
     const candidate = selectedReceiverId
       ?? (storeHydrated ? storedSelectedId : null)
@@ -172,8 +188,10 @@ export function ReceiversPage({
   const selectReceiver = useCallback((receiverIdentity: string) => {
     setSelectedId(receiverIdentity);
     setStoreSelectedReceiverId(receiverIdentity);
-    router.replace(`${basePath}?receiver=${encodeURIComponent(receiverIdentity)}`, { scroll: false });
-  }, [basePath, router, setStoreSelectedReceiverId]);
+    const query = new URLSearchParams({ receiver: receiverIdentity });
+    if (sourceAircraftId) query.set('fromAircraft', sourceAircraftId);
+    router.replace(`${basePath}?${query.toString()}`, { scroll: false });
+  }, [basePath, router, setStoreSelectedReceiverId, sourceAircraftId]);
 
   const ownedIdentities = useMemo(() => new Set(discovered.filter((receiver) => ownsReceiver(receiver, walletLocks)).map((receiver) => receiver.receiver_identity)), [discovered, walletLocks]);
   const filtered = useMemo(() => {
@@ -185,7 +203,7 @@ export function ReceiversPage({
       return `${receiver.label} ${receiver.identity ?? ''} ${receiver.capabilities.join(' ')}`.toLowerCase().includes(query);
     });
   }, [directoryReceivers, ownedIdentities, search, view]);
-  const selectedUi = directoryReceivers.find((receiver) => receiver.key === selectedId) ?? filtered[0] ?? null;
+  const selectedUi = filtered.find((receiver) => receiver.key === selectedId) ?? filtered[0] ?? null;
   const selected = discovered.find((receiver) => receiver.receiver_identity === selectedUi?.identity);
   const selectedOwned = Boolean(selected && ownsReceiver(selected, walletLocks));
 
@@ -258,6 +276,7 @@ export function ReceiversPage({
     await queryClient.invalidateQueries({ queryKey: ['registry-v2-directory'] });
     await directoryQuery.refetch();
     await queryClient.invalidateQueries({ queryKey: ['registry-v2-history', receiverIdentity] });
+    setView('all');
     selectReceiver(receiverIdentity);
   };
 
@@ -272,6 +291,12 @@ export function ReceiversPage({
   const summary = summarizeReceiverDirectory(unifiedReceivers);
   const registryDirectoryEmpty = directoryQuery.isSuccess && discovered.length === 0;
   const registryConnected = directoryQuery.isSuccess && !registryDirectoryEmpty;
+  const runtimeError = runtimeReceiversQuery.error
+    ? presentApiError(runtimeReceiversQuery.error, 'The MLAT receiver inventory could not be refreshed. Last-known receivers are retained but their operational state is marked unavailable.')
+    : null;
+  const positionsError = positionsQuery.error
+    ? presentApiError(positionsQuery.error, 'Recent aircraft links could not be refreshed. Receiver identity and Registry lifecycle data remain available.')
+    : null;
   const selectedInspector = selectedUi ? {
     ...selectedUi,
     ownerLockArgs: selected ? ownerAddress(selected, client) : selectedUi.ownerLockArgs,
@@ -313,7 +338,7 @@ export function ReceiversPage({
         ] : [
           { label: 'Registry identities', value: directoryQuery.isLoading && !summary.registryIdentities ? 'Loading' : number(summary.registryIdentities), tone: summary.registryIdentities ? 'trust' : 'attention' },
           { label: 'Active', value: number(summary.active), tone: summary.active ? 'trust' : 'neutral' },
-          { label: 'Unavailable', value: receiverData ? number(summary.unavailable) : 'Unknown', tone: !receiverData || summary.unavailable ? 'attention' : 'healthy' },
+          { label: 'Unavailable', value: runtimeInventoryAvailable ? number(summary.unavailable) : 'Unknown', tone: !runtimeInventoryAvailable || summary.unavailable ? 'attention' : 'healthy' },
           { label: 'MLAT eligible', value: number(summary.mlatEligible), tone: summary.mlatEligible ? 'healthy' : 'attention' },
           { label: 'Contributing', value: number(summary.contributing), tone: summary.contributing ? 'healthy' : 'neutral' },
         ]} />}
@@ -324,8 +349,10 @@ export function ReceiversPage({
       </WorkspacePanel> : null}
 
       {directoryQuery.error ? <DataNotice title={perspective === 'registry' ? 'The Registry directory could not be refreshed' : 'Registry refresh failed; Registry receivers are unavailable'} detail={perspective === 'registry' ? 'The CKB testnet indexer did not return a fresh directory. No replay or MLAT receiver is substituted for an on-chain identity.' : 'The CKB testnet indexer did not return a complete directory. Registry-backed receivers are removed from the active MLAT pool until discovery succeeds again. Earlier aircraft evidence remains visible.'} onRetry={() => void directoryQuery.refetch()} /> : null}
-      {registryDirectoryEmpty ? <DataNotice title="No Registry V2 cells were returned" detail="The indexer answered successfully but returned no Registry records. This may be an empty registry or indexer lag; do not treat it as proof that a receiver does not exist." onRetry={() => void directoryQuery.refetch()} /> : null}
-      {discoveryFailures.length ? <DataNotice title={`${discoveryFailures.length} registry ${discoveryFailures.length === 1 ? 'cell was' : 'cells were'} quarantined`} detail="The SDK rejected malformed, duplicate, or incomplete data instead of presenting it as a valid receiver." /> : null}
+      {runtimeError && perspective !== 'registry' ? <DataNotice title="Receiver operational state could not be refreshed" detail={runtimeError.detail} technicalDetail={runtimeError.technicalDetail} onRetry={() => void runtimeReceiversQuery.refetch()} /> : null}
+      {positionsError && perspective !== 'registry' ? <DataNotice title="Recent aircraft links could not be refreshed" detail={positionsError.detail} technicalDetail={positionsError.technicalDetail} tone="attention" onRetry={() => void positionsQuery.refetch()} /> : null}
+      {registryDirectoryEmpty ? <DataNotice title="No Registry V2 cells were returned" detail="The indexer answered successfully but returned no Registry records. This may be an empty registry or indexer lag; do not treat it as proof that a receiver does not exist." tone="attention" onRetry={() => void directoryQuery.refetch()} /> : null}
+      {discoveryFailures.length ? <DataNotice title={`${discoveryFailures.length} registry ${discoveryFailures.length === 1 ? 'cell was' : 'cells were'} quarantined`} detail="The SDK rejected malformed, duplicate, or incomplete data instead of presenting it as a valid receiver." tone="attention" /> : null}
 
       <WorkspaceSplit
         secondaryWidth="390px"
@@ -340,7 +367,7 @@ export function ReceiversPage({
               ] as const).map(([value, label]) => <button key={value} type="button" aria-pressed={view === value} onClick={() => setView(value)} className={cn('h-8 whitespace-nowrap rounded px-2.5 text-xs font-medium text-ink-quiet outline-none hover:text-ink focus-visible:ring-2 focus-visible:ring-signal-blue', view === value && 'bg-graphite-hover text-ink')}>{label}</button>)}</div>
               <SearchField value={search} onValueChange={setSearch} placeholder="Search label, Type ID, or capability" label="Search receiver directory" rootClassName="w-full sm:w-[310px]" />
             </div>
-            {directoryQuery.isLoading && !directoryReceivers.length ? <DirectoryLoading /> : view === 'mine' && !signerInfo ? (
+            {directoryQuery.isLoading && !directoryQuery.data ? <DirectoryLoading /> : view === 'mine' && !signerInfo ? (
               <div className="flex min-h-44 flex-col items-center justify-center px-6 text-center"><UserRound className="mb-3 size-5 text-ink-quiet" /><p className="text-sm font-semibold text-ink">Connect a testnet wallet to find your receivers</p><p className="mt-1 max-w-md text-xs leading-5 text-ink-quiet">Ownership is matched against the complete CKB lock script from your wallet. No address is sent to the MLAT backend.</p><Button className="mt-4" size="sm" variant="primary" onClick={open}>Connect testnet wallet</Button></div>
             ) : (
               <DataGrid data={filtered} columns={columns} getRowId={(row) => row.key} onRowClick={(row) => selectReceiver(row.key)} isRowSelected={(row) => row.key === selectedUi?.key} keyboardColumnLabel={(row) => row.label} emptyLabel={search ? 'No receivers match this search and view.' : view === 'mine' ? 'This wallet does not own a current Registry V2 receiver.' : 'No receiver identities or MLAT receivers are available.'} ariaLabel="Receiver identity and MLAT status directory" height={Math.min(460, Math.max(184, filtered.length * 48))} />

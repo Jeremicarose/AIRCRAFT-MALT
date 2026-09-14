@@ -48,6 +48,7 @@ interface ReconcileReceiverOptions {
   nowSeconds?: number;
   staleAfterSeconds?: number;
   runtimeInventoryAvailable?: boolean;
+  registryDirectoryAvailable?: boolean;
 }
 
 function normalizedIdentity(value?: string | null): string | null {
@@ -112,6 +113,7 @@ function operationalState({
   contributing,
   observationFreshness,
   runtimeInventoryAvailable,
+  registryDirectoryAvailable,
 }: {
   registryStatus: RegistryIdentityStatus;
   recordStatus: string | null;
@@ -120,12 +122,16 @@ function operationalState({
   contributing: boolean;
   observationFreshness: ReceiverObservationFreshness | null;
   runtimeInventoryAvailable: boolean;
+  registryDirectoryAvailable: boolean;
 }): Pick<UnifiedReceiver, 'mlatStatus' | 'mlatReason'> {
   if (registryStatus === 'conflict') {
     return { mlatStatus: 'excluded', mlatReason: 'Duplicate live cells claim this canonical identity. MLAT must fail closed.' };
   }
   if (registryStatus === 'revoked') {
     return { mlatStatus: 'excluded', mlatReason: 'The Registry identity is revoked and cannot participate in MLAT.' };
+  }
+  if (registryStatus === 'active' && !registryDirectoryAvailable) {
+    return { mlatStatus: 'excluded', mlatReason: 'Registry discovery could not be verified, so this identity is excluded until discovery recovers.' };
   }
   if (recordStatus === 'offline') {
     return { mlatStatus: 'offline', mlatReason: 'The Registry record is published as offline.' };
@@ -170,6 +176,7 @@ export function reconcileReceivers({
   nowSeconds = Date.now() / 1000,
   staleAfterSeconds = RECEIVER_STALE_AFTER_SECONDS,
   runtimeInventoryAvailable = true,
+  registryDirectoryAvailable = true,
 }: ReconcileReceiverOptions): UnifiedReceiver[] {
   const registryByIdentity = groupByKey(registryReceivers, true);
   const runtimeByKey = groupByKey(runtimeReceivers, false);
@@ -195,7 +202,8 @@ export function reconcileReceivers({
           ? 'revoked'
           : 'active';
     const capabilities = [...new Set([...(registry?.capabilities ?? []), ...(runtime?.capabilities ?? [])])];
-    const mlatEligible = registryStatus === 'active'
+    const mlatEligible = registryDirectoryAvailable
+      && registryStatus === 'active'
       && registryRecordStatus === 'online'
       && capabilities.includes('mlat');
     const lastObservationAt = Number.isFinite(Number(runtime?.last_seen))
@@ -218,6 +226,7 @@ export function reconcileReceivers({
       contributing: isContributing,
       observationFreshness,
       runtimeInventoryAvailable,
+      registryDirectoryAvailable,
     });
 
     return {

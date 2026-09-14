@@ -58,7 +58,7 @@ export function CommandPalette({ snapshot }: { snapshot: ShellSnapshot }) {
         <Dialog.Content className="fixed left-1/2 top-[12vh] z-modal w-[min(680px,calc(100vw-32px))] -translate-x-1/2 overflow-hidden rounded-lg border border-[#343c48] bg-[#11151a] shadow-overlay focus:outline-none motion-safe:animate-in motion-safe:fade-in motion-safe:zoom-in-[0.98]">
           <Dialog.Title className="sr-only">Search the console</Dialog.Title>
           <Dialog.Description className="sr-only">Open a page, aircraft, receiver, or shell action.</Dialog.Description>
-          <Command loop className="[&_[cmdk-group-heading]]:px-3 [&_[cmdk-group-heading]]:pb-1 [&_[cmdk-group-heading]]:pt-3 [&_[cmdk-group-heading]]:text-[11px] [&_[cmdk-group-heading]]:font-semibold [&_[cmdk-group-heading]]:uppercase [&_[cmdk-group-heading]]:tracking-[0.16em] [&_[cmdk-group-heading]]:text-ink-quiet">
+          <Command loop className="[&_[cmdk-group-heading]]:px-3 [&_[cmdk-group-heading]]:pb-1 [&_[cmdk-group-heading]]:pt-3 [&_[cmdk-group-heading]]:text-[11px] [&_[cmdk-group-heading]]:font-semibold [&_[cmdk-group-heading]]:text-ink-quiet">
             <div className="flex h-12 items-center gap-3 border-b border-line px-4">
               <Search aria-hidden="true" className="size-4 text-ink-quiet" />
               <Command.Input autoFocus placeholder="Search routes, entities, or console actions" className="h-full min-w-0 flex-1 bg-transparent text-sm text-ink outline-none placeholder:text-ink-quiet" />
@@ -189,7 +189,6 @@ export function CommandPalette({ snapshot }: { snapshot: ShellSnapshot }) {
                 </Command.Group>
               ) : null}
             </Command.List>
-            <div className="flex h-9 items-center gap-4 border-t border-line px-4 text-[11px] text-ink-quiet"><span>Enter to run</span><span>↑↓ to navigate</span><span>Esc to close</span></div>
           </Command>
         </Dialog.Content>
       </Dialog.Portal>

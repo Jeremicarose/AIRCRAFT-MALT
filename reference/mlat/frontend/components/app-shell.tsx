@@ -1,6 +1,7 @@
 'use client';
 
 import * as Dialog from '@radix-ui/react-dialog';
+import { useQuery } from '@tanstack/react-query';
 import { Activity, ChevronLeft, ChevronRight, Database, Gauge, Map, Menu, PanelLeftClose, PanelRightClose, PanelRightOpen, Plane, RadioTower, Search, Settings, SlidersHorizontal, Workflow, X } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -15,10 +16,11 @@ import { CommandPalette } from '@/components/ui/command-palette';
 import { NotificationCenter } from '@/components/ui/notification-center';
 import { StatusChip } from '@/components/ui/status-chip';
 import { Tooltip } from '@/components/ui/tooltip';
+import { apiQueryKeys, fetchJson } from '@/lib/api';
 import { toneFromFreshness, truncateMiddle } from '@/lib/format';
 import { useOperatorStore } from '@/lib/operator-store';
 import { consoleRoutes, type ConsoleRoute } from '@/lib/routes';
-import type { InvestigationDockState, ShellSnapshot, StatusTone } from '@/lib/types';
+import type { HealthData, InvestigationDockState, ModeData, ReceiversResponse, ShellSnapshot, StatusTone } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
 const routeIcons: Record<string, LucideIcon> = {
@@ -35,13 +37,14 @@ const routeIcons: Record<string, LucideIcon> = {
 
 const groups: ConsoleRoute['group'][] = ['Registry', 'MLAT reference', 'System'];
 
-function getSystemSummary(snapshot: ShellSnapshot): { label: string; tone: StatusTone; environment: string } {
+function getSystemSummary(snapshot: ShellSnapshot, healthAvailable = true): { label: string; tone: StatusTone; environment: string } {
   const mode = snapshot.modeData;
   if (!mode) return { label: 'Unavailable', tone: 'failure', environment: 'Unknown' };
   const isReplay = Boolean(mode.demo_mode || mode.simulation_mode || mode.synthetic_feed_mode);
   const isActive = mode.runtime_status === 'active';
   if (isReplay) return { label: 'Replay', tone: 'replay', environment: 'Replay' };
-  if (isActive) return { label: 'Healthy', tone: 'healthy', environment: mode.strict_production_mode ? 'Production' : 'Live' };
+  if (isActive && healthAvailable && snapshot.healthData?.status === 'ok') return { label: 'Healthy', tone: 'healthy', environment: mode.strict_production_mode ? 'Production' : 'Live' };
+  if (isActive) return { label: 'Degraded', tone: 'attention', environment: mode.strict_production_mode ? 'Production' : 'Live' };
   if (mode.runtime_status === 'stale') return { label: 'Degraded', tone: 'attention', environment: 'Live' };
   return { label: 'Offline', tone: 'failure', environment: mode.strict_production_mode ? 'Production' : 'Configured' };
 }
@@ -144,13 +147,27 @@ export function AppShell({ pageKey, title, description, snapshot, children }: { 
   const storeHydrated = useOperatorStore((state) => state.hasHydrated);
   const reduceMotion = useReducedMotion();
   const [wideDock, setWideDock] = useState(false);
+  const modeQuery = useQuery({ queryKey: apiQueryKeys.mode, queryFn: () => fetchJson<ModeData>('/api/system/mode'), initialData: snapshot.modeData ?? undefined, refetchInterval: 20_000 });
+  const healthQuery = useQuery({ queryKey: apiQueryKeys.health, queryFn: () => fetchJson<HealthData>('/api/health'), initialData: snapshot.healthData ?? undefined, refetchInterval: 10_000 });
+  const receiversQuery = useQuery({ queryKey: apiQueryKeys.receivers, queryFn: () => fetchJson<ReceiversResponse>('/api/receivers'), initialData: snapshot.receiverData ?? undefined, refetchInterval: 15_000 });
+  const aircraftQuery = useQuery({ queryKey: apiQueryKeys.aircraft, queryFn: () => fetchJson<{ aircraft?: string[]; count?: number }>('/api/aircraft?seconds=300'), initialData: snapshot.aircraftData ?? undefined, refetchInterval: 30_000 });
+  const liveSnapshot: ShellSnapshot = {
+    modeData: modeQuery.data ?? null,
+    healthData: healthQuery.data ?? null,
+    receiverData: receiversQuery.data ?? null,
+    aircraftData: aircraftQuery.data ?? null,
+  };
+  const healthAvailable = !modeQuery.error && !healthQuery.error;
   const summary = pageKey === 'registry'
     ? { label: 'Registry V2', tone: 'trust' as const, environment: 'Pudge' }
-    : getSystemSummary(snapshot);
-  const signalAge = snapshot.healthData?.freshness?.last_signal_age_s;
+    : getSystemSummary(liveSnapshot, healthAvailable);
+  const signalAge = liveSnapshot.healthData?.freshness?.last_signal_age_s;
   const signalTone = toneFromFreshness(signalAge, 15, 60);
   const pinnedRoute = consoleRoutes.find((route) => route.key === pageKey);
-  const breadcrumbRoutes = [{ label: 'Receiver Registry', href: '/app/registry' }, ...(pinnedRoute ? [{ label: pinnedRoute.group, href: pinnedRoute.href }, { label: pinnedRoute.label, href: pinnedRoute.href }] : [{ label: title, href: '#' }])];
+  const breadcrumbRoutes = [
+    { label: 'Receiver Registry', href: '/app/registry' },
+    ...(pinnedRoute && pinnedRoute.key !== 'registry' ? [{ label: pinnedRoute.label, href: pinnedRoute.href }] : []),
+  ];
 
   useEffect(() => {
     const media = window.matchMedia('(min-width: 1536px)');
@@ -214,7 +231,7 @@ export function AppShell({ pageKey, title, description, snapshot, children }: { 
         <Navigation collapsed={collapsed} />
         <div className="border-t border-line p-2">
           <div className={cn('flex items-center gap-2 rounded-md px-2 py-2', collapsed && 'justify-center px-0')}>
-            <span className={cn('size-2 shrink-0 rounded-full', summary.tone === 'healthy' ? 'bg-healthy' : summary.tone === 'trust' ? 'bg-trust-cyan' : summary.tone === 'replay' ? 'bg-replay' : summary.tone === 'attention' ? 'bg-attention' : 'bg-failure')} />
+              <span aria-hidden="true" className={cn('size-2 shrink-0 rounded-full', summary.tone === 'healthy' ? 'bg-healthy' : summary.tone === 'trust' ? 'bg-trust-cyan' : summary.tone === 'replay' ? 'bg-replay' : summary.tone === 'attention' ? 'bg-attention' : 'bg-failure')} />
             {!collapsed ? <div className="min-w-0 flex-1"><p className="truncate text-xs font-semibold text-ink-secondary">CKB testnet</p><p className="truncate text-[10px] text-ink-quiet">{summary.environment} · {summary.label}</p></div> : null}
             {collapsed ? <Tooltip label="Expand sidebar"><Button variant="ghost" size="icon-sm" aria-label="Expand sidebar" onClick={() => setCollapsed(false)}><ChevronRight className="size-4" /></Button></Tooltip> : null}
           </div>
@@ -249,15 +266,15 @@ export function AppShell({ pageKey, title, description, snapshot, children }: { 
               </div>
             </div>
             <div className="flex shrink-0 items-center gap-1 sm:gap-2">
-              <button onClick={() => setCommandOpen(true)} className="hidden h-9 min-w-[180px] items-center gap-2 rounded-md border border-line bg-graphite px-2.5 text-xs text-ink-quiet transition-colors duration-standard hover:border-[#3a4350] hover:text-ink-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal-blue xl:flex"><Search className="size-3.5" /><span className="flex-1 text-left">Search console</span><kbd className="rounded border border-line bg-graphite-raised px-1.5 py-0.5 font-sans text-[10px]">Ctrl K</kbd></button>
+              <button onClick={() => setCommandOpen(true)} className="hidden h-9 min-w-[180px] items-center gap-2 rounded-md border border-line bg-graphite px-2.5 text-xs text-ink-quiet transition-colors duration-standard hover:border-[#3a4350] hover:text-ink-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal-blue xl:flex"><Search className="size-3.5" /><span className="flex-1 text-left">Search console</span></button>
               <div className="hidden md:block"><WalletControl /></div>
               <Tooltip label={rightDockOpen ? 'Hide investigation inspector' : 'Show investigation inspector'} side="bottom"><Button variant="ghost" size="icon-sm" aria-label={rightDockOpen ? 'Hide investigation inspector' : 'Show investigation inspector'} onClick={() => setRightDockOpen(!rightDockOpen)}>{rightDockOpen ? <PanelRightClose className="size-4" /> : <PanelRightOpen className="size-4" />}</Button></Tooltip>
-              <NotificationCenter snapshot={snapshot} />
+              <NotificationCenter snapshot={liveSnapshot} />
               <Tooltip label="Search console" side="bottom"><Button variant="ghost" size="icon-sm" className="xl:hidden" aria-label="Search console" onClick={() => setCommandOpen(true)}><Search className="size-4" /></Button></Tooltip>
               <span className="sr-only">Signal freshness: {signalTone}</span>
             </div>
           </div>
-          <ContextBar snapshot={snapshot} selectedAircraftId={selectedAircraftId} selectedReceiverId={selectedReceiverId} pageKey={pageKey} />
+          <ContextBar snapshot={liveSnapshot} selectedAircraftId={selectedAircraftId} selectedReceiverId={selectedReceiverId} pageKey={pageKey} />
         </header>
         <main id="main-content" className="min-w-0 p-3 sm:p-6">{pageKey === 'registry' ? <FirstRunNotice /> : null}{children}</main>
       </div>
@@ -273,7 +290,7 @@ export function AppShell({ pageKey, title, description, snapshot, children }: { 
       </Dialog.Root>
 
       {rightDockOpen && wideDock ? <aside className="fixed inset-y-0 right-0 z-sticky hidden w-[360px] flex-col border-l border-line bg-[#0c1015] 2xl:flex"><div className="flex h-16 items-center justify-between border-b border-line px-4"><p className="text-sm font-semibold text-ink">Investigation inspector</p><Tooltip label="Hide investigation inspector" side="left"><Button variant="ghost" size="icon-sm" aria-label="Hide investigation inspector" onClick={() => setRightDockOpen(false)}><PanelRightClose className="size-4" /></Button></Tooltip></div><InvestigationDock dock={dock} pageKey={pageKey} /></aside> : null}
-      <CommandPalette snapshot={snapshot} />
+      <CommandPalette snapshot={liveSnapshot} />
     </div>
   );
 }

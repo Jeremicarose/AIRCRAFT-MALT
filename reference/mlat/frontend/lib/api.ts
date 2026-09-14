@@ -1,7 +1,17 @@
 import type { HealthData, ModeData, ReceiversResponse, ShellSnapshot } from '@/lib/types';
 
 const FALLBACK_API_BASE = 'http://127.0.0.1:5057';
+export const API_REQUEST_TIMEOUT_MS = 12_000;
 export const PUBLIC_POSITIONS_PATH = '/api/positions/recent?seconds=300&limit=100';
+
+export const apiQueryKeys = {
+  aircraft: ['aircraft'] as const,
+  health: ['health'] as const,
+  mode: ['mode'] as const,
+  pipeline: ['pipeline'] as const,
+  positions: ['positions'] as const,
+  receivers: ['receivers'] as const,
+};
 
 function normalizeApiBase(value: string): string {
   const trimmed = value.trim().replace(/\/$/, '');
@@ -19,6 +29,27 @@ export class ApiRequestError extends Error {
   }
 }
 
+export function presentApiError(error: unknown, fallbackDetail: string): { detail: string; technicalDetail?: string } {
+  if (!(error instanceof ApiRequestError)) {
+    return {
+      detail: fallbackDetail,
+      technicalDetail: error instanceof Error ? error.message : undefined,
+    };
+  }
+
+  let detail = fallbackDetail;
+  if (error.status === 0) detail = 'The service could not be reached. Check the connection, then try again.';
+  else if (error.status === 404) detail = 'The requested data is not available from this deployment. You can continue using the other workspaces.';
+  else if (error.status === 429) detail = 'The service is receiving too many requests. Wait a moment, then try again.';
+  else if (error.status === 504) detail = 'The service did not respond in time. Existing data may be stale; try again when the connection recovers.';
+  else if (error.status >= 500) detail = 'The service is temporarily unavailable. Existing data may be stale; try again in a moment.';
+
+  return {
+    detail,
+    technicalDetail: `${error.message} (HTTP ${error.status || 'network'}, ${error.path})`,
+  };
+}
+
 export function getApiBase(): string {
   if (typeof window === 'undefined') {
     const internal = process.env.MLAT_API_INTERNAL_URL?.trim();
@@ -34,7 +65,19 @@ export function apiUrl(path: string): string {
 }
 
 export async function fetchJson<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(apiUrl(path), { ...init, cache: 'no-store' });
+  const timeoutSignal = AbortSignal.timeout(API_REQUEST_TIMEOUT_MS);
+  const signal = init?.signal ? AbortSignal.any([init.signal, timeoutSignal]) : timeoutSignal;
+  let response: Response;
+  try {
+    response = await fetch(apiUrl(path), { ...init, cache: 'no-store', signal });
+  } catch (error) {
+    const timedOut = timeoutSignal.aborted && !init?.signal?.aborted;
+    throw new ApiRequestError(
+      timedOut ? `The service did not respond within ${API_REQUEST_TIMEOUT_MS / 1000} seconds.` : 'The service request could not be completed.',
+      timedOut ? 504 : 0,
+      path,
+    );
+  }
   if (!response.ok) {
     let message = `The service returned HTTP ${response.status}.`;
     try {

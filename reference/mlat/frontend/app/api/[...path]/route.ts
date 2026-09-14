@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { apiUrl } from '@/lib/api';
+import { API_REQUEST_TIMEOUT_MS, apiUrl } from '@/lib/api';
 
 const publicReadPrefixes = [
   'aircraft',
@@ -33,7 +33,7 @@ export async function GET(request: NextRequest, context: { params: Promise<{ pat
     const upstream = await fetch(`${apiUrl(`/api/${path}`)}${request.nextUrl.search}`, {
       cache: 'no-store',
       headers: { Accept: request.headers.get('accept') ?? 'application/json' },
-      signal: request.signal,
+      signal: AbortSignal.any([request.signal, AbortSignal.timeout(API_REQUEST_TIMEOUT_MS)]),
     });
     const body = await upstream.arrayBuffer();
     return new NextResponse(body, {
