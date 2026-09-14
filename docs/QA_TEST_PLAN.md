@@ -46,7 +46,7 @@ machine-readable release report are written under ignored `test-results/` and
 | Cross-language SDK | Protocol vectors and transaction preparation agree | PASS | 70 TypeScript SDK tests and 171 shared runtime assertions passed |
 | Frontend unit and harness behavior | Invalid, future, and stale observations fail closed; exact `u64` values are not rounded; production and browser harnesses are isolated | PASS | 13 precision, freshness, receiver-reference, standalone-runtime, reporter, and Playwright-config tests passed |
 | Browser evidence report | Failed tests and axe findings make the machine-readable report fail closed | PASS | 1 reporter contract test passed |
-| Automated production browser suite | Registry-first navigation, MLAT reference context, assets, accessibility, mobile width, and headers work together | PASS | Clean Node 22 run passed all 9 Playwright tests on commit `064b5d3`; the report was invalidated when the shared worktree changed during finalization |
+| Automated production browser suite | Registry-first navigation, MLAT reference context, assets, accessibility, mobile width, and headers work together | PASS | The source-bound review bundle records all 9 Playwright tests passing from a clean Node 22 worktree at commit `4fc8fce`, with zero serious or critical accessibility findings |
 | Python application | Registry, API, MLAT, database, and evidence tests pass | PASS | 195 tests passed on 2026-09-14 |
 | Production build | Optimized Node 22 build completes | PASS | Clean Node 22 build generated all 16 routes |
 | Production console | No critical browser errors or development overlay | PASS | Clean browser suite completed without page errors or failed asset requests |

@@ -9,6 +9,24 @@ capture authoritative.
 Evidence does not replace an independent security audit or prove physical-world
 metadata.
 
+## Current Source-Bound Review Bundle
+
+Path: `evidence/registry-v2-review-2026-09-14-final`
+
+This bundle is bound to source commit `4fc8fce48a86cd0dbfab70c4910580eac2c61730`
+and Git tree `3facd3f14a2d1224432c5b99c0fce5abeabd082f`. It records 16 passing
+repository checks, the exact deployed contract binary hashes, 57 shared
+conformance cases, and a clean Node 22 browser report with 9 passing tests and
+0 serious or critical accessibility findings. Verify it with:
+
+```bash
+python3 tools/registry/verify_registry_v2_review_evidence.py \
+  --bundle evidence/registry-v2-review-2026-09-14-final
+```
+
+The bundle does not claim a browser-wallet lifecycle or independent security
+review. Those remain external dependencies.
+
 ## Current Registry V2 Testnet Package
 
 Path: `evidence/registry-v2-testnet-2026-09-11-data1-final`

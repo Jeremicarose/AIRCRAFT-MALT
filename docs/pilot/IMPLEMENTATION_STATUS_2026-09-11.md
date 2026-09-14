@@ -37,7 +37,7 @@ physical receiver hardware exists.
 | Frontend typecheck | passed |
 | Frontend production build | Node 22 production build passed and generated all 16 routes |
 | Frontend unit and evidence-contract tests | 13 passed under Node 22 |
-| Registry, MLAT reference, investigation, accessibility, mobile, asset, and header browser checks | 9 checks passed in a clean Node 22 run; the report was invalidated by a later shared-worktree change |
+| Registry, MLAT reference, investigation, accessibility, mobile, asset, and header browser checks | The source-bound review bundle records all 9 checks passing from a clean Node 22 worktree at commit `4fc8fce`, with zero serious or critical accessibility findings |
 | Documentation and environment checks | passed |
 
 The fresh `data1` bundle records a funded deployment and complete signed

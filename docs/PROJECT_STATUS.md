@@ -21,7 +21,7 @@ validated by external users.
 | Browser/SDK-driven lifecycle | BLOCKED | The SDK and browser journey use the fresh immutable deployment and mutable deployments still fail closed | Connect a funded CCC testnet wallet and approve a new create-update-transfer-revoke rehearsal; no SDK-driven transaction is claimed yet |
 | MLAT reference software | PARTIAL | Full 195-test repository Python suite passes; strict live gates and evidence verifier exist | Physical synchronized receiver run and independent reference data are absent |
 | Operator frontend | PARTIAL | The shell starts on the Receiver Registry, places MLAT under a secondary reference group, preserves aircraft-receiver return context, and uses the SDK for Registry discovery, export, history, and signer-based lifecycle actions; 13 unit tests, type checking, the Node 22 production build, and 9 browser checks pass | Preserve the browser report from a clean final commit in CI and complete a funded wallet-signed browser run |
-| Review evidence bundle | PARTIAL | Source-bound generation and verification are implemented; earlier bundles were invalidated by later source fixes | Regenerate and verify the bundle after the final source commit |
+| Review evidence bundle | COMPLETE | `evidence/registry-v2-review-2026-09-14-final` binds commit `4fc8fce` and tree `3facd3f`, includes 16 passing checks, 57 conformance cases, exact binary hashes, and 9 clean browser checks | GitHub CI provenance and independent review remain external release gates |
 | Pilot materials | PARTIAL | Browser workflow, readiness gate, owner/coordinator tasks, feedback form, evidence template, proposal, and recruitment research exist | Consent materials, a maintainer wallet rehearsal, recruitment, and observed sessions remain |
 | Security/release baseline | PARTIAL | CodeQL, dependency review, SBOM, attestations, locked dependencies, MIT license, protected general release, and protected provenance-backed SDK release workflows exist | The npm organization and first package release need maintainer approval; workflows need a public green run; independent audit is absent; one low upstream npm advisory remains |
 | Product demand | MISSING | No customer, partner, participant, revenue, or adoption evidence is claimed | Recruit and run the precommitted product-validation pilot |
@@ -40,8 +40,9 @@ validated by external users.
   standalone-asset, and browser-evidence contract tests passed.
 - `npm run test:e2e` from the clean Node 22 source commit passed all 9 Registry,
   MLAT reference, investigation-flow, accessibility, responsive-layout, asset,
-  and security-header checks. The report was invalidated when the shared
-  worktree changed during finalization; CI must preserve a clean report.
+  and security-header checks. The source-bound report records commit `4fc8fce`,
+  tree `3facd3f`, a clean worktree, and zero serious or critical accessibility
+  findings.
 - `python3 tools/registry/generate_registry_v2_conformance_report.py`: 57
   shared cases, 171 runtime assertions, and zero failures.
 - `npm run typecheck` and `next build --webpack` in the frontend passed under
@@ -51,10 +52,9 @@ validated by external users.
   low-severity `elliptic` advisory remains documented in `SECURITY.md`.
 - `python3 -m pip check`: no broken Python requirements.
 - `python3 tools/registry/verify_registry_v2_review_evidence.py --bundle
-  evidence/registry-v2-review-2026-09-12-final`: 17 checks passed for its pinned
-  source commit/tree, candidate binary hashes, conformance report, and external
-  signer blocker. It predates the current frontend and immutable deployment
-  defaults, so a replacement bundle is still required for this tree.
+  evidence/registry-v2-review-2026-09-14-final`: 21 checksum/source/evidence checks
+  passed for commit `4fc8fce` and tree `3facd3f`, including the clean browser
+  report and exact deployed binary hashes.
 - The fresh `data1` lifecycle bundle verifies 50 checksummed files, a passing
   local CI rebuild, and 100 chain, binary, lifecycle, rejection, discovery, API,
   live RPC, and indexer checks. Full release verification now fails only on the

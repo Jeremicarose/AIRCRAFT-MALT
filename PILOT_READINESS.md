@@ -29,7 +29,7 @@ review are still missing; the stable release gate must repeat the live check.
 | TypeScript SDK | Prepared | 70 SDK tests pass and the current testnet factory uses the immutable deployment | Run a funded CCC wallet lifecycle through the browser |
 | MLAT replay | Prepared | Python integration suite passes | Keep replay labels visible |
 | MLAT live field use | Blocked | Harness exists; no synchronized physical run | Obtain four qualified receiver feeds |
-| UI | Partial | 13 unit/contract tests, the Node 22 production build, and nine browser checks pass locally; the report was invalidated when the shared worktree changed after the run | Preserve a passing browser report from the final canonical commit in CI, then complete a funded wallet-signed lifecycle |
+| UI | Partial | 13 unit/contract tests, the Node 22 production build, and nine browser checks are recorded in the source-bound review bundle | Complete a funded wallet-signed lifecycle and repeat the browser report in public CI |
 | Public deployment | Blocked | No verified complete hosted URL | Deploy frontend, API, and processor |
 | Recruitment | Prepared, not executed | 13 public leads; messages and tracker exist | Send authorized permission requests and invitations |
 | Pilot | Not started | 0 contacted, 0 confirmed, 0 completed | Clear P0 gates before inviting |
@@ -67,9 +67,9 @@ documented low-severity upstream advisory.
   passed and generated all 16 routes.
 - Browser: nine Playwright checks cover the Registry landing route, the
   secondary MLAT reference navigation, the aircraft-receiver return path,
-  production assets, mobile width, security headers, and WCAG scans. The clean
-  run passed locally, but its report was invalidated when the shared worktree
-  changed after the run, so CI must preserve a source-bound report.
+  production assets, mobile width, security headers, and WCAG scans. The
+  source-bound review bundle records all 9 as passing with 0 serious or critical
+  accessibility findings. Public CI should repeat the report for release.
 - Fresh immutable lifecycle: 50 bundled files, local CI, and 100 live-chain
   checks passed. The normal release verifier now fails closed only because the
   GitHub CI record is missing.
