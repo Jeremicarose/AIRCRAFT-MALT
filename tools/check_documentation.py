@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import os
 from pathlib import Path
 import re
 import sys
@@ -12,7 +13,14 @@ from urllib.parse import unquote
 ROOT = Path(__file__).resolve().parents[1]
 LINK_RE = re.compile(r"(?<!!)\[[^\]]+\]\(([^)]+)\)")
 SKIP_PREFIXES = ("http://", "https://", "mailto:", "#")
-SKIP_DIRECTORY_NAMES = {".git", ".next", "node_modules", "target"}
+SKIP_DIRECTORY_NAMES = {
+    ".git",
+    ".next",
+    "node_modules",
+    "playwright-report",
+    "target",
+    "test-results",
+}
 SKIP_TREES = {
     Path(".pytest_cache"),
     Path("ckb-cli"),
@@ -24,15 +32,24 @@ SKIP_TREES = {
 
 
 def markdown_files() -> list[Path]:
-    files = []
-    for path in ROOT.rglob("*.md"):
-        relative = path.relative_to(ROOT)
-        if any(part in SKIP_DIRECTORY_NAMES for part in relative.parts) or any(
-            relative == tree or tree in relative.parents for tree in SKIP_TREES
-        ):
-            continue
-        files.append(path)
+    files: list[Path] = []
+    for current_root, directory_names, file_names in os.walk(ROOT):
+        current = Path(current_root)
+        directory_names[:] = [
+            name
+            for name in directory_names
+            if not _skip_directory((current / name).relative_to(ROOT))
+        ]
+        files.extend(current / name for name in file_names if name.endswith(".md"))
     return sorted(files)
+
+
+def _skip_directory(relative: Path) -> bool:
+    return (
+        relative.name in SKIP_DIRECTORY_NAMES
+        or relative.name.startswith(".next-")
+        or any(relative == tree or tree in relative.parents for tree in SKIP_TREES)
+    )
 
 
 def local_link_failures(path: Path) -> list[str]:
