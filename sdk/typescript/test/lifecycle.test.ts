@@ -371,3 +371,58 @@ test("history reads and validates the real create, update, transfer, and revoke 
   assert.deepEqual(events.map((event) => event.record.sequence), [0n, 1n, 2n, 3n]);
   assert.equal(events.every((event) => event.receiver_identity === receiverIdentity), true);
 });
+
+test("history fails closed when a non-empty page omits its cursor", async () => {
+  const client = {
+    addressPrefix: "ckt",
+    async findTransactionsPaged() {
+      return {
+        transactions: [{
+          txHash: "0x" + "01".repeat(32),
+          blockNumber: 100n,
+          txIndex: 0n,
+          cells: [{ isInput: false, cellIndex: 0n }],
+        }],
+        lastCursor: undefined,
+      };
+    },
+  } as unknown as ccc.Client;
+
+  await assert.rejects(
+    new RegistryV2Sdk(client, {
+      contractCodeHash,
+      scriptHashType: "data1",
+      contractCellDep,
+    }).history.discover(receiverIdentity),
+    /Registry history received an invalid pagination cursor/,
+  );
+});
+
+test("history fails closed when a non-empty page repeats its cursor", async () => {
+  let calls = 0;
+  const client = {
+    addressPrefix: "ckt",
+    async findTransactionsPaged() {
+      calls += 1;
+      return {
+        transactions: [{
+          txHash: "0x" + calls.toString(16).padStart(64, "0"),
+          blockNumber: BigInt(100 + calls),
+          txIndex: 0n,
+          cells: [{ isInput: false, cellIndex: 0n }],
+        }],
+        lastCursor: "0x1",
+      };
+    },
+  } as unknown as ccc.Client;
+
+  await assert.rejects(
+    new RegistryV2Sdk(client, {
+      contractCodeHash,
+      scriptHashType: "data1",
+      contractCellDep,
+    }).history.discover(receiverIdentity),
+    /Registry history received an invalid pagination cursor/,
+  );
+  assert.equal(calls, 2);
+});

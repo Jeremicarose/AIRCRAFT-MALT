@@ -26,7 +26,7 @@ review are still missing; the stable release gate must repeat the live check.
 | Registry source | Prepared | 5 Rust host and 11 CKB-VM tests pass | Independent review |
 | Registry deployment | Partial | Fresh evidence binds the deployed binary with `data1`, records the signed lifecycle, and includes passing live RPC/indexer and local CI reports | Add GitHub CI provenance, repeat the live check at release, and obtain independent review of the exact binary hashes |
 | Python discovery | Prepared | Pagination, duplicate, schema, and binding tests pass; the fresh revoked identity is excluded by live verification | Keep monitoring the public indexer during pilot runs |
-| TypeScript SDK | Prepared | 70 SDK tests pass and the current testnet factory uses the immutable deployment | Run a funded CCC wallet lifecycle through the browser |
+| TypeScript SDK | Prepared | 72 SDK tests pass, discovery and history pagination fail closed, and the current testnet factory uses the immutable deployment | Run a funded CCC wallet lifecycle through the browser |
 | MLAT replay | Prepared | Python integration suite passes | Keep replay labels visible |
 | MLAT live field use | Blocked | Harness exists; no synchronized physical run | Obtain four qualified receiver feeds |
 | UI | Partial | 22 current unit/contract tests and the 17-route Node 22 production build pass; malformed Registry rows without explicit canonical identity are excluded; the older source-bound bundle records nine browser checks for commit `4fc8fce` | Run the current 12-test browser suite from a clean final commit in public CI and complete a funded wallet-signed lifecycle |
@@ -59,7 +59,7 @@ documented low-severity upstream advisory.
 
 - Python: 198 passed with `python -m pytest`.
 - Registry contract: 16 tests passed.
-- TypeScript SDK: 70 tests passed.
+- TypeScript SDK: 72 tests passed.
 - Cross-language conformance: 57 cases, 171 assertions, zero failures.
 - Historical offline evidence verifier: passed all checks.
 - Frontend type check: passed.

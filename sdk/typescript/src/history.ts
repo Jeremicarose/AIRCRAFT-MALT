@@ -75,9 +75,12 @@ export class RegistryV2History {
         throw new Error("Registry history exceeded maxEvents");
       }
       const nextCursor = page.lastCursor || undefined;
-      if (page.transactions.length === 0 || nextCursor === undefined || nextCursor === cursor) {
+      if (page.transactions.length === 0) {
         exhausted = true;
         break;
+      }
+      if (nextCursor === undefined || nextCursor === cursor) {
+        throw new Error("Registry history received an invalid pagination cursor");
       }
       cursor = nextCursor;
     }

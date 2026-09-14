@@ -1,6 +1,6 @@
 # CKB Spark Grant Analysis
 
-Status date: 2026-09-11
+Status date: 2026-09-14
 
 ## Executive conclusion
 
@@ -69,9 +69,9 @@ the Registry.
 | Registry V2 contract | COMPLETE | 5 Rust host and 11 CKB-VM lifecycle/attack tests | Independent review |
 | Canonical identity and discovery | COMPLETE | Python and TypeScript key by 32-byte Type ID, paginate to exhaustion, quarantine duplicates, and exclude revoked tombstones from active results | Monitor public indexer behavior during pilots |
 | Cross-language protocol | COMPLETE | 57 shared cases and 171 Rust/Python/TypeScript assertions pass | Extend only when protocol scope changes |
-| TypeScript SDK | COMPLETE IN SOURCE | 70 tests cover codec, Type ID, discovery, history, deployment checks, and CCC signer transaction construction | First npm release and an external developer install |
+| TypeScript SDK | COMPLETE IN SOURCE | 72 tests cover codec, Type ID, cursor-exhaustive discovery and history, deployment checks, and CCC signer transaction construction | First npm release and an external developer install |
 | Immutable testnet lifecycle | COMPLETE | `data1` deployment plus CKB CLI-signed create, update, transfer, revoke, seven rejected attacks, local CI, and 100 live-chain checks pass | GitHub CI provenance and independent review for release use |
-| Browser Registry workflow | PARTIAL | Registry opens first; My receivers, history, JSON export, and SDK-backed lifecycle controls are implemented; 13 unit checks and 9 production-browser checks pass locally | Preserve clean browser evidence on the final canonical commit and complete a funded CCC wallet rehearsal |
+| Browser Registry workflow | PARTIAL | Registry opens first; My receivers, history, JSON export, and SDK-backed lifecycle controls are implemented; 22 current unit checks pass, while the pinned `4fc8fce` evidence records 9 production-browser checks | Run the current 12-check browser suite on a clean final commit and complete a funded CCC wallet rehearsal |
 | MLAT consumer | PARTIAL | Replay integration and strict live gates pass automated tests | Four synchronized physical feeds and independent position reference data |
 | Pilot and demand | MISSING | Materials and recruitment research exist; 0 participants are claimed | Recruit, observe, and report real sessions |
 | Production service | MISSING | Local/reference deployment only | Reviewed public pilot deployment and operating evidence |

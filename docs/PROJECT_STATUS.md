@@ -15,7 +15,7 @@ validated by external users.
 | V2 record and lifecycle validation | COMPLETE | Rust/Python/TypeScript enforce strict schema, exact sequence, terminal revoke, and `u64` bounds | No protocol change should occur without a new corpus/version review |
 | Indexer discovery | COMPLETE | Cursor-exhaustive pagination, script binding, provenance, duplicate quarantine, and historical revoked filtering are tested in Python and TypeScript | Live RPC behavior remains an external service dependency |
 | Cross-language corpus | COMPLETE | Corpus version 2 passes 171 Rust/Python/TypeScript assertions across 57 record, identity, Type ID, creation, transition, script, and discovery cases | Add vectors only when protocol scope changes |
-| TypeScript SDK | COMPLETE | 70 tests cover codec, discovery, pagination, Type ID, history, immutable deployment binding and binary preflight, mutable-deployment write rejection, CCC-signer lifecycle assembly, the complete documented journey, and public package metadata | Claim the npm scope and approve the first protected release |
+| TypeScript SDK | COMPLETE | 72 tests cover codec, cursor-exhaustive discovery and history, Type ID, immutable deployment binding and binary preflight, mutable-deployment write rejection, CCC-signer lifecycle assembly, the complete documented journey, and public package metadata | Claim the npm scope and approve the first protected release |
 | Historical CKB testnet lifecycle | COMPLETE | Frozen 2026-07-30 create-update-transfer-revoke and seven rejected attacks pass the offline verifier | Evidence is historical and uses the older tooling |
 | Fresh immutable testnet lifecycle | COMPLETE | The CKB CLI-signed `data1` deployment, create, update, transfer, revoke, seven rejected attacks, source-review linkage, local CI, and 100 live-chain checks are preserved without private keys | GitHub CI provenance and independent review are still required for a stable release, but not for the factual testnet lifecycle claim |
 | Browser/SDK-driven lifecycle | BLOCKED | The SDK and browser journey use the fresh immutable deployment and mutable deployments still fail closed | Connect a funded CCC testnet wallet and approve a new create-update-transfer-revoke rehearsal; no SDK-driven transaction is claimed yet |
@@ -34,7 +34,7 @@ validated by external users.
 - `python3 -m flake8 src tools tests`: passed.
 - `make test && make check` in `contracts/registry-v2`: 5 host tests,
   11 CKB-VM tests, and the RISC-V contract check passed.
-- `npm test && npm run build` in `sdk/typescript`: 70 tests and TypeScript
+- `npm test && npm run build` in `sdk/typescript`: 72 tests and TypeScript
   compilation passed.
 - `npm test` in the frontend: 22 canonical-identity, API-error, fail-closed discovery, precision,
   freshness, map-configuration, receiver-reference, standalone-asset, and
