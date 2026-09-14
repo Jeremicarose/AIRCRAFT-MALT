@@ -87,10 +87,11 @@ python3 tools/registry/verify_registry_v2_review_evidence.py \
   --bundle evidence/registry-v2-review-YYYY-MM-DD-final
 ```
 
-Generation fails if the browser suite did not pass all nine checks, found a
-serious or critical accessibility issue, used a dirty worktree, or names a
-different source commit or tree. The resulting checksum file covers the browser
-report, conformance report, contract binary, manifest, and every test log.
+Generation fails if the browser suite did not pass every registered check (with
+a minimum of nine), found a serious or critical accessibility issue, used a
+dirty worktree, or names a different source commit or tree. The resulting
+checksum file covers the browser report, conformance report, contract binary,
+manifest, and every test log.
 
 ## Deterministic MLAT Benchmark
 

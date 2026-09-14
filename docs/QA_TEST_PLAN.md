@@ -44,12 +44,12 @@ machine-readable release report are written under ignored `test-results/` and
 | Verify lifecycle evidence | Create, update, transfer, and revoke hashes resolve | PASS | The CKB CLI-signed immutable lifecycle passed 100 checks including fresh public-RPC verification; this is not an SDK-driven lifecycle |
 | Contract lifecycle | Valid transitions pass and invalid transitions fail | PASS | 5 host and 11 CKB-VM tests passed after the CKB target build |
 | Cross-language SDK | Protocol vectors and transaction preparation agree | PASS | 70 TypeScript SDK tests and 171 shared runtime assertions passed |
-| Frontend unit and harness behavior | Invalid, future, and stale observations fail closed; exact `u64` values are not rounded; production and browser harnesses are isolated | PASS | 13 precision, freshness, receiver-reference, standalone-runtime, reporter, and Playwright-config tests passed |
+| Frontend unit and harness behavior | Invalid, future, and stale observations fail closed; exact `u64` values are not rounded; production and browser harnesses are isolated | PASS | 20 API-error, fail-closed discovery, precision, freshness, map-configuration, receiver-reference, standalone-runtime, reporter, and Playwright-config tests passed |
 | Browser evidence report | Failed tests and axe findings make the machine-readable report fail closed | PASS | 1 reporter contract test passed |
-| Automated production browser suite | Registry-first navigation, MLAT reference context, assets, accessibility, mobile width, and headers work together | PASS | The source-bound review bundle records all 9 Playwright tests passing from a clean Node 22 worktree at commit `4fc8fce`, with zero serious or critical accessibility findings |
-| Python application | Registry, API, MLAT, database, and evidence tests pass | PASS | 195 tests passed on 2026-09-14 |
-| Production build | Optimized Node 22 build completes | PASS | Clean Node 22 build generated all 16 routes |
-| Production console | No critical browser errors or development overlay | PASS | Clean browser suite completed without page errors or failed asset requests |
+| Automated production browser suite | Registry-first navigation, MLAT investigation and recovery, map degradation, assets, accessibility, mobile width, and headers work together | PARTIAL | The older source-bound bundle records 9 Playwright tests passing at commit `4fc8fce`; the current 12-test suite still needs a clean source-bound CI run |
+| Python application | Registry, API, MLAT, database, and evidence tests pass | PASS | 196 tests passed on 2026-09-14 |
+| Production build | Optimized Node 22 build completes | PASS | Node 22 build generated all 17 routes |
+| Production console | No critical browser errors or development overlay | PARTIAL | The clean `4fc8fce` browser suite completed without page errors or failed assets; later frontend commits need the expanded clean run |
 | Production response security | Basic security headers present; framework hidden | PASS | `nosniff`, `DENY`, referrer, and permissions policies present; no `X-Powered-By` |
 | Production dependency audit | No critical, high, or moderate advisories | PASS | Both npm projects passed the configured moderate threshold; the documented low-severity upstream `elliptic` advisory remains |
 | Public deployment | Shareable hosted frontend URL is live | NOT RUN | Render blueprint is configured, but no Render account/deployment access was provided |

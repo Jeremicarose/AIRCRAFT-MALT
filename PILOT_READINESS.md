@@ -29,7 +29,7 @@ review are still missing; the stable release gate must repeat the live check.
 | TypeScript SDK | Prepared | 70 SDK tests pass and the current testnet factory uses the immutable deployment | Run a funded CCC wallet lifecycle through the browser |
 | MLAT replay | Prepared | Python integration suite passes | Keep replay labels visible |
 | MLAT live field use | Blocked | Harness exists; no synchronized physical run | Obtain four qualified receiver feeds |
-| UI | Partial | 13 unit/contract tests, the Node 22 production build, and nine browser checks are recorded in the source-bound review bundle | Complete a funded wallet-signed lifecycle and repeat the browser report in public CI |
+| UI | Partial | 20 current unit/contract tests and the 17-route Node 22 production build pass; the older source-bound bundle records nine browser checks for commit `4fc8fce` | Run the current 12-test browser suite from a clean final commit in public CI and complete a funded wallet-signed lifecycle |
 | Public deployment | Blocked | No verified complete hosted URL | Deploy frontend, API, and processor |
 | Recruitment | Prepared, not executed | 13 public leads; messages and tracker exist | Send authorized permission requests and invitations |
 | Pilot | Not started | 0 contacted, 0 confirmed, 0 completed | Clear P0 gates before inviting |
@@ -57,19 +57,23 @@ documented low-severity upstream advisory.
 
 ## Verification results
 
-- Python: 195 passed with `python -m pytest`.
+- Python: 196 passed with `python -m pytest`.
 - Registry contract: 16 tests passed.
 - TypeScript SDK: 70 tests passed.
 - Cross-language conformance: 57 cases, 171 assertions, zero failures.
 - Historical offline evidence verifier: passed all checks.
 - Frontend type check: passed.
-- Frontend: 13 unit/contract tests, type check, and a Node 22 production build
-  passed and generated all 16 routes.
-- Browser: nine Playwright checks cover the Registry landing route, the
+- Frontend: 20 unit/contract tests, type check, and a Node 22 production build
+  passed and generated all 17 routes.
+- Browser: the current Playwright suite defines 12 checks covering the Registry
+  landing route, MLAT investigation and recovery paths, map degradation,
+  accessibility, mobile layout, assets, and security headers. A clean run of
+  this expanded suite is still required. The older nine-check suite covered the
   secondary MLAT reference navigation, the aircraft-receiver return path,
   production assets, mobile width, security headers, and WCAG scans. The
-  source-bound review bundle records all 9 as passing with 0 serious or critical
-  accessibility findings. Public CI should repeat the report for release.
+  source-bound review bundle at commit `4fc8fce` records all 9 as passing with
+  0 serious or critical accessibility findings. That report does not certify
+  later frontend commits.
 - Fresh immutable lifecycle: 50 bundled files, local CI, and 100 live-chain
   checks passed. The normal release verifier now fails closed only because the
   GitHub CI record is missing.
@@ -99,12 +103,12 @@ documented low-severity upstream advisory.
 
 ## Next actions
 
-1. Commit the current source and add GitHub CI provenance to the
-   immutable lifecycle evidence.
+1. Freeze and commit the remaining frontend source, then run the expanded
+   browser suite from that clean commit.
 2. Obtain independent review attesting the deployed binary SHA-256 and CKB data hash.
 3. Repeat live verification at release time using normal TLS verification.
-4. Repeat the passing browser suite on the final canonical commit in CI and
-   preserve its source-bound report.
+4. Generate a new source-bound review bundle for the final canonical commit and
+   preserve its browser report in CI.
 5. Complete the funded CCC wallet acceptance lifecycle in the browser.
 6. Deploy a complete pilot environment.
 7. Send permission requests and direct invitations from the maintainer's named
