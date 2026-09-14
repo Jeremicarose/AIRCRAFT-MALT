@@ -145,7 +145,8 @@ test('loads real OpenStreetMap tiles and keeps MLAT overlays usable', async ({ p
   await expect(contributingReceiver).toBeVisible();
   await contributingReceiver.click();
   await expect(page).toHaveURL(/receiver=/);
-  await expect(page.getByText('Canonical identity', { exact: true })).toBeVisible();
+  await expect(page.getByText('Registry identity', { exact: true })).toBeVisible();
+  await expect(page.getByText('Not registered', { exact: true })).toBeVisible();
 
   const mapRegion = page.getByRole('region', { name: 'Interactive aircraft and receiver map' });
   const zoomBefore = Number(await mapRegion.getAttribute('data-map-zoom'));
@@ -175,6 +176,26 @@ test('shows a map-only failure state when the tile provider is unavailable', asy
   await expect(page.locator('.aircraft-map-marker').first()).toBeVisible();
   await expect(page.locator('.receiver-map-marker').first()).toBeVisible();
   await expect(page.getByText('Contributing receivers', { exact: true })).toBeVisible();
+});
+
+test('recovers the air picture after a failed refresh without reloading the page', async ({ page }) => {
+  await page.goto('/app/localization');
+  await expect(page.locator('.aircraft-map-marker').first()).toBeVisible();
+
+  const failPositions = (route) => route.abort('failed');
+  await page.route('**/api/positions/recent**', failPositions);
+  await page.getByRole('button', { name: 'Refresh map' }).click();
+
+  const notice = page.getByRole('alert').filter({ hasText: 'The air picture could not be refreshed' });
+  await expect(notice).toBeVisible();
+  await expect(notice.getByText(/try again/i)).toBeVisible();
+  await expect(notice.getByText('Technical details')).toBeVisible();
+  await expect(page.locator('.aircraft-map-marker').first()).toBeVisible();
+
+  await page.unroute('**/api/positions/recent**', failPositions);
+  await notice.getByRole('button', { name: 'Try again' }).click();
+  await expect(notice).toBeHidden();
+  await expect(page.getByText('Live polling', { exact: true }).first()).toBeVisible();
 });
 
 for (const route of ['/app/localization', '/app/environment']) {
@@ -208,6 +229,18 @@ test('fits the Live Map in a narrow mobile viewport', async ({ page }) => {
     scroll: document.documentElement.scrollWidth,
   }));
   expect(width.scroll).toBeLessThanOrEqual(width.client);
+});
+
+test('keeps an operational data grid readable on mobile', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/app/aircraft');
+
+  const gridRegion = page.getByRole('region', { name: /Aircraft inventory, horizontally scrollable/ });
+  await expect(gridRegion).toBeVisible();
+  const gridWidth = await gridRegion.evaluate((element) => ({ client: element.clientWidth, scroll: element.scrollWidth }));
+  expect(gridWidth.scroll).toBeGreaterThan(gridWidth.client);
+  const documentWidth = await page.evaluate(() => ({ client: document.documentElement.clientWidth, scroll: document.documentElement.scrollWidth }));
+  expect(documentWidth.scroll).toBeLessThanOrEqual(documentWidth.client);
 });
 
 test('returns the required browser security headers', async ({ request }) => {

@@ -3,7 +3,7 @@ import { forwardRef, type ButtonHTMLAttributes } from 'react';
 import { cn } from '@/lib/utils';
 
 export const buttonVariants = cva(
-  'inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-md px-3 text-[13px] font-semibold transition-[background-color,color,transform,border-color] duration-standard ease-operational focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal-blue focus-visible:ring-offset-2 focus-visible:ring-offset-graphite-deep disabled:pointer-events-none disabled:opacity-45 active:scale-[0.98]',
+  'ui-button inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-md px-3 text-[13px] font-semibold transition-[background-color,color,transform,border-color] duration-standard ease-operational focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal-blue focus-visible:ring-offset-2 focus-visible:ring-offset-graphite-deep disabled:pointer-events-none disabled:opacity-45 active:scale-[0.98]',
   {
     variants: {
       variant: {

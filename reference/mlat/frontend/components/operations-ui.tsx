@@ -22,7 +22,7 @@ export function Inspector({ title, subtitle, status, actions, children, classNam
   return (
     <aside className={cn('overflow-hidden rounded-lg border border-line bg-graphite', className)}>
       <div className="border-b border-line p-4">
-        <div className="flex items-start justify-between gap-3"><div className="min-w-0"><h2 className="truncate text-base font-semibold text-ink">{title}</h2>{subtitle ? <p className="mt-1 text-xs text-ink-quiet">{subtitle}</p> : null}</div>{status}</div>
+        <div className="flex items-start justify-between gap-3"><div className="min-w-0"><h2 className="truncate text-base font-semibold text-ink">{title}</h2>{subtitle ? <div className="mt-1 text-xs text-ink-quiet">{subtitle}</div> : null}</div>{status}</div>
         {actions ? <div className="mt-3 flex gap-2">{actions}</div> : null}
       </div>
       {children}

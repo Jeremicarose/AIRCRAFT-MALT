@@ -4,9 +4,10 @@ import { ArrowUpRight, RadioTower, ShieldCheck } from 'lucide-react';
 import Link from 'next/link';
 import type { ReactNode } from 'react';
 import { FactGrid, Inspector } from '@/components/operations-ui';
+import { CopyValue } from '@/components/ui/copy-value';
 import { RelativeTime } from '@/components/ui/relative-time';
 import { StatusChip } from '@/components/ui/status-chip';
-import { formatDateTime, titleCase } from '@/lib/format';
+import { formatDateTime, titleCase, truncateMiddle } from '@/lib/format';
 import {
   mlatStatusPresentation,
   registryStatusPresentation,
@@ -44,7 +45,7 @@ export function ReceiverInspector({
   return (
     <Inspector
       title={receiver.label}
-      subtitle={receiver.identity ? <span className="break-all font-mono">{receiver.identity}</span> : 'No canonical CKB identity'}
+      subtitle={receiver.identity ? <CopyValue value={receiver.identity} displayValue={truncateMiddle(receiver.identity, 12, 10)} label="canonical receiver identity" /> : 'No canonical CKB identity'}
       status={<StatusChip label={perspective === 'registry' ? registryState.label : mlatState.label} tone={perspective === 'registry' ? registryState.tone : mlatState.tone} />}
       actions={actions}
       className={className}
@@ -66,7 +67,7 @@ export function ReceiverInspector({
       </div> : null}
 
       <FactGrid items={[
-        { label: 'Owner', value: receiver.ownerLockArgs ?? 'Not available', mono: Boolean(receiver.ownerLockArgs) },
+        { label: 'Owner', value: receiver.ownerLockArgs ? <CopyValue value={receiver.ownerLockArgs} displayValue={truncateMiddle(receiver.ownerLockArgs, 9, 7)} label="owner address" /> : 'Not available' },
         { label: 'Published state', value: receiver.registryRecordStatus ? titleCase(receiver.registryRecordStatus) : 'Not published' },
         { label: 'Capabilities', value: receiver.capabilities.length ? receiver.capabilities.join(', ') : 'Not available' },
         { label: 'Last observation', value: receiver.lastObservationAt ? <RelativeTime timestamp={receiver.lastObservationAt} /> : 'Not available' },
@@ -102,7 +103,7 @@ export function ReceiverInspector({
       <details className="border-t border-line p-4">
         <summary className="cursor-pointer rounded-sm text-xs font-semibold text-ink-secondary outline-none focus-visible:ring-2 focus-visible:ring-signal-blue">Technical Registry details</summary>
         <dl className="mt-3 space-y-3 text-[11px]">
-          <div><dt className="text-ink-quiet">Canonical Type ID</dt><dd className="mt-1 break-all font-mono text-ink-secondary">{receiver.identity ?? 'Not available'}</dd></div>
+          <div><dt className="text-ink-quiet">Canonical Type ID</dt><dd className="mt-1 text-ink-secondary">{receiver.identity ? <CopyValue value={receiver.identity} label="canonical Type ID" className="w-full" /> : 'Not available'}</dd></div>
           <div><dt className="text-ink-quiet">Registry sequence</dt><dd className="mt-1 font-mono text-ink-secondary">{detailSource?.registry?.sequence ?? 'Not available'}</dd></div>
           <div><dt className="text-ink-quiet">Last Registry update</dt><dd className="mt-1 text-ink-secondary">{receiver.lastRegistryUpdateAt ? formatDateTime(receiver.lastRegistryUpdateAt) : 'Not available'}</dd></div>
           <div className="flex items-start gap-2 rounded-md bg-trust-cyan/[0.06] p-2.5 text-ink-quiet"><ShieldCheck className="mt-0.5 size-3.5 shrink-0 text-trust-cyan" />CKB proves lifecycle continuity and owner authorization. It does not prove physical location, receiver hardware, clock quality, or feed honesty.</div>

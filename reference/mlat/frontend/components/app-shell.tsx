@@ -111,9 +111,9 @@ function InvestigationDock({ dock, pageKey }: { dock: InvestigationDockState | n
   );
 }
 
-function ContextBar({ snapshot, selectedAircraftId, selectedReceiverId, pageKey }: { snapshot: ShellSnapshot; selectedAircraftId: string | null; selectedReceiverId: string | null; pageKey: string }) {
+function ContextBar({ snapshot, selectedAircraftId, selectedReceiverId, pageKey, healthAvailable }: { snapshot: ShellSnapshot; selectedAircraftId: string | null; selectedReceiverId: string | null; pageKey: string; healthAvailable: boolean }) {
   const registryPage = pageKey === 'registry';
-  const summary = registryPage ? { label: 'Registry V2', tone: 'trust' as const } : getSystemSummary(snapshot);
+  const summary = registryPage ? { label: 'Registry V2', tone: 'trust' as const } : getSystemSummary(snapshot, healthAvailable);
   const signalAge = snapshot.healthData?.freshness?.last_signal_age_s;
   return (
     <div className="flex min-h-10 items-center gap-3 overflow-x-auto border-t border-line px-4 py-2 text-[11px] text-ink-quiet sm:px-6">
@@ -124,7 +124,7 @@ function ContextBar({ snapshot, selectedAircraftId, selectedReceiverId, pageKey 
       <span className="h-3 w-px shrink-0 bg-line" aria-hidden="true" />
       {selectedReceiverId ? <Link href={`/app/receivers?receiver=${encodeURIComponent(selectedReceiverId)}`} className="shrink-0 rounded-sm text-ink-secondary hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal-blue">Receiver {truncateMiddle(selectedReceiverId, 8, 5)}</Link> : <span className="shrink-0">No receiver selected</span>}
       {selectedAircraftId ? <Link href={`/app/aircraft?aircraft=${encodeURIComponent(selectedAircraftId)}`} className="shrink-0 rounded-sm text-ink-secondary hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal-blue">Aircraft {selectedAircraftId}</Link> : null}
-      <span className="ml-auto hidden shrink-0 sm:inline">{registryPage ? 'Public indexer directory' : `Signal ${signalAge == null ? 'unavailable' : `${Math.round(signalAge)}s ago`}`}</span>
+      <span className="ml-auto hidden shrink-0 sm:inline">{registryPage ? 'Public indexer directory' : !healthAvailable ? 'Signal status unavailable' : `Signal ${signalAge == null ? 'unavailable' : `${Math.round(signalAge)}s ago`}`}</span>
     </div>
   );
 }
@@ -162,7 +162,7 @@ export function AppShell({ pageKey, title, description, snapshot, children }: { 
     ? { label: 'Registry V2', tone: 'trust' as const, environment: 'Pudge' }
     : getSystemSummary(liveSnapshot, healthAvailable);
   const signalAge = liveSnapshot.healthData?.freshness?.last_signal_age_s;
-  const signalTone = toneFromFreshness(signalAge, 15, 60);
+  const signalTone = healthAvailable ? toneFromFreshness(signalAge, 15, 60) : 'attention';
   const pinnedRoute = consoleRoutes.find((route) => route.key === pageKey);
   const breadcrumbRoutes = [
     { label: 'Receiver Registry', href: '/app/registry' },
@@ -274,7 +274,7 @@ export function AppShell({ pageKey, title, description, snapshot, children }: { 
               <span className="sr-only">Signal freshness: {signalTone}</span>
             </div>
           </div>
-          <ContextBar snapshot={liveSnapshot} selectedAircraftId={selectedAircraftId} selectedReceiverId={selectedReceiverId} pageKey={pageKey} />
+          <ContextBar snapshot={liveSnapshot} selectedAircraftId={selectedAircraftId} selectedReceiverId={selectedReceiverId} pageKey={pageKey} healthAvailable={healthAvailable} />
         </header>
         <main id="main-content" className="min-w-0 p-3 sm:p-6">{pageKey === 'registry' ? <FirstRunNotice /> : null}{children}</main>
       </div>

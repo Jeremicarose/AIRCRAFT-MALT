@@ -11,6 +11,7 @@ import { ArrowUpRight, Ban, Check, CircleAlert, FilePlus2, LoaderCircle, Pencil,
 import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from 'react';
 import { WorkspacePanel } from '@/components/operations-ui';
 import { Button } from '@/components/ui/button';
+import { CopyValue } from '@/components/ui/copy-value';
 import { ProgressBar } from '@/components/ui/progress-bar';
 import { StatusChip } from '@/components/ui/status-chip';
 import { WalletControl } from '@/components/wallet-control';
@@ -18,7 +19,7 @@ import { explainRegistryError, explorerTransactionUrl } from '@/lib/registry';
 import { cn } from '@/lib/utils';
 
 type ActionKind = 'create' | 'update' | 'transfer' | 'revoke';
-type TransactionPhase = 'idle' | 'preparing' | 'signature' | 'submitted' | 'confirming' | 'complete' | 'error';
+type TransactionPhase = 'idle' | 'preparing' | 'signature' | 'confirming' | 'complete' | 'error';
 
 interface RecordFormState {
   receiverId: string;
@@ -55,9 +56,8 @@ const actionOptions: Array<{ value: ActionKind; label: string; icon: typeof File
 
 const phaseCopy: Record<Exclude<TransactionPhase, 'idle' | 'error'>, { label: string; value: number }> = {
   preparing: { label: 'Preparing the Registry V2 transaction', value: 20 },
-  signature: { label: 'Waiting for approval in your wallet', value: 45 },
-  submitted: { label: 'Transaction submitted to CKB testnet', value: 65 },
-  confirming: { label: 'Waiting for on-chain confirmation', value: 82 },
+  signature: { label: 'Waiting for wallet signature and submission', value: 45 },
+  confirming: { label: 'Submitted; waiting for on-chain confirmation', value: 82 },
   complete: { label: 'Registry directory updated', value: 100 },
 };
 
@@ -143,7 +143,7 @@ export function RegistryActionPanel({
   const [transactionHash, setTransactionHash] = useState('');
   const [resultIdentity, setResultIdentity] = useState('');
   const [error, setError] = useState<{ message: string; technical: string } | null>(null);
-  const busy = ['preparing', 'signature', 'submitted', 'confirming'].includes(phase);
+  const busy = ['preparing', 'signature', 'confirming'].includes(phase);
   const selectedUnavailable = action !== 'create' && !selected;
   const revoked = selected?.record.status === 'revoked';
   const ownerRequired = action !== 'create' && !ownsSelected;
@@ -226,7 +226,6 @@ export function RegistryActionPanel({
       setPhase('signature');
       submittedHash = await signer.sendTransaction(transaction);
       setTransactionHash(submittedHash);
-      setPhase('submitted');
       setPhase('confirming');
       await sdk.waitForIndexedTransaction(receiverIdentity, submittedHash, {
         indexerTimeoutMs: 60_000,
@@ -381,8 +380,8 @@ export function RegistryActionPanel({
               </div>
               <ProgressBar value={phaseCopy[phase].value} label="Registry transaction progress" tone={phase === 'complete' ? 'healthy' : 'selection'} />
             </> : error ? <div role="alert"><p className="text-xs font-semibold text-failure">Action not completed</p><p className="mt-1 text-xs leading-5 text-ink-secondary">{error.message}</p><details className="mt-2"><summary className="cursor-pointer text-[11px] text-ink-quiet">Technical details</summary><pre className="mt-2 max-h-32 overflow-auto whitespace-pre-wrap rounded bg-graphite p-2 font-mono text-[10px] text-ink-quiet">{error.technical}</pre></details></div> : null}
-            {transactionHash ? <a href={explorerTransactionUrl(transactionHash)} target="_blank" rel="noreferrer" className="mt-3 inline-flex items-center gap-1.5 text-xs font-semibold text-trust-cyan hover:underline">Verify transaction on CKB Explorer<ArrowUpRight className="size-3.5" /></a> : null}
-            {phase === 'complete' && resultIdentity ? <p className="mt-2 break-all font-mono text-[10px] text-ink-quiet">Receiver identity: {resultIdentity}</p> : null}
+            {transactionHash ? <div className="mt-3 flex flex-wrap items-center gap-2"><a href={explorerTransactionUrl(transactionHash)} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-xs font-semibold text-trust-cyan hover:underline">Verify transaction on CKB Explorer<ArrowUpRight className="size-3.5" /></a><CopyValue value={transactionHash} displayValue={`${transactionHash.slice(0, 10)}...${transactionHash.slice(-8)}`} label="transaction hash" className="text-[10px] text-ink-quiet" /></div> : null}
+            {phase === 'complete' && resultIdentity ? <div className="mt-2 text-[10px] text-ink-quiet"><span className="mr-1">Receiver identity:</span><CopyValue value={resultIdentity} displayValue={`${resultIdentity.slice(0, 10)}...${resultIdentity.slice(-8)}`} label="receiver identity" /></div> : null}
           </div>
         ) : null}
 

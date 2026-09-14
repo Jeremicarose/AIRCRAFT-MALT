@@ -121,7 +121,7 @@ function upsertGeoJson(map: MapLibreMap, id: string, data: GeoJSON.FeatureCollec
 export default function AirspaceMap({ aircraft, receivers, selectedAircraftId, selectedReceiverId, onSelectAircraft, onSelectReceiver, showReceiverLinks = true, showUncertainty = true, track = [], coveragePositions = [], fitRequest = 0, className }: AirspaceMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
-  const markersRef = useRef<Marker[]>([]);
+  const markersRef = useRef<Map<string, Marker>>(new Map());
   const [ready, setReady] = useState(false);
   const [mapError, setMapError] = useState<string | null>(null);
   const [mapAttempt, setMapAttempt] = useState(0);
@@ -190,6 +190,7 @@ export default function AirspaceMap({ aircraft, receivers, selectedAircraftId, s
     return () => {
       window.clearTimeout(loadTimeout);
       markersRef.current.forEach((marker) => marker.remove());
+      markersRef.current.clear();
       map.remove();
       mapRef.current = null;
     };
@@ -198,35 +199,52 @@ export default function AirspaceMap({ aircraft, receivers, selectedAircraftId, s
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !ready) return;
-    markersRef.current.forEach((marker) => marker.remove());
-    markersRef.current = [];
+    const visibleMarkerKeys = new Set<string>();
 
     receivers.forEach((receiver) => {
       const coordinates = validReceiverCoordinates(receiver);
       if (!coordinates) return;
-      const element = document.createElement('button');
-      element.type = 'button';
       const operationalKey = receiverOperationalKey(receiver);
+      const markerKey = `receiver:${operationalKey}`;
+      visibleMarkerKeys.add(markerKey);
+      const existingMarker = markersRef.current.get(markerKey);
+      const element = (existingMarker?.getElement() as HTMLButtonElement | undefined) ?? document.createElement('button');
+      element.type = 'button';
       const references = receiverReferenceIds(operationalKey, receiverIdentity(receiver), receiver.receiver_id);
       element.className = `receiver-map-marker${selectedReceiverId && receiverReferencesInclude(references, selectedReceiverId) ? ' is-selected' : ''}`;
       const receiverLabel = receiver.receiver_label || receiver.receiver_id;
       const identity = receiverIdentity(receiver);
       element.setAttribute('aria-label', `Select receiver ${receiverLabel}`);
-      element.addEventListener('click', () => onSelectReceiver?.(operationalKey));
-      const marker = new maplibregl.Marker({ element, anchor: 'center' }).setLngLat(coordinates).setPopup(new maplibregl.Popup({ offset: 12, closeButton: false }).setDOMContent(popupContent(receiverLabel, [identity ? `Identity ${identity.slice(0, 10)}...${identity.slice(-6)}` : 'No Registry identity', formatCoordinate(receiver.latitude, receiver.longitude), receiver.status || 'Status unknown']))).addTo(map);
-      markersRef.current.push(marker);
+      element.onclick = () => onSelectReceiver?.(operationalKey);
+      const popup = existingMarker?.getPopup() ?? new maplibregl.Popup({ offset: 12, closeButton: false });
+      popup.setDOMContent(popupContent(receiverLabel, [identity ? `Identity ${identity.slice(0, 10)}...${identity.slice(-6)}` : 'No Registry identity', formatCoordinate(receiver.latitude, receiver.longitude), receiver.status || 'Status unknown']));
+      const marker = existingMarker ?? new maplibregl.Marker({ element, anchor: 'center' }).setPopup(popup).addTo(map);
+      marker.setLngLat(coordinates);
+      markersRef.current.set(markerKey, marker);
     });
 
     aircraft.forEach((item) => {
       const coordinates = positionCoordinates(item);
       if (!coordinates) return;
-      const element = document.createElement('button');
+      const markerKey = `aircraft:${item.aircraft_id}`;
+      visibleMarkerKeys.add(markerKey);
+      const existingMarker = markersRef.current.get(markerKey);
+      const element = (existingMarker?.getElement() as HTMLButtonElement | undefined) ?? document.createElement('button');
       element.type = 'button';
       element.className = `aircraft-map-marker${selectedAircraft?.aircraft_id === item.aircraft_id ? ' is-selected' : ''}`;
       element.setAttribute('aria-label', `Select aircraft ${item.aircraft_id}`);
-      element.addEventListener('click', () => onSelectAircraft?.(item.aircraft_id));
-      const marker = new maplibregl.Marker({ element, anchor: 'center' }).setLngLat(coordinates).setPopup(new maplibregl.Popup({ offset: 12, closeButton: false }).setDOMContent(popupContent(item.aircraft_id, [`${percent(item.quality?.score, 0)} confidence`, `${item.correlation?.receiver_count ?? item.num_receivers ?? 0} receivers`]))).addTo(map);
-      markersRef.current.push(marker);
+      element.onclick = () => onSelectAircraft?.(item.aircraft_id);
+      const popup = existingMarker?.getPopup() ?? new maplibregl.Popup({ offset: 12, closeButton: false });
+      popup.setDOMContent(popupContent(item.aircraft_id, [`${percent(item.quality?.score, 0)} confidence`, `${item.correlation?.receiver_count ?? item.num_receivers ?? 0} receivers`]));
+      const marker = existingMarker ?? new maplibregl.Marker({ element, anchor: 'center' }).setPopup(popup).addTo(map);
+      marker.setLngLat(coordinates);
+      markersRef.current.set(markerKey, marker);
+    });
+
+    markersRef.current.forEach((marker, key) => {
+      if (visibleMarkerKeys.has(key)) return;
+      marker.remove();
+      markersRef.current.delete(key);
     });
   }, [aircraft, onSelectAircraft, onSelectReceiver, ready, receivers, selectedAircraft, selectedReceiverId]);
 

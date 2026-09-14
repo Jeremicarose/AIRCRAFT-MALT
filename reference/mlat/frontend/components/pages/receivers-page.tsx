@@ -67,7 +67,7 @@ function DirectoryLoading() {
 function RegistryHistory({ history, loading, error }: { history?: RegistryHistoryEvent[]; loading: boolean; error?: Error | null }) {
   if (loading) return <div className="space-y-3 p-4" aria-label="Loading receiver lifecycle"><Skeleton className="h-12" /><Skeleton className="h-12" /><Skeleton className="h-12" /></div>;
   if (error) return <div className="p-4"><DataNotice title="Lifecycle history could not be loaded" detail="The current record is still available. Try again after the CKB indexer catches up." /></div>;
-  if (!history?.length) return <div className="p-5 text-center text-xs leading-5 text-ink-quiet">No committed lifecycle events were found for this identity.</div>;
+  if (!history?.length) return <div className="p-5 text-center text-xs leading-5 text-ink-quiet">No committed lifecycle events were found for this identity. Refresh the directory if this receiver was changed recently.</div>;
   return (
     <Timeline items={history.map((event) => ({
       title: `${titleCase(event.action)} · sequence ${event.record.sequence.toString()}`,
@@ -370,7 +370,7 @@ export function ReceiversPage({
             {directoryQuery.isLoading && !directoryQuery.data ? <DirectoryLoading /> : view === 'mine' && !signerInfo ? (
               <div className="flex min-h-44 flex-col items-center justify-center px-6 text-center"><UserRound className="mb-3 size-5 text-ink-quiet" /><p className="text-sm font-semibold text-ink">Connect a testnet wallet to find your receivers</p><p className="mt-1 max-w-md text-xs leading-5 text-ink-quiet">Ownership is matched against the complete CKB lock script from your wallet. No address is sent to the MLAT backend.</p><Button className="mt-4" size="sm" variant="primary" onClick={open}>Connect testnet wallet</Button></div>
             ) : (
-              <DataGrid data={filtered} columns={columns} getRowId={(row) => row.key} onRowClick={(row) => selectReceiver(row.key)} isRowSelected={(row) => row.key === selectedUi?.key} keyboardColumnLabel={(row) => row.label} emptyLabel={search ? 'No receivers match this search and view.' : view === 'mine' ? 'This wallet does not own a current Registry V2 receiver.' : 'No receiver identities or MLAT receivers are available.'} ariaLabel="Receiver identity and MLAT status directory" height={Math.min(460, Math.max(184, filtered.length * 48))} />
+              <DataGrid data={filtered} columns={columns} getRowId={(row) => row.key} onRowClick={(row) => selectReceiver(row.key)} isRowSelected={(row) => row.key === selectedUi?.key} keyboardColumnLabel={(row) => row.label} emptyLabel={search ? 'No receivers match this search and view. Clear the search or choose another state.' : view === 'mine' ? 'This wallet does not own a current Registry V2 receiver. Connect another wallet or choose All states.' : 'No receivers are available in this view. Refresh the directory or choose another state.'} ariaLabel="Receiver identity and MLAT status directory" height={Math.min(460, Math.max(184, filtered.length * 48))} />
             )}
           </WorkspacePanel>
 

@@ -237,6 +237,20 @@ input,
   }
 }
 
+@media (pointer: coarse) {
+  .ui-button,
+  .maplibregl-ctrl-group button {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  .aircraft-map-marker,
+  .receiver-map-marker {
+    width: 44px;
+    height: 44px;
+  }
+}
+
 .recharts-cartesian-axis-tick-value,
 .recharts-legend-item-text {
   fill: #7f8996;

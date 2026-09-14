@@ -1,13 +1,17 @@
 'use client';
 
+import { useQuery } from '@tanstack/react-query';
 import { Activity, Clock3, Cpu, Gauge, MemoryStick, RadioTower, ServerCog, TriangleAlert } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { DistributionChart, MultiLineChart, Sparkline, TrendChart } from '@/components/lazy-charts';
 import { ActivityRail, SignalMarquee, WorkspaceHeader, WorkspacePanel, WorkspaceSplit } from '@/components/operations-ui';
 import { SegmentedControl } from '@/components/ui/segmented-control';
+import { DataNotice } from '@/components/ui/data-notice';
+import { Skeleton } from '@/components/ui/skeleton';
 import { StatStrip, type StatItem } from '@/components/ui/stat-strip';
 import { StatusChip } from '@/components/ui/status-chip';
 import { number } from '@/lib/format';
+import { apiQueryKeys, fetchJson, presentApiError } from '@/lib/api';
 import { useOperatorStore } from '@/lib/operator-store';
 import type { JsonValue, MetricsData, StatusTone } from '@/lib/types';
 
@@ -34,10 +38,16 @@ function histogram(values: number[], bins = 10) {
 }
 
 function EmptyChart({ height = 220 }: { height?: number }) {
-  return <div style={{ height }} className="grid place-items-center text-xs text-ink-quiet">No samples in this range.</div>;
+  return <div style={{ height }} className="grid place-items-center px-5 text-center text-xs leading-5 text-ink-quiet">No metric samples are available in this range. Choose a longer range or check Diagnostics for collection status.</div>;
 }
 
-export function MetricsPage({ metrics, performance, reliability }: { metrics: MetricsData | null; performance: Artifact; reliability: Artifact }) {
+export function MetricsPage({ metrics: initialMetrics, performance: initialPerformance, reliability: initialReliability }: { metrics: MetricsData | null; performance: Artifact; reliability: Artifact }) {
+  const metricsQuery = useQuery({ queryKey: apiQueryKeys.evidenceMetrics(500), queryFn: () => fetchJson<MetricsData>('/api/evidence/metrics?hours=24&limit=500'), initialData: initialMetrics ?? undefined, refetchInterval: 30_000 });
+  const performanceQuery = useQuery({ queryKey: apiQueryKeys.performanceEvidence, queryFn: () => fetchJson<Record<string, JsonValue>>('/api/evidence/performance/latest'), initialData: initialPerformance ?? undefined, refetchInterval: 60_000 });
+  const reliabilityQuery = useQuery({ queryKey: apiQueryKeys.reliabilityEvidence, queryFn: () => fetchJson<Record<string, JsonValue>>('/api/evidence/reliability/latest'), initialData: initialReliability ?? undefined, refetchInterval: 60_000 });
+  const metrics = metricsQuery.data ?? null;
+  const performance = performanceQuery.data ?? null;
+  const reliability = reliabilityQuery.data ?? null;
   const [range, setRange] = useState<Range>('24h');
   const history = metrics?.history ?? [];
   const limit = range === '1h' ? 12 : range === '6h' ? 72 : history.length;
@@ -98,10 +108,19 @@ export function MetricsPage({ metrics, performance, reliability }: { metrics: Me
     { title: 'Failure pressure', detail: `${number(failedSolves)} failed solves and ${number(current.rejected_groups)} rejected groups in the latest snapshot.`, meta: failedSolves ? 'Review' : 'Clear', tone: failedSolves ? 'attention' : 'healthy' as StatusTone },
     { title: 'Availability artifact', detail: `${number((reliabilityMetrics as Record<string, JsonValue> | null)?.api_availability_percent, 2)}% API availability in the latest reliability evidence.`, meta: 'Reliability', tone: 'trust' as StatusTone },
   ];
+  const metricsError = metricsQuery.error ? presentApiError(metricsQuery.error, 'Operational metrics could not be refreshed. The last-known samples remain visible and may be stale.') : null;
+  const artifactFailure = performanceQuery.error ?? reliabilityQuery.error;
+  const artifactError = artifactFailure ? presentApiError(artifactFailure, 'The latest performance or reliability evidence could not be refreshed. Current runtime metrics remain available.') : null;
+
+  if (metricsQuery.isLoading && !metrics) {
+    return <div className="space-y-3" role="status" aria-label="Loading operational metrics"><Skeleton className="h-24 border border-line" /><Skeleton className="h-28 border border-line" /><Skeleton className="h-[420px] border border-line" /><span className="sr-only">Loading metrics and evidence</span></div>;
+  }
 
   return (
     <div className="space-y-4">
-      <WorkspaceHeader eyebrow="Operate" title="Observability workbench" description="Metrics are organized around primary analysis surfaces: throughput, latency, resource envelope, and failure pressure instead of a generic chart grid." status={<StatusChip label={chartData.length ? 'Sampling' : 'Waiting'} tone={chartData.length ? 'healthy' : 'attention'} />} actions={<SegmentedControl label="Metrics time range" value={range} options={rangeOptions} onValueChange={setRange} className="bg-graphite" />} rail={<SignalMarquee items={[{ label: 'Solve success', value: `${number(solveSuccess, 1)}%`, tone: solveSuccess >= 99 ? 'healthy' : solveSuccess >= 95 ? 'attention' : 'failure' }, { label: 'Active receivers', value: number(activeReceivers), tone: activeReceivers >= 4 ? 'healthy' : 'failure' }, { label: 'Failed solves', value: number(failedSolves), tone: failedSolves ? 'attention' : 'healthy' }, { label: 'Range', value: range, tone: 'selection' }]} />} />
+      {metricsError ? <DataNotice title="Operational metrics could not be refreshed" detail={metricsError.detail} technicalDetail={metricsError.technicalDetail} onRetry={() => void metricsQuery.refetch()} /> : null}
+      {artifactError ? <DataNotice title="Evidence artifacts could not be refreshed" detail={artifactError.detail} technicalDetail={artifactError.technicalDetail} tone="attention" onRetry={() => void Promise.all([performanceQuery.refetch(), reliabilityQuery.refetch()])} /> : null}
+      <WorkspaceHeader title="Observability workbench" description="Compare throughput, latency, receiver availability, solve quality, and failure pressure over the selected time range." status={<StatusChip label={chartData.length ? 'Sampling' : 'Waiting'} tone={chartData.length ? 'healthy' : 'attention'} />} actions={<SegmentedControl label="Metrics time range" value={range} options={rangeOptions} onValueChange={setRange} className="bg-graphite" />} rail={<SignalMarquee items={[{ label: 'Solve success', value: `${number(solveSuccess, 1)}%`, tone: solveSuccess >= 99 ? 'healthy' : solveSuccess >= 95 ? 'attention' : 'failure' }, { label: 'Active receivers', value: number(activeReceivers), tone: activeReceivers >= 4 ? 'healthy' : 'failure' }, { label: 'Failed solves', value: number(failedSolves), tone: failedSolves ? 'attention' : 'healthy' }, { label: 'Range', value: range, tone: 'selection' }]} />} />
 
       <StatStrip items={counters} layout="five" />
 

@@ -6,11 +6,15 @@ export const PUBLIC_POSITIONS_PATH = '/api/positions/recent?seconds=300&limit=10
 
 export const apiQueryKeys = {
   aircraft: ['aircraft'] as const,
+  evidenceMetrics: (limit: number) => ['evidence-metrics', 24, limit] as const,
   health: ['health'] as const,
   mode: ['mode'] as const,
+  performanceEvidence: ['performance-evidence'] as const,
   pipeline: ['pipeline'] as const,
   positions: ['positions'] as const,
+  readiness: ['readiness'] as const,
   receivers: ['receivers'] as const,
+  reliabilityEvidence: ['reliability-evidence'] as const,
 };
 
 function normalizeApiBase(value: string): string {

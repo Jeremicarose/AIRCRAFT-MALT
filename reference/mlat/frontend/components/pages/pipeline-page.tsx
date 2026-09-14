@@ -1,9 +1,13 @@
 'use client';
 
-import { AlertTriangle, ArrowUpRight, Check, FileJson, Lightbulb, Wrench } from 'lucide-react';
+import { AlertTriangle, ArrowUpRight, FileJson, Lightbulb, Wrench } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
 import { useEffect, useMemo, useState } from 'react';
 import { ActivityRail, IssueList, SignalMarquee, Timeline, WorkspaceHeader, WorkspacePanel, WorkspaceSplit } from '@/components/operations-ui';
 import { StatusChip } from '@/components/ui/status-chip';
+import { DataNotice } from '@/components/ui/data-notice';
+import { Skeleton } from '@/components/ui/skeleton';
+import { apiQueryKeys, fetchJson, presentApiError } from '@/lib/api';
 import { number, titleCase } from '@/lib/format';
 import { useOperatorStore } from '@/lib/operator-store';
 import type { MetricsData, PipelineData, StatusTone } from '@/lib/types';
@@ -28,7 +32,11 @@ function stageTone(status: string): StatusTone {
   return 'attention';
 }
 
-export function PipelinePage({ pipeline, metrics }: { pipeline: PipelineData | null; metrics: MetricsData | null }) {
+export function PipelinePage({ pipeline: initialPipeline, metrics: initialMetrics }: { pipeline: PipelineData | null; metrics: MetricsData | null }) {
+  const pipelineQuery = useQuery({ queryKey: apiQueryKeys.pipeline, queryFn: () => fetchJson<PipelineData>('/api/pipeline'), initialData: initialPipeline ?? undefined, refetchInterval: 15_000 });
+  const metricsQuery = useQuery({ queryKey: apiQueryKeys.evidenceMetrics(120), queryFn: () => fetchJson<MetricsData>('/api/evidence/metrics?hours=24&limit=120'), initialData: initialMetrics ?? undefined, refetchInterval: 30_000 });
+  const pipeline = pipelineQuery.data ?? null;
+  const metrics = metricsQuery.data ?? null;
   const stages = pipeline?.stages ?? [];
   const blockers = pipeline?.blockers ?? [];
   const passed = stages.filter((stage) => stage.status === 'pass').length;
@@ -87,10 +95,18 @@ export function PipelinePage({ pipeline, metrics }: { pipeline: PipelineData | n
     { title: 'Current blocker count', detail: blockers.length ? `${blockers.length} blocking conditions require operator action.` : 'No blockers are currently reported.', meta: blockers.length ? 'Open' : 'Clear', tone: blockers.length ? 'failure' : 'healthy' as StatusTone },
     { title: 'Evidence posture', detail: liveReady ? 'Live evidence output is ready for publication.' : 'Live evidence remains gated by current stage state.', meta: liveReady ? 'Ready' : 'Blocked', tone: liveReady ? 'trust' : 'attention' as StatusTone },
   ];
+  const pipelineError = pipelineQuery.error ? presentApiError(pipelineQuery.error, 'Pipeline status could not be refreshed. The last-known stage state remains visible and may be stale.') : null;
+  const metricsError = metricsQuery.error ? presentApiError(metricsQuery.error, 'Bounded metrics could not be refreshed. Pipeline stage evidence remains available.') : null;
+
+  if (pipelineQuery.isLoading && !pipeline) {
+    return <div className="space-y-3" role="status" aria-label="Loading pipeline status"><Skeleton className="h-24 border border-line" /><Skeleton className="h-40 border border-line" /><Skeleton className="h-[420px] border border-line" /><span className="sr-only">Loading pipeline stages and evidence</span></div>;
+  }
 
   return (
     <div className="space-y-4">
-      <WorkspaceHeader eyebrow="Operate" title="Pipeline debugger" description="Stages, blockers, machine-readable proof surfaces, and operator recovery guidance are combined into one interactive failure workspace." status={<StatusChip label={stateLabel} tone={stateTone} />} rail={<SignalMarquee items={[{ label: 'Passing stages', value: `${passed}/${stages.length}`, tone: stateTone }, { label: 'Blockers', value: number(blockers.length), tone: blockers.length ? 'failure' : 'healthy' }, { label: 'Evidence', value: liveReady ? 'Ready' : 'Blocked', tone: liveReady ? 'trust' : 'attention' }, { label: 'Solve success', value: `${number(current.solve_success_percent, 1)}%`, tone: Number(current.solve_success_percent ?? 0) >= 95 ? 'healthy' : 'attention' }]} />} />
+      {pipelineError ? <DataNotice title="Pipeline status could not be refreshed" detail={pipelineError.detail} technicalDetail={pipelineError.technicalDetail} onRetry={() => void pipelineQuery.refetch()} /> : null}
+      {metricsError ? <DataNotice title="Pipeline metrics could not be refreshed" detail={metricsError.detail} technicalDetail={metricsError.technicalDetail} tone="attention" onRetry={() => void metricsQuery.refetch()} /> : null}
+      <WorkspaceHeader title="Pipeline debugger" description="Find the first blocked stage, inspect its evidence, and follow the recommended recovery action." status={<StatusChip label={stateLabel} tone={stateTone} />} rail={<SignalMarquee items={[{ label: 'Passing stages', value: `${passed}/${stages.length}`, tone: stateTone }, { label: 'Blockers', value: number(blockers.length), tone: blockers.length ? 'failure' : 'healthy' }, { label: 'Evidence', value: liveReady ? 'Ready' : 'Blocked', tone: liveReady ? 'trust' : 'attention' }, { label: 'Solve success', value: `${number(current.solve_success_percent, 1)}%`, tone: Number(current.solve_success_percent ?? 0) >= 95 ? 'healthy' : 'attention' }]} />} />
 
       <WorkspacePanel title="Failure chain" detail="The first non-passing stage explains the downstream MLAT and aircraft state." tone={stateTone}>
         <SystemFlow ariaLabel="Registry discovery MLAT aircraft failure chain" nodes={[

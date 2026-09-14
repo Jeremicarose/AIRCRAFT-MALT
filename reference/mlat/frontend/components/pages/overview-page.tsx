@@ -12,11 +12,11 @@ import { buttonVariants } from '@/components/ui/button';
 import { DataNotice } from '@/components/ui/data-notice';
 import { StatStrip, type StatItem } from '@/components/ui/stat-strip';
 import { StatusChip } from '@/components/ui/status-chip';
-import { fetchJson, PUBLIC_POSITIONS_PATH } from '@/lib/api';
+import { apiQueryKeys, fetchJson, presentApiError, PUBLIC_POSITIONS_PATH } from '@/lib/api';
 import { formatAltitude, formatCoordinate, formatDistanceMeters, latestPositions, number, percent, toneFromFreshness, toneFromScore } from '@/lib/format';
 import { useOperatorStore } from '@/lib/operator-store';
 import { receiverIdentity } from '@/lib/receiver-state';
-import type { JsonValue, PipelineData, PositionsResponse, ReadinessData, ReceiversResponse, ShellSnapshot, StatusTone } from '@/lib/types';
+import type { HealthData, JsonValue, ModeData, PipelineData, PositionsResponse, ReadinessData, ReceiversResponse, ShellSnapshot, StatusTone } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
 interface OverviewPageProps {
@@ -29,18 +29,20 @@ interface OverviewPageProps {
 }
 
 export function OverviewPage({ snapshot, readiness, benchmark, positionsData, positionsError, initialPipeline }: OverviewPageProps) {
-  const positionsQuery = useQuery({ queryKey: ['positions', 'overview'], queryFn: () => fetchJson<PositionsResponse>(PUBLIC_POSITIONS_PATH), initialData: positionsData, refetchInterval: 10_000 });
-  const receiversQuery = useQuery({ queryKey: ['receivers', 'overview'], queryFn: () => fetchJson<ReceiversResponse>('/api/receivers'), initialData: snapshot.receiverData ?? { receivers: [] }, refetchInterval: 15_000 });
-  const pipelineQuery = useQuery({ queryKey: ['pipeline', 'overview'], queryFn: () => fetchJson<PipelineData>('/api/pipeline'), initialData: initialPipeline ?? undefined, refetchInterval: 15_000 });
+  const positionsQuery = useQuery({ queryKey: apiQueryKeys.positions, queryFn: () => fetchJson<PositionsResponse>(PUBLIC_POSITIONS_PATH), initialData: positionsData, initialDataUpdatedAt: positionsError ? 0 : undefined, refetchInterval: 10_000 });
+  const receiversQuery = useQuery({ queryKey: apiQueryKeys.receivers, queryFn: () => fetchJson<ReceiversResponse>('/api/receivers'), initialData: snapshot.receiverData ?? undefined });
+  const pipelineQuery = useQuery({ queryKey: apiQueryKeys.pipeline, queryFn: () => fetchJson<PipelineData>('/api/pipeline'), initialData: initialPipeline ?? undefined, refetchInterval: 15_000 });
+  const modeQuery = useQuery({ queryKey: apiQueryKeys.mode, queryFn: () => fetchJson<ModeData>('/api/system/mode'), initialData: snapshot.modeData ?? undefined });
+  const healthQuery = useQuery({ queryKey: apiQueryKeys.health, queryFn: () => fetchJson<HealthData>('/api/health'), initialData: snapshot.healthData ?? undefined });
   const aircraft = useMemo(() => latestPositions(positionsQuery.data.positions ?? []), [positionsQuery.data.positions]);
-  const receivers = receiversQuery.data.receivers ?? [];
+  const receivers = receiversQuery.data?.receivers ?? [];
   const selectedId = useOperatorStore((state) => state.selectedAircraftId);
   const setSelectedId = useOperatorStore((state) => state.setSelectedAircraftId);
   const setDock = useOperatorStore((state) => state.setDock);
   const setInvestigationContext = useOperatorStore((state) => state.setInvestigationContext);
   const selected = aircraft.find((item) => item.aircraft_id === selectedId) ?? aircraft[0] ?? null;
-  const mode = snapshot.modeData;
-  const health = snapshot.healthData;
+  const mode = modeQuery.data ?? null;
+  const health = healthQuery.data ?? null;
   const pipeline = pipelineQuery.data;
   const isReplay = Boolean(mode?.demo_mode || mode?.simulation_mode || mode?.synthetic_feed_mode);
   const evidenceReady = Boolean(readiness?.ready && mode?.benchmarkable_output);
@@ -49,8 +51,9 @@ export function OverviewPage({ snapshot, readiness, benchmark, positionsData, po
   const storeAge = health?.freshness?.last_store_age_s;
   const activeReceivers = Number(readiness?.dimensions?.reliability?.active_receivers ?? receivers.length);
   const registeredRuntimeReceivers = receivers.filter((receiver) => receiverIdentity(receiver) !== null).length;
-  const systemTone: StatusTone = !mode ? 'failure' : isReplay ? 'replay' : readiness?.ready ? 'healthy' : 'attention';
-  const systemLabel = !mode ? 'System unavailable' : isReplay ? 'Replay operations' : readiness?.ready ? 'System operational' : 'Attention required';
+  const liveStatusUnverified = Boolean(modeQuery.error || healthQuery.error);
+  const systemTone: StatusTone = !mode ? 'failure' : isReplay ? 'replay' : liveStatusUnverified ? 'attention' : readiness?.ready ? 'healthy' : 'attention';
+  const systemLabel = !mode ? 'System unavailable' : isReplay ? 'Replay operations' : liveStatusUnverified ? 'Live status unverified' : readiness?.ready ? 'System operational' : 'Attention required';
   const blockers = pipeline?.blockers ?? [];
   const alerts = [
     ...blockers.slice(0, 3).map((detail) => ({ title: 'Pipeline blocker', detail, tone: 'failure' as StatusTone, href: '/app/pipeline' })),
@@ -76,6 +79,10 @@ export function OverviewPage({ snapshot, readiness, benchmark, positionsData, po
     { title: 'Receiver fleet', detail: `${activeReceivers} receivers are available in the current MLAT pool.`, meta: `${receivers.length} visible`, tone: activeReceivers >= 4 ? 'healthy' : 'failure', href: '/app/receivers' },
     { title: 'Evidence posture', detail: evidenceReady ? 'Output is benchmarkable and ready for review.' : 'Evidence gates remain constrained.', meta: evidenceReady ? 'Ready' : 'Pending', tone: evidenceReady ? 'trust' : 'attention', href: '/app/pipeline' },
   ];
+  const positionsFailure = positionsQuery.error ?? (positionsError && !positionsQuery.isFetchedAfterMount ? new Error(positionsError) : null);
+  const positionError = positionsFailure ? presentApiError(positionsFailure, 'The aircraft list could not be refreshed. Last-known positions remain visible and may be stale.') : null;
+  const receiverError = receiversQuery.error ? presentApiError(receiversQuery.error, 'Receiver availability could not be refreshed. Receiver counts and geometry may be stale.') : null;
+  const pipelineError = pipelineQuery.error ? presentApiError(pipelineQuery.error, 'Pipeline status could not be refreshed. The last-known evidence posture remains visible.') : null;
 
   useEffect(() => {
     if (selected) setSelectedId(selected.aircraft_id);
@@ -112,9 +119,10 @@ export function OverviewPage({ snapshot, readiness, benchmark, positionsData, po
 
   return (
     <div className="space-y-4">
-      {(positionsQuery.error instanceof Error || (positionsError && !positionsQuery.isFetchedAfterMount)) ? <DataNotice title="Aircraft positions are unavailable" detail={positionsQuery.error instanceof Error ? positionsQuery.error.message : positionsError ?? 'The latest position request failed.'} onRetry={() => void positionsQuery.refetch()} /> : null}
+      {positionError ? <DataNotice title="Aircraft positions could not be refreshed" detail={positionError.detail} technicalDetail={positionError.technicalDetail} onRetry={() => void positionsQuery.refetch()} /> : null}
+      {receiverError ? <DataNotice title="Receiver availability is unverified" detail={receiverError.detail} technicalDetail={receiverError.technicalDetail} tone="attention" onRetry={() => void receiversQuery.refetch()} /> : null}
+      {pipelineError ? <DataNotice title="Pipeline status could not be refreshed" detail={pipelineError.detail} technicalDetail={pipelineError.technicalDetail} tone="attention" onRetry={() => void pipelineQuery.refetch()} /> : null}
       <WorkspaceHeader
-        eyebrow="Operate"
         title="Operational landing page"
         description={alerts.length ? alerts[0].detail : 'Maps, evidence posture, and ranked issues stay connected so an operator can move from system health to a concrete aircraft or receiver investigation without losing context.'}
         status={<StatusChip label={systemLabel} tone={systemTone} />}
@@ -136,7 +144,7 @@ export function OverviewPage({ snapshot, readiness, benchmark, positionsData, po
 
       <WorkspaceSplit
         secondaryWidth="420px"
-        primary={<WorkspacePanel title="Operational map" detail="The overview now starts with a live spatial canvas instead of a static summary." tone="trust"><div className="relative overflow-hidden"><div className="absolute left-4 top-4 z-dropdown flex items-center gap-2 rounded-md border border-line bg-graphite/90 px-3 py-2 shadow-map backdrop-blur-sm"><span className="size-1.5 rounded-full bg-healthy" /><span className="text-xs font-semibold text-ink">Current airspace</span><span className="text-[11px] text-ink-quiet">{aircraft.length} tracked</span></div><LazyAirspaceMap aircraft={aircraft} receivers={receivers} selectedAircraftId={selected?.aircraft_id} onSelectAircraft={setSelectedId} className="map-overview" /></div></WorkspacePanel>}
+        primary={<WorkspacePanel title="Operational map" detail="Current solved aircraft and receiver geometry." tone="trust"><div className="relative overflow-hidden"><div className="absolute left-4 top-4 z-dropdown flex items-center gap-2 rounded-md border border-line bg-graphite/90 px-3 py-2 shadow-map backdrop-blur-sm"><span className="size-1.5 rounded-full bg-healthy" /><span className="text-xs font-semibold text-ink">Current airspace</span><span className="text-[11px] text-ink-quiet">{aircraft.length} tracked</span></div><LazyAirspaceMap aircraft={aircraft} receivers={receivers} selectedAircraftId={selected?.aircraft_id} onSelectAircraft={setSelectedId} className="map-overview" /></div></WorkspacePanel>}
         secondary={<WorkspacePanel title="Ranked attention queue" detail="The highest priority issues and state changes are surfaced first." tone={alerts.length ? alerts[0].tone : 'healthy'}><IssueList items={alerts.length ? alerts : [{ title: 'System clear', detail: 'Aircraft localization, receiver participation, and evidence gates are within operating thresholds.', tone: 'healthy', href: '/app/localization' }]} /><div className="border-t border-line"><ActivityRail items={liveRail} /></div></WorkspacePanel>}
       />
 

@@ -28,13 +28,14 @@ interface LiveMapPageProps {
   initialPositionsData: PositionsResponse;
   initialPositionsError: string | null;
   initialReceiversData: ReceiversResponse;
+  initialReceiversError: string | null;
   initialSelectedAircraftId?: string | null;
   initialSelectedReceiverId?: string | null;
 }
 
 type FocusType = 'aircraft' | 'receiver';
 
-export default function LiveMapPage({ initialModeData, initialHealthData, initialPositionsData, initialPositionsError, initialReceiversData, initialSelectedAircraftId, initialSelectedReceiverId }: LiveMapPageProps) {
+export default function LiveMapPage({ initialModeData, initialHealthData, initialPositionsData, initialPositionsError, initialReceiversData, initialReceiversError, initialSelectedAircraftId, initialSelectedReceiverId }: LiveMapPageProps) {
   const router = useRouter();
   const [search, setSearch] = useState('');
   const [fitRequest, setFitRequest] = useState(0);
@@ -53,8 +54,8 @@ export default function LiveMapPage({ initialModeData, initialHealthData, initia
   const setInvestigationContext = useOperatorStore((state) => state.setInvestigationContext);
   const storeHydrated = useOperatorStore((state) => state.hasHydrated);
 
-  const positionsQuery = useQuery({ queryKey: apiQueryKeys.positions, queryFn: () => fetchJson<PositionsResponse>(PUBLIC_POSITIONS_PATH), initialData: initialPositionsData, refetchInterval: refreshInterval * 1_000 });
-  const receiversQuery = useQuery({ queryKey: apiQueryKeys.receivers, queryFn: () => fetchJson<ReceiversResponse>('/api/receivers'), initialData: initialReceiversData });
+  const positionsQuery = useQuery({ queryKey: apiQueryKeys.positions, queryFn: () => fetchJson<PositionsResponse>(PUBLIC_POSITIONS_PATH), initialData: initialPositionsData, initialDataUpdatedAt: initialPositionsError ? 0 : undefined, refetchInterval: refreshInterval * 1_000 });
+  const receiversQuery = useQuery({ queryKey: apiQueryKeys.receivers, queryFn: () => fetchJson<ReceiversResponse>('/api/receivers'), initialData: initialReceiversData, initialDataUpdatedAt: initialReceiversError ? 0 : undefined });
   const modeQuery = useQuery({ queryKey: apiQueryKeys.mode, queryFn: () => fetchJson<ModeData>('/api/system/mode'), initialData: initialModeData ?? undefined });
   const healthQuery = useQuery({ queryKey: apiQueryKeys.health, queryFn: () => fetchJson<HealthData>('/api/health'), initialData: initialHealthData ?? undefined });
 
@@ -145,7 +146,8 @@ export default function LiveMapPage({ initialModeData, initialHealthData, initia
   const focusAircraft = focusType === 'aircraft' ? selectedAircraft : null;
   const positionFailure = positionsQuery.error ?? (initialPositionsError && !positionsQuery.isFetchedAfterMount ? new Error(initialPositionsError) : null);
   const positionError = positionFailure ? presentApiError(positionFailure, 'The latest aircraft positions could not be refreshed. Last-known positions remain visible and may be stale.') : null;
-  const receiverError = receiversQuery.error ? presentApiError(receiversQuery.error, 'Receiver status could not be refreshed. Aircraft positions remain available, but receiver availability is unknown.') : null;
+  const receiverFailure = receiversQuery.error ?? (initialReceiversError && !receiversQuery.isFetchedAfterMount ? new Error(initialReceiversError) : null);
+  const receiverError = receiverFailure ? presentApiError(receiverFailure, 'Receiver status could not be refreshed. Aircraft positions remain available, but receiver availability is unknown.') : null;
   const healthError = healthQuery.error ? presentApiError(healthQuery.error, 'System freshness could not be checked. The map remains usable, but its live status cannot be confirmed.') : null;
   const hasPositionData = Boolean(positionsQuery.data?.positions.length);
   const connectionLabel = isReplay
