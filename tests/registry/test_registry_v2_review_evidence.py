@@ -31,6 +31,23 @@ def test_clean_worktree_allows_only_the_bundle_being_generated(monkeypatch, tmp_
         review.require_clean_worktree(Path(tmp_path) / "outside-repository")
 
 
+def test_review_generator_accepts_the_pinned_node_version(monkeypatch):
+    monkeypatch.setattr(
+        review,
+        "tool_version",
+        lambda command: f"v{review.PINNED_NODE_VERSION}",
+    )
+
+    review.require_pinned_node_version()
+
+
+def test_review_generator_rejects_an_unpinned_node_version(monkeypatch):
+    monkeypatch.setattr(review, "tool_version", lambda command: "v20.19.6")
+
+    with pytest.raises(RuntimeError, match=r"Node\.js 22\.23\.1 is required.*nvm use"):
+        review.require_pinned_node_version()
+
+
 def browser_report(commit: str, tree: str) -> dict:
     return {
         "schema_version": 1,

@@ -22,6 +22,7 @@ CORPUS = ROOT / "tests/registry/fixtures/registry_v2_conformance.json"
 CONTRACT_BINARY = CONTRACT / "target/riscv64imac-unknown-none-elf/release/receiver-registry"
 HISTORICAL_BUNDLE = ROOT / "evidence/registry-v2-testnet-2026-07-30-final"
 DEPLOYED_BUNDLE = ROOT / "evidence/registry-v2-testnet-2026-09-11-data1-final"
+PINNED_NODE_VERSION = (ROOT / ".nvmrc").read_text(encoding="ascii").strip()
 
 
 @dataclass(frozen=True)
@@ -299,6 +300,21 @@ def tool_version(command: tuple[str, ...]) -> str:
     return (completed.stdout or completed.stderr).strip()
 
 
+def require_pinned_node_version() -> None:
+    try:
+        observed = tool_version(("node", "--version")).removeprefix("v")
+    except (OSError, subprocess.CalledProcessError) as exc:
+        raise RuntimeError(
+            f"Node.js {PINNED_NODE_VERSION} is required; run `nvm use` before "
+            "generating review evidence"
+        ) from exc
+    if observed != PINNED_NODE_VERSION:
+        raise RuntimeError(
+            f"Node.js {PINNED_NODE_VERSION} is required, but {observed or 'an unknown version'} "
+            "is active; run `nvm use` before generating review evidence"
+        )
+
+
 def write_checksums(bundle: Path) -> None:
     entries = []
     for path in sorted(item for item in bundle.rglob("*") if item.is_file()):
@@ -315,6 +331,7 @@ def main() -> None:
         raise RuntimeError(f"output directory is not empty: {output}")
 
     require_clean_worktree()
+    require_pinned_node_version()
     source_commit = git("rev-parse", "HEAD")
     source_tree = git("rev-parse", "HEAD^{tree}")
     repository = git("remote", "get-url", "origin")
