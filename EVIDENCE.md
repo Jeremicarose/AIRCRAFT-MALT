@@ -29,7 +29,7 @@ review. Those remain external dependencies.
 
 The repository now contains later frontend commits. The bundle remains valid
 for the exact source it names, but it does not certify those later UI changes.
-The current frontend has 20 passing unit tests and defines 12 browser checks; a
+The current frontend has 22 passing unit tests and defines 12 browser checks; a
 new clean browser report and review bundle are still required for the final
 source revision.
 

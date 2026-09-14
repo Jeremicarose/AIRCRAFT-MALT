@@ -19,8 +19,8 @@ validated by external users.
 | Historical CKB testnet lifecycle | COMPLETE | Frozen 2026-07-30 create-update-transfer-revoke and seven rejected attacks pass the offline verifier | Evidence is historical and uses the older tooling |
 | Fresh immutable testnet lifecycle | COMPLETE | The CKB CLI-signed `data1` deployment, create, update, transfer, revoke, seven rejected attacks, source-review linkage, local CI, and 100 live-chain checks are preserved without private keys | GitHub CI provenance and independent review are still required for a stable release, but not for the factual testnet lifecycle claim |
 | Browser/SDK-driven lifecycle | BLOCKED | The SDK and browser journey use the fresh immutable deployment and mutable deployments still fail closed | Connect a funded CCC testnet wallet and approve a new create-update-transfer-revoke rehearsal; no SDK-driven transaction is claimed yet |
-| MLAT reference software | PARTIAL | Full 196-test repository Python suite passes; strict live gates and evidence verifier exist | Physical synchronized receiver run and independent reference data are absent |
-| Operator frontend | PARTIAL | The shell starts on the Receiver Registry, places MLAT under a secondary reference group, preserves aircraft-receiver return context, and uses the SDK for Registry discovery, export, history, and signer-based lifecycle actions; 20 unit tests and type checking pass, and the Node 22 production build generates 17 routes | Run the current 12-test browser suite from a clean final commit in CI and complete a funded wallet-signed browser run |
+| MLAT reference software | PARTIAL | Full 198-test repository Python suite passes; strict live gates and evidence verifier exist | Physical synchronized receiver run and independent reference data are absent |
+| Operator frontend | PARTIAL | The shell starts on the Receiver Registry, uses only explicit `receiver_identity` values for CKB rows, excludes malformed identity rows from MLAT, preserves aircraft-receiver return context, and uses the SDK for Registry lifecycle actions; 22 unit tests and type checking pass, and the Node 22 production build generates 17 routes | Run the current 12-test browser suite from a clean final commit in CI and complete a funded wallet-signed browser run |
 | Review evidence for current source | PARTIAL | `evidence/registry-v2-review-2026-09-14-final` is a complete, passing bundle for commit `4fc8fce` and tree `3facd3f`, including 16 checks, 57 conformance cases, exact binary hashes, and 9 clean browser checks | Later frontend commits are outside that bundle; generate a new clean source-bound bundle, then add GitHub CI provenance and independent review |
 | Pilot materials | PARTIAL | Browser workflow, readiness gate, owner/coordinator tasks, feedback form, evidence template, proposal, and recruitment research exist | Consent materials, a maintainer wallet rehearsal, recruitment, and observed sessions remain |
 | Security/release baseline | PARTIAL | CodeQL, dependency review, SBOM, attestations, locked dependencies, MIT license, protected general release, and protected provenance-backed SDK release workflows exist | The npm organization and first package release need maintainer approval; workflows need a public green run; independent audit is absent; one low upstream npm advisory remains |
@@ -28,7 +28,7 @@ validated by external users.
 
 ## Verification on this tree
 
-- `python3 -m pytest -q`: 196 passed.
+- `python3 -m pytest -q`: 198 passed.
 - `python3 -m black --check src/ckb_registry src/mlat_reference tools tests`:
   passed.
 - `python3 -m flake8 src tools tests`: passed.
@@ -36,7 +36,7 @@ validated by external users.
   11 CKB-VM tests, and the RISC-V contract check passed.
 - `npm test && npm run build` in `sdk/typescript`: 70 tests and TypeScript
   compilation passed.
-- `npm test` in the frontend: 20 API-error, fail-closed discovery, precision,
+- `npm test` in the frontend: 22 canonical-identity, API-error, fail-closed discovery, precision,
   freshness, map-configuration, receiver-reference, standalone-asset, and
   browser-evidence contract tests passed.
 - `npm run test:e2e` from the clean Node 22 source commit `4fc8fce` passed all 9 Registry,

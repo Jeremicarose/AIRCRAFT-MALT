@@ -1,11 +1,17 @@
 import { formatDateTime, truncateMiddle } from '@/lib/format';
 import { classifyReceiverObservation, RECEIVER_STALE_AFTER_SECONDS, type ReceiverObservationFreshness } from '@/lib/receiver-freshness';
-import { receiverReferenceIds, receiverReferencesInclude } from '@/lib/receiver-reference';
+import {
+  normalizedReceiverIdentity,
+  RECEIVER_IDENTITY_PATTERN,
+  receiverIdentity,
+  receiverReferenceIds,
+  receiverReferencesInclude,
+} from '@/lib/receiver-reference';
 import type { InvestigationDockState, Position, Receiver, StatusTone } from '@/lib/types';
 
-export const RECEIVER_IDENTITY_PATTERN = /^0x[0-9a-f]{64}$/i;
+export { RECEIVER_IDENTITY_PATTERN, receiverIdentity };
 
-export type RegistryIdentityStatus = 'active' | 'revoked' | 'not_registered' | 'conflict';
+export type RegistryIdentityStatus = 'active' | 'revoked' | 'not_registered' | 'conflict' | 'invalid';
 export type MlatOperationalStatus = 'available' | 'contributing' | 'stale' | 'offline' | 'excluded' | 'unavailable';
 
 export interface UnifiedReceiver {
@@ -51,11 +57,6 @@ interface ReconcileReceiverOptions {
   registryDirectoryAvailable?: boolean;
 }
 
-function normalizedIdentity(value?: string | null): string | null {
-  if (!value || !RECEIVER_IDENTITY_PATTERN.test(value)) return null;
-  return value.toLowerCase();
-}
-
 function normalizedRegistryTimestamp(value: unknown): string | null {
   if (typeof value !== 'string' || !/^(0|[1-9][0-9]*)$/.test(value)) return null;
   try {
@@ -68,12 +69,6 @@ function normalizedRegistryTimestamp(value: unknown): string | null {
   }
 }
 
-export function receiverIdentity(receiver?: Receiver | null): string | null {
-  if (!receiver) return null;
-  return normalizedIdentity(receiver.receiver_identity)
-    ?? (receiver.data_source === 'ckb_registry' ? normalizedIdentity(receiver.receiver_id) : null);
-}
-
 export function receiverOperationalKey(receiver: Receiver): string {
   const identity = receiverIdentity(receiver);
   if (identity) return identity;
@@ -84,11 +79,10 @@ export function receiverOperationalKey(receiver: Receiver): string {
     : `${prefix}${receiver.receiver_id}`;
 }
 
-function groupByKey(receivers: Receiver[], registrySource: boolean): Map<string, Receiver[]> {
+function groupByKey(receivers: Receiver[]): Map<string, Receiver[]> {
   const result = new Map<string, Receiver[]>();
   receivers.forEach((receiver) => {
     const identity = receiverIdentity(receiver);
-    if (registrySource && !identity) return;
     const key = identity ?? receiverOperationalKey(receiver);
     result.set(key, [...(result.get(key) ?? []), receiver]);
   });
@@ -124,6 +118,9 @@ function operationalState({
   runtimeInventoryAvailable: boolean;
   registryDirectoryAvailable: boolean;
 }): Pick<UnifiedReceiver, 'mlatStatus' | 'mlatReason'> {
+  if (registryStatus === 'invalid') {
+    return { mlatStatus: 'excluded', mlatReason: 'This CKB Registry row has no valid canonical receiver_identity and is excluded.' };
+  }
   if (registryStatus === 'conflict') {
     return { mlatStatus: 'excluded', mlatReason: 'Duplicate live cells claim this canonical identity. MLAT must fail closed.' };
   }
@@ -178,9 +175,9 @@ export function reconcileReceivers({
   runtimeInventoryAvailable = true,
   registryDirectoryAvailable = true,
 }: ReconcileReceiverOptions): UnifiedReceiver[] {
-  const registryByIdentity = groupByKey(registryReceivers, true);
-  const runtimeByKey = groupByKey(runtimeReceivers, false);
-  const explicitConflicts = new Set(conflictIdentities.map(normalizedIdentity).filter(Boolean) as string[]);
+  const registryByIdentity = groupByKey(registryReceivers);
+  const runtimeByKey = groupByKey(runtimeReceivers);
+  const explicitConflicts = new Set(conflictIdentities.map(normalizedReceiverIdentity).filter(Boolean) as string[]);
   const keys = new Set([...registryByIdentity.keys(), ...runtimeByKey.keys(), ...explicitConflicts]);
 
   return [...keys].sort().map((key) => {
@@ -188,19 +185,24 @@ export function reconcileReceivers({
     const runtimeRows = runtimeByKey.get(key) ?? [];
     const registry = registryRows[0] ?? null;
     const runtime = runtimeRows[0] ?? null;
-    const identity = normalizedIdentity(key);
+    const identity = normalizedReceiverIdentity(key);
     const identityConflict = explicitConflicts.has(key)
       || registryRows.length > 1
       || (identity !== null && runtimeRows.length > 1);
     const base = registry ?? runtime;
     const registryRecordStatus = registry?.status ?? (identity ? runtime?.status : null) ?? null;
-    const registryStatus: RegistryIdentityStatus = identityConflict
-      ? 'conflict'
-      : identity === null
-        ? 'not_registered'
-        : registryRecordStatus === 'revoked'
-          ? 'revoked'
-          : 'active';
+    const invalidRegistryIdentity = identity === null
+      && (registryRows.length > 0
+        || runtimeRows.some((receiver) => receiver.data_source === 'ckb_registry'));
+    const registryStatus: RegistryIdentityStatus = invalidRegistryIdentity
+      ? 'invalid'
+      : identityConflict
+        ? 'conflict'
+        : identity === null
+          ? 'not_registered'
+          : registryRecordStatus === 'revoked'
+            ? 'revoked'
+            : 'active';
     const capabilities = [...new Set([...(registry?.capabilities ?? []), ...(runtime?.capabilities ?? [])])];
     const mlatEligible = registryDirectoryAvailable
       && registryStatus === 'active'
@@ -232,7 +234,7 @@ export function reconcileReceivers({
     return {
       key,
       identity,
-      label: base?.receiver_label || (identity ? base?.receiver_id : runtime?.receiver_id) || 'Unknown receiver',
+      label: base?.receiver_label || base?.receiver_id || 'Unknown receiver',
       registry,
       runtime,
       registryStatus,
@@ -274,6 +276,7 @@ export function registryStatusPresentation(status: RegistryIdentityStatus): { la
   if (status === 'active') return { label: 'Active identity', tone: 'trust' };
   if (status === 'revoked') return { label: 'Revoked identity', tone: 'failure' };
   if (status === 'conflict') return { label: 'Identity conflict', tone: 'failure' };
+  if (status === 'invalid') return { label: 'Invalid identity', tone: 'failure' };
   return { label: 'Not registered', tone: 'neutral' };
 }
 

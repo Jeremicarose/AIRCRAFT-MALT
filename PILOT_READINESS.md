@@ -29,7 +29,7 @@ review are still missing; the stable release gate must repeat the live check.
 | TypeScript SDK | Prepared | 70 SDK tests pass and the current testnet factory uses the immutable deployment | Run a funded CCC wallet lifecycle through the browser |
 | MLAT replay | Prepared | Python integration suite passes | Keep replay labels visible |
 | MLAT live field use | Blocked | Harness exists; no synchronized physical run | Obtain four qualified receiver feeds |
-| UI | Partial | 20 current unit/contract tests and the 17-route Node 22 production build pass; the older source-bound bundle records nine browser checks for commit `4fc8fce` | Run the current 12-test browser suite from a clean final commit in public CI and complete a funded wallet-signed lifecycle |
+| UI | Partial | 22 current unit/contract tests and the 17-route Node 22 production build pass; malformed Registry rows without explicit canonical identity are excluded; the older source-bound bundle records nine browser checks for commit `4fc8fce` | Run the current 12-test browser suite from a clean final commit in public CI and complete a funded wallet-signed lifecycle |
 | Public deployment | Blocked | No verified complete hosted URL | Deploy frontend, API, and processor |
 | Recruitment | Prepared, not executed | 13 public leads; messages and tracker exist | Send authorized permission requests and invitations |
 | Pilot | Not started | 0 contacted, 0 confirmed, 0 completed | Clear P0 gates before inviting |
@@ -57,13 +57,13 @@ documented low-severity upstream advisory.
 
 ## Verification results
 
-- Python: 196 passed with `python -m pytest`.
+- Python: 198 passed with `python -m pytest`.
 - Registry contract: 16 tests passed.
 - TypeScript SDK: 70 tests passed.
 - Cross-language conformance: 57 cases, 171 assertions, zero failures.
 - Historical offline evidence verifier: passed all checks.
 - Frontend type check: passed.
-- Frontend: 20 unit/contract tests, type check, and a Node 22 production build
+- Frontend: 22 unit/contract tests, type check, and a Node 22 production build
   passed and generated all 17 routes.
 - Browser: the current Playwright suite defines 12 checks covering the Registry
   landing route, MLAT investigation and recovery paths, map degradation,

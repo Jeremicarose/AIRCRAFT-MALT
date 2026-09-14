@@ -1,7 +1,18 @@
-const CKB_RECEIVER_IDENTITY = /^0x[0-9a-f]{64}$/i;
+export const RECEIVER_IDENTITY_PATTERN = /^0x[0-9a-f]{64}$/i;
 
 function normalizedReference(value: string): string {
-  return CKB_RECEIVER_IDENTITY.test(value) ? value.toLowerCase() : value;
+  return RECEIVER_IDENTITY_PATTERN.test(value) ? value.toLowerCase() : value;
+}
+
+export function normalizedReceiverIdentity(value?: string | null): string | null {
+  if (!value || !RECEIVER_IDENTITY_PATTERN.test(value)) return null;
+  return value.toLowerCase();
+}
+
+export function receiverIdentity(
+  receiver?: { receiver_identity?: string | null } | null,
+): string | null {
+  return normalizedReceiverIdentity(receiver?.receiver_identity);
 }
 
 export function receiverReferenceIds(

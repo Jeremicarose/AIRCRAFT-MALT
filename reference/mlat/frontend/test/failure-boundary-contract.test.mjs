@@ -22,3 +22,9 @@ test('fails closed when Registry discovery is unavailable', () => {
   assert.match(receiverStateSource, /Registry discovery could not be verified/);
   assert.match(receiversPageSource, /registryDirectoryAvailable,/);
 });
+
+test('excludes CKB Registry rows without an explicit canonical identity', () => {
+  assert.match(receiverStateSource, /registryStatus === 'invalid'/);
+  assert.match(receiverStateSource, /has no valid canonical receiver_identity and is excluded/);
+  assert.doesNotMatch(receiverStateSource, /normalizedReceiverIdentity\(receiver\.receiver_id\)/);
+});
