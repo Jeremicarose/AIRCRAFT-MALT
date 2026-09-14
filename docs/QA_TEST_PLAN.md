@@ -47,7 +47,7 @@ machine-readable release report are written under ignored `test-results/` and
 | Frontend unit and harness behavior | Missing canonical identities, invalid, future, and stale observations fail closed; exact `u64` values are not rounded; production and browser harnesses are isolated | PASS | 22 canonical-identity, API-error, fail-closed discovery, precision, freshness, map-configuration, receiver-reference, standalone-runtime, reporter, and Playwright-config tests passed |
 | Browser evidence report | Failed tests and axe findings make the machine-readable report fail closed | PASS | 1 reporter contract test passed |
 | Automated production browser suite | Registry-first navigation, MLAT investigation and recovery, map degradation, assets, accessibility, mobile width, and headers work together | PARTIAL | The older source-bound bundle records 9 Playwright tests passing at commit `4fc8fce`; the current 12-test suite still needs a clean source-bound CI run |
-| Python application | Registry, API, MLAT, database, and evidence tests pass | PASS | 198 tests passed on 2026-09-14 |
+| Python application | Registry, API, MLAT, database, and evidence tests pass | PASS | 199 tests passed on 2026-09-14 |
 | Production build | Optimized Node 22 build completes | PASS | Node 22 build generated all 17 routes |
 | Production console | No critical browser errors or development overlay | PARTIAL | The clean `4fc8fce` browser suite completed without page errors or failed assets; later frontend commits need the expanded clean run |
 | Production response security | Basic security headers present; framework hidden | PASS | `nosniff`, `DENY`, referrer, and permissions policies present; no `X-Powered-By` |

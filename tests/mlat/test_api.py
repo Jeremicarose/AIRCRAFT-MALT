@@ -473,6 +473,15 @@ def test_system_mode_does_not_treat_fallback_capability_as_simulation(monkeypatc
     assert mode["synthetic_feed_mode"] is False
 
 
+def test_system_mode_defaults_registry_to_immutable_data1(monkeypatch, tmp_path):
+    monkeypatch.delenv("RECEIVER_REGISTRY_HASH_TYPE", raising=False)
+    module = _load_api_module(monkeypatch, tmp_path)
+    mode = module.create_app().test_client().get("/api/system/mode").get_json()
+
+    assert mode["receiver_registry_hash_type"] == "data1"
+    assert mode["registry_code_immutable"] is True
+
+
 def test_system_mode_exposes_strict_production_configuration(monkeypatch, tmp_path):
     module = _load_api_module(
         monkeypatch,
