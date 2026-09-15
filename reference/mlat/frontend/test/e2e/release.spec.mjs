@@ -153,16 +153,12 @@ test('loads real OpenStreetMap tiles and keeps MLAT overlays usable', async ({ p
   await page.locator('.maplibregl-ctrl-zoom-in').last().click();
   await expect.poll(async () => Number(await mapRegion.getAttribute('data-map-zoom'))).toBeGreaterThan(zoomBefore);
 
-  const mapBounds = await page.locator('.maplibregl-canvas').last().boundingBox();
-  expect(mapBounds).not.toBeNull();
-  if (mapBounds) {
-    const centerBefore = await mapRegion.getAttribute('data-map-center');
-    await page.mouse.move(mapBounds.x + mapBounds.width * 0.65, mapBounds.y + mapBounds.height * 0.5);
-    await page.mouse.down();
-    await page.mouse.move(mapBounds.x + mapBounds.width * 0.25, mapBounds.y + mapBounds.height * 0.5, { steps: 8 });
-    await page.mouse.up();
-    await expect.poll(async () => mapRegion.getAttribute('data-map-center')).not.toBe(centerBefore);
-  }
+  const mapCanvas = page.locator('.maplibregl-canvas').last();
+  await expect(mapCanvas).toBeVisible();
+  const centerBefore = await mapRegion.getAttribute('data-map-center');
+  await mapCanvas.focus();
+  await page.keyboard.press('ArrowRight');
+  await expect.poll(async () => mapRegion.getAttribute('data-map-center')).not.toBe(centerBefore);
 });
 }
 
@@ -188,7 +184,7 @@ test('recovers the air picture after a failed refresh without reloading the page
 
   const notice = page.getByRole('alert').filter({ hasText: 'The air picture could not be refreshed' });
   await expect(notice).toBeVisible();
-  await expect(notice.getByText(/try again/i)).toBeVisible();
+  await expect(notice.getByRole('button', { name: 'Try again' })).toBeVisible();
   await expect(notice.getByText('Technical details')).toBeVisible();
   await expect(page.locator('.aircraft-map-marker').first()).toBeVisible();
 

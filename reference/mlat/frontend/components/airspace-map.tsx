@@ -218,8 +218,12 @@ export default function AirspaceMap({ aircraft, receivers, selectedAircraftId, s
       element.onclick = () => onSelectReceiver?.(operationalKey);
       const popup = existingMarker?.getPopup() ?? new maplibregl.Popup({ offset: 12, closeButton: false });
       popup.setDOMContent(popupContent(receiverLabel, [identity ? `Identity ${identity.slice(0, 10)}...${identity.slice(-6)}` : 'No Registry identity', formatCoordinate(receiver.latitude, receiver.longitude), receiver.status || 'Status unknown']));
-      const marker = existingMarker ?? new maplibregl.Marker({ element, anchor: 'center' }).setPopup(popup).addTo(map);
-      marker.setLngLat(coordinates);
+      const marker = existingMarker
+        ? existingMarker.setLngLat(coordinates)
+        : new maplibregl.Marker({ element, anchor: 'center' })
+          .setLngLat(coordinates)
+          .setPopup(popup)
+          .addTo(map);
       markersRef.current.set(markerKey, marker);
     });
 
@@ -236,8 +240,12 @@ export default function AirspaceMap({ aircraft, receivers, selectedAircraftId, s
       element.onclick = () => onSelectAircraft?.(item.aircraft_id);
       const popup = existingMarker?.getPopup() ?? new maplibregl.Popup({ offset: 12, closeButton: false });
       popup.setDOMContent(popupContent(item.aircraft_id, [`${percent(item.quality?.score, 0)} confidence`, `${item.correlation?.receiver_count ?? item.num_receivers ?? 0} receivers`]));
-      const marker = existingMarker ?? new maplibregl.Marker({ element, anchor: 'center' }).setPopup(popup).addTo(map);
-      marker.setLngLat(coordinates);
+      const marker = existingMarker
+        ? existingMarker.setLngLat(coordinates)
+        : new maplibregl.Marker({ element, anchor: 'center' })
+          .setLngLat(coordinates)
+          .setPopup(popup)
+          .addTo(map);
       markersRef.current.set(markerKey, marker);
     });
 
