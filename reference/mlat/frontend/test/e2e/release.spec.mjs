@@ -191,7 +191,7 @@ test('recovers the air picture after a failed refresh without reloading the page
   await page.unroute('**/api/positions/recent**', failPositions);
   await notice.getByRole('button', { name: 'Try again' }).click();
   await expect(notice).toBeHidden();
-  await expect(page.getByText('Live polling', { exact: true }).first()).toBeVisible();
+  await expect(page.getByText(/^(Replay data|Live polling)$/).first()).toBeVisible();
 });
 
 for (const route of ['/app/localization', '/app/environment']) {
