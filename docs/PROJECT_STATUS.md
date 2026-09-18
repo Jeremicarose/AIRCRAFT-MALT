@@ -19,16 +19,16 @@ validated by external users.
 | Historical CKB testnet lifecycle | COMPLETE | Frozen 2026-07-30 create-update-transfer-revoke and seven rejected attacks pass the offline verifier | Evidence is historical and uses the older tooling |
 | Fresh immutable testnet lifecycle | COMPLETE | The CKB CLI-signed `data1` deployment, create, update, transfer, revoke, seven rejected attacks, source-review linkage, local CI, and 100 live-chain checks are preserved without private keys | GitHub CI provenance and independent review are still required for a stable release, but not for the factual testnet lifecycle claim |
 | Browser/SDK-driven lifecycle | BLOCKED | The SDK and browser journey use the fresh immutable deployment and mutable deployments still fail closed | Connect a funded CCC testnet wallet and approve a new create-update-transfer-revoke rehearsal; no SDK-driven transaction is claimed yet |
-| MLAT reference software | PARTIAL | Full 201-test repository Python suite passes; strict live gates and evidence verifier exist | Physical synchronized receiver run and independent reference data are absent |
+| MLAT reference software | PARTIAL | Full 202-test repository Python suite passes; strict live gates and evidence verifier exist | Physical synchronized receiver run and independent reference data are absent |
 | Operator frontend | PARTIAL | The shell starts on the Receiver Registry, keeps the selected receiver visible before owner actions, excludes malformed Registry identities from MLAT, preserves aircraft-receiver return context, and uses the SDK for lifecycle actions; 24 unit tests, type checking, a 17-route Node 22 build, and 13 clean browser checks pass | Reproduce the browser report in public CI and complete a funded wallet-signed browser run |
-| Review evidence for current source | PARTIAL | `evidence/registry-v2-review-2026-09-18-final` is a complete, passing local bundle for commit `e99ea8d` and tree `e50bd66`, including 16 stages, 57 conformance cases, exact binary hashes, and 13 clean browser checks; its verifier passes 88 checks across 21 files | Add GitHub CI provenance and independent review |
+| Review evidence for current source | PARTIAL | `evidence/registry-v2-review-2026-09-18-v2-final` is a complete, passing local bundle for commit `e92a341` and tree `adf6401`, including 16 stages, 57 conformance cases, exact binary hashes, and 13 clean browser checks; its verifier passes 90 checks across 21 checksum-covered files | Add GitHub CI provenance and independent review |
 | Pilot materials | PARTIAL | Browser workflow, readiness gate, owner/coordinator tasks, feedback form, evidence template, proposal, and recruitment research exist | Consent materials, a maintainer wallet rehearsal, recruitment, and observed sessions remain |
 | Security/release baseline | PARTIAL | CodeQL, dependency review, SBOM, attestations, locked dependencies, MIT license, protected general release, and protected provenance-backed SDK release workflows exist | The npm organization and first package release need maintainer approval; workflows need a public green run; independent audit is absent; one low upstream npm advisory remains |
 | Product demand | MISSING | No customer, partner, participant, revenue, or adoption evidence is claimed | Recruit and run the precommitted product-validation pilot |
 
 ## Verification on this tree
 
-- `python3 -m pytest -q`: 201 passed.
+- `python3 -m pytest -q`: 202 passed.
 - `python3 -m black --check src/ckb_registry src/mlat_reference tools tests`:
   passed.
 - `python3 -m flake8 src tools tests`: passed.
@@ -40,9 +40,9 @@ validated by external users.
   freshness, map-configuration, receiver-reference, standalone-asset, and
   browser-evidence contract tests passed.
 - `npm run test:e2e` plus a clean isolated rerun from Node 22 source commit
-  `e99ea8d` passed all 13 Registry, MLAT reference, investigation-flow,
+  `e92a341` passed all 13 Registry, MLAT reference, investigation-flow,
   accessibility, responsive-layout, asset, and security-header checks. The
-  source-bound report records commit `e99ea8d`, tree `e50bd66`, a clean
+  source-bound report records commit `e92a341`, tree `adf6401`, a clean
   worktree, and zero serious or critical accessibility
   findings.
 - `python3 tools/registry/generate_registry_v2_conformance_report.py`: 57
@@ -54,8 +54,8 @@ validated by external users.
   low-severity `elliptic` advisory remains documented in `SECURITY.md`.
 - `python3 -m pip check`: no broken Python requirements.
 - `python3 tools/registry/verify_registry_v2_review_evidence.py --bundle
-  evidence/registry-v2-review-2026-09-18-final`: 88 verification checks across
-  21 bundled files passed for commit `e99ea8d` and tree `e50bd66`, including the
+  evidence/registry-v2-review-2026-09-18-v2-final`: 90 verification checks across
+  21 checksum-covered files passed for commit `e92a341` and tree `adf6401`, including the
   clean browser report and exact deployed binary hashes.
 - The fresh `data1` lifecycle bundle verifies 50 checksummed files, a passing
   local CI rebuild, and 100 chain, binary, lifecycle, rejection, discovery, API,

@@ -1,0 +1,39 @@
+$ make test
+cwd: contracts/registry-v2
+exit_code: 0
+
+STDOUT
+cargo build --locked --release --target riscv64imac-unknown-none-elf --features contract-bin
+cargo test --locked --lib --test lifecycle
+
+running 5 tests
+test record::tests::rejects_duplicate_capabilities ... ok
+test record::tests::validates_creation_and_successor ... ok
+test record::tests::rejects_identity_label_change_and_sequence_jump ... ok
+test record::tests::revocation_is_terminal ... ok
+test record::tests::matches_shared_registry_v2_conformance_corpus ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 11 tests
+test type_id_matches_off_chain_tooling_vector ... ok
+test revoked_identity_cannot_be_resurrected ... ok
+test receiver_label_change_fails ... ok
+test duplicate_registry_outputs_fail ... ok
+test creation_rejects_oversized_record_without_unbounded_loading ... ok
+test creation_rejects_forged_identity ... ok
+test sequence_jump_fails ... ok
+test valid_creation_uses_type_id_identity ... ok
+test wrong_owner_signature_cannot_update ... ok
+test burn_fails_and_tombstone_revocation_passes ... ok
+test valid_update_and_owner_transfer_pass ... ok
+
+test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.13s
+
+
+STDERR
+    Finished `release` profile [optimized] target(s) in 0.21s
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.24s
+     Running unittests src/lib.rs (target/debug/deps/receiver_registry-013e39f40198928f)
+     Running tests/lifecycle.rs (target/debug/deps/lifecycle-6f2cf4721340e499)

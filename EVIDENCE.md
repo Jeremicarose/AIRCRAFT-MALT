@@ -11,25 +11,34 @@ metadata.
 
 ## Current Source-Bound Review Bundle
 
-Path: `evidence/registry-v2-review-2026-09-18-final`
+Path: `evidence/registry-v2-review-2026-09-18-v2-final`
 
-This bundle is bound to source commit `e99ea8d55403254e2b31bcc128baaf45cf26b325`
-and Git tree `e50bd667852a4e9a30e6638840fa3867cd421199`. It records 16 passing
+This bundle is bound to source commit `e92a341e01c2637bfaf8e218f748c33bab81e0cf`
+and Git tree `adf6401c3d16f86e19979550437ed474e14b90f4`. It records 16 passing
 repository checks, the exact deployed contract binary hashes, 57 shared
 conformance cases, and a clean Node 22 browser report with 13 passing tests and
 0 serious or critical accessibility findings. Verify it with:
 
 ```bash
 python3 tools/registry/verify_registry_v2_review_evidence.py \
-  --bundle evidence/registry-v2-review-2026-09-18-final
+  --bundle evidence/registry-v2-review-2026-09-18-v2-final
 ```
 
 The bundle does not claim a browser-wallet lifecycle or independent security
 review. Those remain external dependencies.
 
-The bundle verifier passes 88 checks across 21 bundled files. Public GitHub CI
-for the source commit is still required before the local result can be treated
-as public CI provenance.
+The bundle verifier passes 90 checks across 21 checksum-covered files. Public
+GitHub CI for the source commit is still required before the local result can
+be treated as public CI provenance.
+
+## Historical Source-Bound Review Bundle
+
+Path: `evidence/registry-v2-review-2026-09-18-final`
+
+This unchanged bundle remains valid for source commit `e99ea8d` and tree
+`e50bd66`. It predates the GitHub frontend dependency-order correction in
+`e92a341`, so it is retained as historical evidence rather than the current
+review candidate.
 
 ## Current Registry V2 Testnet Package
 

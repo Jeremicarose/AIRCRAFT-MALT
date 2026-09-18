@@ -1,0 +1,480 @@
+$ /Users/jeremicarose/Downloads/mlat-system 2/.venv/bin/python tools/registry/verify_registry_v2_evidence.py --bundle evidence/registry-v2-testnet-2026-09-11-data1-final --saved-chain-only
+cwd: .
+exit_code: 0
+
+STDOUT
+{
+  "bundle": "/Users/jeremicarose/Downloads/mlat-system 2/evidence/registry-v2-testnet-2026-09-11-data1-final",
+  "checks": [
+    {
+      "detail": "verified 50 files",
+      "name": "bundle checksums",
+      "pass": true
+    },
+    {
+      "detail": "/Users/jeremicarose/Downloads/mlat-system 2/evidence/registry-v2-testnet-2026-09-11-data1-final/manifest.json",
+      "name": "manifest exists",
+      "pass": true
+    },
+    {
+      "detail": "0x1d6855f20486a023c92df0c613a3141e385f3766c4c844d2935fe18cfcf220ce",
+      "name": "receiver_identity present",
+      "pass": true
+    },
+    {
+      "detail": "complete",
+      "name": "manifest status complete",
+      "pass": true
+    },
+    {
+      "detail": "False",
+      "name": "private keys excluded",
+      "pass": true
+    },
+    {
+      "detail": "/Users/jeremicarose/Downloads/mlat-system 2/evidence/registry-v2-testnet-2026-09-11-data1-final/contract/receiver-registry",
+      "name": "contract binary exists",
+      "pass": true
+    },
+    {
+      "detail": "087a8b19ca99170d8d1e8c018b749259ce067ad3cb1cc8cef3b4a490ccae0465",
+      "name": "contract SHA-256",
+      "pass": true
+    },
+    {
+      "detail": "0x40ebcd7df892234592a97c987faadce70df6bcfb5f7fa24fa78431cc24f3d6fa",
+      "name": "contract CKB data hash",
+      "pass": true
+    },
+    {
+      "detail": "data1",
+      "name": "registry script hash type",
+      "pass": true
+    },
+    {
+      "detail": "code_hash=0x40ebcd7df892234592a97c987faadce70df6bcfb5f7fa24fa78431cc24f3d6fa data_hash=0x40ebcd7df892234592a97c987faadce70df6bcfb5f7fa24fa78431cc24f3d6fa",
+      "name": "immutable data1 code binding",
+      "pass": true
+    },
+    {
+      "detail": "/Users/jeremicarose/Downloads/mlat-system 2/evidence/registry-v2-testnet-2026-09-11-data1-final/real-indexer-verification.json",
+      "name": "real indexer report exists",
+      "pass": true
+    },
+    {
+      "detail": "identity=0x1d6855f20486a023c92df0c613a3141e385f3766c4c844d2935fe18cfcf220ce checks=10",
+      "name": "real indexer pagination and binding",
+      "pass": true
+    },
+    {
+      "detail": "/Users/jeremicarose/Downloads/mlat-system 2/evidence/registry-v2-testnet-2026-09-11-data1-final/runtime-revocation-verification.json",
+      "name": "runtime revocation report exists",
+      "pass": true
+    },
+    {
+      "detail": "identity=0x1d6855f20486a023c92df0c613a3141e385f3766c4c844d2935fe18cfcf220ce checks=12",
+      "name": "same-process revocation removal",
+      "pass": true
+    },
+    {
+      "detail": "/Users/jeremicarose/Downloads/mlat-system 2/evidence/registry-v2-testnet-2026-09-11-data1-final/rpc/deployment-transaction.json",
+      "name": "deployment RPC response exists",
+      "pass": true
+    },
+    {
+      "detail": "committed",
+      "name": "deployment committed",
+      "pass": true
+    },
+    {
+      "detail": "expected=0xc2241446c19b61293b0901f801898ebeade7df9f4fd52669fc1eeebebee450bf observed=0xc2241446c19b61293b0901f801898ebeade7df9f4fd52669fc1eeebebee450bf",
+      "name": "deployment transaction hash",
+      "pass": true
+    },
+    {
+      "detail": "expected=0xc2241446c19b61293b0901f801898ebeade7df9f4fd52669fc1eeebebee450bf calculated=0xc2241446c19b61293b0901f801898ebeade7df9f4fd52669fc1eeebebee450bf",
+      "name": "deployment transaction body hash",
+      "pass": true
+    },
+    {
+      "detail": "/Users/jeremicarose/Downloads/mlat-system 2/evidence/registry-v2-testnet-2026-09-11-data1-final/rpc/create-transaction.json",
+      "name": "create RPC response exists",
+      "pass": true
+    },
+    {
+      "detail": "committed",
+      "name": "create committed",
+      "pass": true
+    },
+    {
+      "detail": "expected=0x3b78cd8aeac8d55ff07a17f7d9f8fca97ca4aaec5824a07d9d54a58cb0dd64a1 observed=0x3b78cd8aeac8d55ff07a17f7d9f8fca97ca4aaec5824a07d9d54a58cb0dd64a1",
+      "name": "create transaction hash",
+      "pass": true
+    },
+    {
+      "detail": "expected=0x3b78cd8aeac8d55ff07a17f7d9f8fca97ca4aaec5824a07d9d54a58cb0dd64a1 calculated=0x3b78cd8aeac8d55ff07a17f7d9f8fca97ca4aaec5824a07d9d54a58cb0dd64a1",
+      "name": "create transaction body hash",
+      "pass": true
+    },
+    {
+      "detail": "/Users/jeremicarose/Downloads/mlat-system 2/evidence/registry-v2-testnet-2026-09-11-data1-final/rpc/update-transaction.json",
+      "name": "update RPC response exists",
+      "pass": true
+    },
+    {
+      "detail": "committed",
+      "name": "update committed",
+      "pass": true
+    },
+    {
+      "detail": "expected=0x33f02d9d9c2dada3d3473014492c39c1fe344fd5d3c887a465fbaf72191f0597 observed=0x33f02d9d9c2dada3d3473014492c39c1fe344fd5d3c887a465fbaf72191f0597",
+      "name": "update transaction hash",
+      "pass": true
+    },
+    {
+      "detail": "expected=0x33f02d9d9c2dada3d3473014492c39c1fe344fd5d3c887a465fbaf72191f0597 calculated=0x33f02d9d9c2dada3d3473014492c39c1fe344fd5d3c887a465fbaf72191f0597",
+      "name": "update transaction body hash",
+      "pass": true
+    },
+    {
+      "detail": "/Users/jeremicarose/Downloads/mlat-system 2/evidence/registry-v2-testnet-2026-09-11-data1-final/rpc/transfer-transaction.json",
+      "name": "transfer RPC response exists",
+      "pass": true
+    },
+    {
+      "detail": "committed",
+      "name": "transfer committed",
+      "pass": true
+    },
+    {
+      "detail": "expected=0xd58ce0337f175fc53152a73b709f4da1a924c082328d3494f3637f7c44ea59a8 observed=0xd58ce0337f175fc53152a73b709f4da1a924c082328d3494f3637f7c44ea59a8",
+      "name": "transfer transaction hash",
+      "pass": true
+    },
+    {
+      "detail": "expected=0xd58ce0337f175fc53152a73b709f4da1a924c082328d3494f3637f7c44ea59a8 calculated=0xd58ce0337f175fc53152a73b709f4da1a924c082328d3494f3637f7c44ea59a8",
+      "name": "transfer transaction body hash",
+      "pass": true
+    },
+    {
+      "detail": "/Users/jeremicarose/Downloads/mlat-system 2/evidence/registry-v2-testnet-2026-09-11-data1-final/rpc/revoke-transaction.json",
+      "name": "revoke RPC response exists",
+      "pass": true
+    },
+    {
+      "detail": "committed",
+      "name": "revoke committed",
+      "pass": true
+    },
+    {
+      "detail": "expected=0x9a34483db911e9238f022dd84a7eb0fafb224a2424d7e646ba29cde10e625626 observed=0x9a34483db911e9238f022dd84a7eb0fafb224a2424d7e646ba29cde10e625626",
+      "name": "revoke transaction hash",
+      "pass": true
+    },
+    {
+      "detail": "expected=0x9a34483db911e9238f022dd84a7eb0fafb224a2424d7e646ba29cde10e625626 calculated=0x9a34483db911e9238f022dd84a7eb0fafb224a2424d7e646ba29cde10e625626",
+      "name": "revoke transaction body hash",
+      "pass": true
+    },
+    {
+      "detail": "{'index': '0x1', 'tx_hash': '0xc2241446c19b61293b0901f801898ebeade7df9f4fd52669fc1eeebebee450bf'}",
+      "name": "creation spends declared lifecycle funding",
+      "pass": true
+    },
+    {
+      "detail": "manifest=0x1d6855f20486a023c92df0c613a3141e385f3766c4c844d2935fe18cfcf220ce calculated=0x1d6855f20486a023c92df0c613a3141e385f3766c4c844d2935fe18cfcf220ce",
+      "name": "creation Type ID derivation",
+      "pass": true
+    },
+    {
+      "detail": "{'index': '0x0', 'tx_hash': '0x3b78cd8aeac8d55ff07a17f7d9f8fca97ca4aaec5824a07d9d54a58cb0dd64a1'}",
+      "name": "update spends previous registry cell",
+      "pass": true
+    },
+    {
+      "detail": "{'index': '0x0', 'tx_hash': '0x33f02d9d9c2dada3d3473014492c39c1fe344fd5d3c887a465fbaf72191f0597'}",
+      "name": "transfer spends previous registry cell",
+      "pass": true
+    },
+    {
+      "detail": "{'index': '0x0', 'tx_hash': '0xd58ce0337f175fc53152a73b709f4da1a924c082328d3494f3637f7c44ea59a8'}",
+      "name": "revoke spends previous registry cell",
+      "pass": true
+    },
+    {
+      "detail": "['RECV_REGISTRY_V2_EVIDENCE']",
+      "name": "receiver label immutable",
+      "pass": true
+    },
+    {
+      "detail": "[0, 1, 2, 3]",
+      "name": "sequence is 0,1,2,3",
+      "pass": true
+    },
+    {
+      "detail": "['online', 'online', 'online', 'revoked']",
+      "name": "revocation is final accepted state",
+      "pass": true
+    },
+    {
+      "detail": "['0x1d6855f20486a023c92df0c613a3141e385f3766c4c844d2935fe18cfcf220ce']",
+      "name": "immutable Receiver Identity",
+      "pass": true
+    },
+    {
+      "detail": "[{\"args\": \"0x1d6855f20486a023c92df0c613a3141e385f3766c4c844d2935fe18cfcf220ce\", \"code_hash\": \"0x40ebcd7df892234592a97c987faadce70df6bcfb5f7fa24fa78431cc24f3d6fa\", \"hash_type\": \"data1\"}, {\"args\": \"0x1d6855f20486a023c92df0c613a3141e385f3766c4c844d2935fe18cfcf220ce\", \"code_hash\": \"0x40ebcd7df892234592a97c987faadce70df6bcfb5f7fa24fa78431cc24f3d6fa\", \"hash_type\": \"data1\"}, {\"args\": \"0x1d6855f20486a023c92df0c613a3141e385f3766c4c844d2935fe18cfcf220ce\", \"code_hash\": \"0x40ebcd7df892234592a97c987faadce70df6bcfb5f7fa24fa78431cc24f3d6fa\", \"hash_type\": \"data1\"}, {\"args\": \"0x1d6855f20486a023c92df0c613a3141e385f3766c4c844d2935fe18cfcf220ce\", \"code_hash\": \"0x40ebcd7df892234592a97c987faadce70df6bcfb5f7fa24fa78431cc24f3d6fa\", \"hash_type\": \"data1\"}]",
+      "name": "complete registry type script",
+      "pass": true
+    },
+    {
+      "detail": "[{\"args\": \"0x1eed21522d7c686da5695111d790c4aab8a2c181\", \"code_hash\": \"0x9bd7e06f3ecf4be0f2fcd2188b23f1b9fcc88e5d4b65a8637b17723bbda3cce8\", \"hash_type\": \"type\"}, {\"args\": \"0x1eed21522d7c686da5695111d790c4aab8a2c181\", \"code_hash\": \"0x9bd7e06f3ecf4be0f2fcd2188b23f1b9fcc88e5d4b65a8637b17723bbda3cce8\", \"hash_type\": \"type\"}, {\"args\": \"0x37c206d5a2f4939319db9c4078db78333899a3fb\", \"code_hash\": \"0x9bd7e06f3ecf4be0f2fcd2188b23f1b9fcc88e5d4b65a8637b17723bbda3cce8\", \"hash_type\": \"type\"}, {\"args\": \"0x37c206d5a2f4939319db9c4078db78333899a3fb\", \"code_hash\": \"0x9bd7e06f3ecf4be0f2fcd2188b23f1b9fcc88e5d4b65a8637b17723bbda3cce8\", \"hash_type\": \"type\"}]",
+      "name": "ownership transfer lock lineage",
+      "pass": true
+    },
+    {
+      "detail": "/Users/jeremicarose/Downloads/mlat-system 2/evidence/registry-v2-testnet-2026-09-11-data1-final/responses/attack-forged-identity.json",
+      "name": "forged-identity response exists",
+      "pass": true
+    },
+    {
+      "detail": "/Users/jeremicarose/Downloads/mlat-system 2/evidence/registry-v2-testnet-2026-09-11-data1-final/transactions/attack-forged-identity.json",
+      "name": "forged-identity signed tx exists",
+      "pass": true
+    },
+    {
+      "detail": "signature groups=1",
+      "name": "forged-identity was signed",
+      "pass": true
+    },
+    {
+      "detail": "Send transaction error: jsonrpc error: `Server error: TransactionFailedToVerify: Verification failed Script(TransactionScriptError { source: Outputs[0].Type, cause: ValidationFailure: see error code -4 on page https://nervosnetwork.github.io/ckb-script-error-codes/by-data-hash/40ebcd7df892234592a97c987faadce70df6bcfb5f7fa24fa78431cc24f3d6fa.html#-4 })`",
+      "name": "forged-identity rejected",
+      "pass": true
+    },
+    {
+      "detail": "fb0c3de8b70a0e5916ff80c4e9930e0a2aeab30619e7ee8cf239c7bce67f56cf",
+      "name": "forged-identity transaction file hash",
+      "pass": true
+    },
+    {
+      "detail": "/Users/jeremicarose/Downloads/mlat-system 2/evidence/registry-v2-testnet-2026-09-11-data1-final/responses/attack-sequence-jump.json",
+      "name": "sequence-jump response exists",
+      "pass": true
+    },
+    {
+      "detail": "/Users/jeremicarose/Downloads/mlat-system 2/evidence/registry-v2-testnet-2026-09-11-data1-final/transactions/attack-sequence-jump.json",
+      "name": "sequence-jump signed tx exists",
+      "pass": true
+    },
+    {
+      "detail": "signature groups=1",
+      "name": "sequence-jump was signed",
+      "pass": true
+    },
+    {
+      "detail": "Send transaction error: jsonrpc error: `Server error: TransactionFailedToVerify: Verification failed Script(TransactionScriptError { source: Inputs[0].Type, cause: ValidationFailure: see error code -25 on page https://nervosnetwork.github.io/ckb-script-error-codes/by-data-hash/40ebcd7df892234592a97c987faadce70df6bcfb5f7fa24fa78431cc24f3d6fa.html#-25 })`",
+      "name": "sequence-jump rejected",
+      "pass": true
+    },
+    {
+      "detail": "0b101d4a9d7d9afe3d58ad9e1b618a6fcb7a262b949ed227e7273d11fbf2e790",
+      "name": "sequence-jump transaction file hash",
+      "pass": true
+    },
+    {
+      "detail": "/Users/jeremicarose/Downloads/mlat-system 2/evidence/registry-v2-testnet-2026-09-11-data1-final/responses/attack-label-mutation.json",
+      "name": "label-mutation response exists",
+      "pass": true
+    },
+    {
+      "detail": "/Users/jeremicarose/Downloads/mlat-system 2/evidence/registry-v2-testnet-2026-09-11-data1-final/transactions/attack-label-mutation.json",
+      "name": "label-mutation signed tx exists",
+      "pass": true
+    },
+    {
+      "detail": "signature groups=1",
+      "name": "label-mutation was signed",
+      "pass": true
+    },
+    {
+      "detail": "Send transaction error: jsonrpc error: `Server error: TransactionFailedToVerify: Verification failed Script(TransactionScriptError { source: Inputs[0].Type, cause: ValidationFailure: see error code -27 on page https://nervosnetwork.github.io/ckb-script-error-codes/by-data-hash/40ebcd7df892234592a97c987faadce70df6bcfb5f7fa24fa78431cc24f3d6fa.html#-27 })`",
+      "name": "label-mutation rejected",
+      "pass": true
+    },
+    {
+      "detail": "44e9a7e80c667c470abb849e0667f0b10a231d5ed160b6a12a9bccb48d4d14a3",
+      "name": "label-mutation transaction file hash",
+      "pass": true
+    },
+    {
+      "detail": "/Users/jeremicarose/Downloads/mlat-system 2/evidence/registry-v2-testnet-2026-09-11-data1-final/responses/attack-duplicate-output.json",
+      "name": "duplicate-output response exists",
+      "pass": true
+    },
+    {
+      "detail": "/Users/jeremicarose/Downloads/mlat-system 2/evidence/registry-v2-testnet-2026-09-11-data1-final/transactions/attack-duplicate-output.json",
+      "name": "duplicate-output signed tx exists",
+      "pass": true
+    },
+    {
+      "detail": "signature groups=1",
+      "name": "duplicate-output was signed",
+      "pass": true
+    },
+    {
+      "detail": "Send transaction error: jsonrpc error: `Server error: TransactionFailedToVerify: Verification failed Script(TransactionScriptError { source: Inputs[0].Type, cause: ValidationFailure: see error code -4 on page https://nervosnetwork.github.io/ckb-script-error-codes/by-data-hash/40ebcd7df892234592a97c987faadce70df6bcfb5f7fa24fa78431cc24f3d6fa.html#-4 })`",
+      "name": "duplicate-output rejected",
+      "pass": true
+    },
+    {
+      "detail": "b1c1607d76849edad335fb2008924f7fc25773f526b4ea2d088cb636bde42741",
+      "name": "duplicate-output transaction file hash",
+      "pass": true
+    },
+    {
+      "detail": "/Users/jeremicarose/Downloads/mlat-system 2/evidence/registry-v2-testnet-2026-09-11-data1-final/responses/attack-burn.json",
+      "name": "burn response exists",
+      "pass": true
+    },
+    {
+      "detail": "/Users/jeremicarose/Downloads/mlat-system 2/evidence/registry-v2-testnet-2026-09-11-data1-final/transactions/attack-burn.json",
+      "name": "burn signed tx exists",
+      "pass": true
+    },
+    {
+      "detail": "signature groups=1",
+      "name": "burn was signed",
+      "pass": true
+    },
+    {
+      "detail": "Send transaction error: jsonrpc error: `Server error: TransactionFailedToVerify: Verification failed Script(TransactionScriptError { source: Inputs[0].Type, cause: ValidationFailure: see error code -5 on page https://nervosnetwork.github.io/ckb-script-error-codes/by-data-hash/40ebcd7df892234592a97c987faadce70df6bcfb5f7fa24fa78431cc24f3d6fa.html#-5 })`",
+      "name": "burn rejected",
+      "pass": true
+    },
+    {
+      "detail": "4b36e9046d74bf0f69bacdabd4123431db392e9d2718e9b88881c23eff4371bf",
+      "name": "burn transaction file hash",
+      "pass": true
+    },
+    {
+      "detail": "/Users/jeremicarose/Downloads/mlat-system 2/evidence/registry-v2-testnet-2026-09-11-data1-final/responses/attack-resurrection.json",
+      "name": "resurrection response exists",
+      "pass": true
+    },
+    {
+      "detail": "/Users/jeremicarose/Downloads/mlat-system 2/evidence/registry-v2-testnet-2026-09-11-data1-final/transactions/attack-resurrection.json",
+      "name": "resurrection signed tx exists",
+      "pass": true
+    },
+    {
+      "detail": "signature groups=1",
+      "name": "resurrection was signed",
+      "pass": true
+    },
+    {
+      "detail": "Send transaction error: jsonrpc error: `Server error: TransactionFailedToVerify: Verification failed Script(TransactionScriptError { source: Inputs[0].Type, cause: ValidationFailure: see error code -28 on page https://nervosnetwork.github.io/ckb-script-error-codes/by-data-hash/40ebcd7df892234592a97c987faadce70df6bcfb5f7fa24fa78431cc24f3d6fa.html#-28 })`",
+      "name": "resurrection rejected",
+      "pass": true
+    },
+    {
+      "detail": "0b49967b4de5611707057f30a5d5407b688e2180ef95ad6c74135451a177d554",
+      "name": "resurrection transaction file hash",
+      "pass": true
+    },
+    {
+      "detail": "/Users/jeremicarose/Downloads/mlat-system 2/evidence/registry-v2-testnet-2026-09-11-data1-final/responses/attack-tombstone-burn.json",
+      "name": "tombstone-burn response exists",
+      "pass": true
+    },
+    {
+      "detail": "/Users/jeremicarose/Downloads/mlat-system 2/evidence/registry-v2-testnet-2026-09-11-data1-final/transactions/attack-tombstone-burn.json",
+      "name": "tombstone-burn signed tx exists",
+      "pass": true
+    },
+    {
+      "detail": "signature groups=1",
+      "name": "tombstone-burn was signed",
+      "pass": true
+    },
+    {
+      "detail": "Send transaction error: jsonrpc error: `Server error: TransactionFailedToVerify: Verification failed Script(TransactionScriptError { source: Inputs[0].Type, cause: ValidationFailure: see error code -5 on page https://nervosnetwork.github.io/ckb-script-error-codes/by-data-hash/40ebcd7df892234592a97c987faadce70df6bcfb5f7fa24fa78431cc24f3d6fa.html#-5 })`",
+      "name": "tombstone-burn rejected",
+      "pass": true
+    },
+    {
+      "detail": "37ee5f4f2e40c45f60c1c217a8bb8764da58b2ce505541dcab829ad047e43bbe",
+      "name": "tombstone-burn transaction file hash",
+      "pass": true
+    },
+    {
+      "detail": "count=1 identity=0x1d6855f20486a023c92df0c613a3141e385f3766c4c844d2935fe18cfcf220ce out_point={'index': '0x0', 'tx_hash': '0x3b78cd8aeac8d55ff07a17f7d9f8fca97ca4aaec5824a07d9d54a58cb0dd64a1'}",
+      "name": "create indexer discovery",
+      "pass": true
+    },
+    {
+      "detail": "count=1 identity=0x1d6855f20486a023c92df0c613a3141e385f3766c4c844d2935fe18cfcf220ce sequence=0",
+      "name": "create adapter discovery",
+      "pass": true
+    },
+    {
+      "detail": "count=1 identity=0x1d6855f20486a023c92df0c613a3141e385f3766c4c844d2935fe18cfcf220ce out_point={'index': '0x0', 'tx_hash': '0x33f02d9d9c2dada3d3473014492c39c1fe344fd5d3c887a465fbaf72191f0597'}",
+      "name": "update indexer discovery",
+      "pass": true
+    },
+    {
+      "detail": "count=1 identity=0x1d6855f20486a023c92df0c613a3141e385f3766c4c844d2935fe18cfcf220ce sequence=1",
+      "name": "update adapter discovery",
+      "pass": true
+    },
+    {
+      "detail": "count=1 identity=0x1d6855f20486a023c92df0c613a3141e385f3766c4c844d2935fe18cfcf220ce out_point={'index': '0x0', 'tx_hash': '0xd58ce0337f175fc53152a73b709f4da1a924c082328d3494f3637f7c44ea59a8'}",
+      "name": "transfer indexer discovery",
+      "pass": true
+    },
+    {
+      "detail": "count=1 identity=0x1d6855f20486a023c92df0c613a3141e385f3766c4c844d2935fe18cfcf220ce sequence=2",
+      "name": "transfer adapter discovery",
+      "pass": true
+    },
+    {
+      "detail": "count=1 identity=0x1d6855f20486a023c92df0c613a3141e385f3766c4c844d2935fe18cfcf220ce out_point={'index': '0x0', 'tx_hash': '0x9a34483db911e9238f022dd84a7eb0fafb224a2424d7e646ba29cde10e625626'}",
+      "name": "revoke indexer discovery",
+      "pass": true
+    },
+    {
+      "detail": "count=0",
+      "name": "revoke adapter discovery",
+      "pass": true
+    },
+    {
+      "detail": "4",
+      "name": "API responses captured",
+      "pass": true
+    },
+    {
+      "detail": "status=200 count=1",
+      "name": "create API response",
+      "pass": true
+    },
+    {
+      "detail": "status=200 count=1",
+      "name": "update API response",
+      "pass": true
+    },
+    {
+      "detail": "status=200 count=1",
+      "name": "transfer API response",
+      "pass": true
+    },
+    {
+      "detail": "status=200 count=0",
+      "name": "revoke API response",
+      "pass": true
+    }
+  ],
+  "ci_provenance_checked": false,
+  "live_rpc_checked": false,
+  "pass": true
+}
+
+STDERR
