@@ -144,6 +144,7 @@ REVIEW_PATHS = (
     "reference/mlat/frontend/test/e2e/release.spec.mjs",
     "reference/mlat/frontend/test/evidence-reporter.test.mjs",
     "reference/mlat/frontend/test/playwright-config.test.mjs",
+    "reference/mlat/frontend/test/registry-workflow-contract.test.mjs",
     "reference/mlat/frontend/test/standalone.test.mjs",
     "reference/mlat/frontend/test/receiver-freshness.test.mjs",
     "reference/mlat/frontend/test/receiver-reference.test.mjs",

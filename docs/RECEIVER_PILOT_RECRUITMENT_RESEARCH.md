@@ -526,11 +526,12 @@ network login, feed key, private feed URL, IP address, or exact receiver locatio
 
 # H. Recruitment Tracker
 
-The working CSV is at
-[`artifacts/receiver-pilot-tracker.csv`](../artifacts/receiver-pilot-tracker.csv).
-It contains the requested funnel fields plus source, evidence, follow-up, and
-next-action fields. Every public lead starts as not contacted, with eligibility
-and interest left blank until those statuses are established directly.
+The maintainer-local working CSV is `artifacts/receiver-pilot-tracker.csv`.
+It is intentionally excluded from source control because it may contain contact
+and recruitment status data. It contains the requested funnel fields plus
+source, evidence, follow-up, and next-action fields. Every public lead starts as
+not contacted, with eligibility and interest left blank until those statuses are
+established directly.
 
 ## Status rules
 

@@ -317,6 +317,46 @@ export function ReceiversPage({
     { id: 'aircraft', label: 'Aircraft', detail: `${aircraftCount} localized in five minutes`, tone: aircraftCount ? 'healthy' as const : 'attention' as const, href: '/app/aircraft' },
   ];
 
+  const directoryPanel = (
+    <WorkspacePanel
+      title={perspective === 'registry' ? 'Registry directory' : 'Receiver inventory'}
+      detail={directoryQuery.isLoading && !directoryReceivers.length ? 'Querying Registry V2 cells on CKB testnet' : `${filtered.length} of ${directoryReceivers.length} receivers in this view`}
+    >
+      <div className="flex flex-col gap-3 border-b border-line p-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex max-w-full overflow-x-auto rounded-md border border-line bg-graphite-raised p-0.5" role="group" aria-label="Directory view">{([
+          ['active', 'Active'], ['mine', 'My receivers'], ['revoked', 'Revoked'], ['all', 'All states'],
+        ] as const).map(([value, label]) => <button key={value} type="button" aria-pressed={view === value} onClick={() => setView(value)} className={cn('h-8 whitespace-nowrap rounded px-2.5 text-xs font-medium text-ink-quiet outline-none hover:text-ink focus-visible:ring-2 focus-visible:ring-signal-blue', view === value && 'bg-graphite-hover text-ink')}>{label}</button>)}</div>
+        <SearchField value={search} onValueChange={setSearch} placeholder="Search label, Type ID, or capability" label="Search receiver directory" rootClassName="w-full sm:w-[310px]" />
+      </div>
+      {directoryQuery.isLoading && !directoryQuery.data ? <DirectoryLoading /> : view === 'mine' && !signerInfo ? (
+        <div className="flex min-h-44 flex-col items-center justify-center px-6 text-center"><UserRound className="mb-3 size-5 text-ink-quiet" /><p className="text-sm font-semibold text-ink">Connect a testnet wallet to find your receivers</p><p className="mt-1 max-w-md text-xs leading-5 text-ink-quiet">Ownership is matched against the complete CKB lock script from your wallet. No address is sent to the MLAT backend.</p><Button className="mt-4" size="sm" variant="primary" onClick={open}>Connect testnet wallet</Button></div>
+      ) : (
+        <DataGrid data={filtered} columns={columns} getRowId={(row) => row.key} onRowClick={(row) => selectReceiver(row.key)} isRowSelected={(row) => row.key === selectedUi?.key} keyboardColumnLabel={(row) => row.label} emptyLabel={search ? 'No receivers match this search and view. Clear the search or choose another state.' : view === 'mine' ? 'This wallet does not own a current Registry V2 receiver. Connect another wallet or choose All states.' : 'No receivers are available in this view. Refresh the directory or choose another state.'} ariaLabel="Receiver identity and MLAT status directory" height={Math.min(460, Math.max(184, filtered.length * 48))} />
+      )}
+    </WorkspacePanel>
+  );
+
+  const receiverInspectorPanel = (
+    <ReceiverInspector
+      receiver={selectedInspector}
+      perspective={perspective}
+      lifecycle={perspective === 'registry' && selected ? <RegistryHistory history={historyQuery.data} loading={historyQuery.isLoading} error={historyQuery.error} /> : undefined}
+      actions={selected ? <>{returnToAircraft}<Button size="sm" variant="secondary" onClick={exportSelected}><Download className="size-3.5" />Export record</Button><a href={explorerTransactionUrl(selected.provenance.outPoint.txHash)} target="_blank" rel="noreferrer" className={buttonVariants({ variant: 'secondary', size: 'sm' })}>Verify transaction<ArrowUpRight className="size-3.5" /></a></> : selectedUi ? <><Link href={`/app/localization?receiver=${encodeURIComponent(selectedUi.key)}`} className={buttonVariants({ variant: 'secondary', size: 'sm' })}>Open live map<ArrowUpRight className="size-3.5" /></Link>{returnToAircraft}</> : returnToAircraft}
+      className="self-start xl:sticky xl:top-20"
+    />
+  );
+
+  const registryEventsPanel = (
+    <WorkspacePanel title="Registry events and MLAT behavior" detail="Registry lifecycle changes have specific operational effects.">
+      <Timeline items={[
+        { title: 'Receiver registered', detail: 'The identity becomes available to Registry discovery. MLAT still applies status and capability checks.', tone: 'trust' },
+        { title: 'Receiver updated', detail: 'Discovery refreshes metadata while the canonical Type ID stays unchanged.', tone: 'selection' },
+        { title: 'Receiver transferred', detail: 'Ownership changes, but MLAT and historical aircraft links keep the same canonical identity.', tone: 'trust' },
+        { title: 'Receiver revoked', detail: 'Discovery excludes the identity from the active MLAT pool. Historical Registry and aircraft evidence remains inspectable.', tone: 'failure' },
+      ]} />
+    </WorkspacePanel>
+  );
+
   return (
     <div className="space-y-4">
       <WorkspaceHeader
@@ -354,45 +394,21 @@ export function ReceiversPage({
       {registryDirectoryEmpty ? <DataNotice title="No Registry V2 cells were returned" detail="The indexer answered successfully but returned no Registry records. This may be an empty registry or indexer lag; do not treat it as proof that a receiver does not exist." tone="attention" onRetry={() => void directoryQuery.refetch()} /> : null}
       {discoveryFailures.length ? <DataNotice title={`${discoveryFailures.length} registry ${discoveryFailures.length === 1 ? 'cell was' : 'cells were'} quarantined`} detail="The SDK rejected malformed, duplicate, or incomplete data instead of presenting it as a valid receiver." tone="attention" /> : null}
 
-      <WorkspaceSplit
-        secondaryWidth="390px"
-        primary={<div className="space-y-4">
-          <WorkspacePanel
-            title={perspective === 'registry' ? 'Registry directory' : 'Receiver inventory'}
-            detail={directoryQuery.isLoading && !directoryReceivers.length ? 'Querying Registry V2 cells on CKB testnet' : `${filtered.length} of ${directoryReceivers.length} receivers in this view`}
-          >
-            <div className="flex flex-col gap-3 border-b border-line p-3 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex max-w-full overflow-x-auto rounded-md border border-line bg-graphite-raised p-0.5" role="group" aria-label="Directory view">{([
-                ['active', 'Active'], ['mine', 'My receivers'], ['revoked', 'Revoked'], ['all', 'All states'],
-              ] as const).map(([value, label]) => <button key={value} type="button" aria-pressed={view === value} onClick={() => setView(value)} className={cn('h-8 whitespace-nowrap rounded px-2.5 text-xs font-medium text-ink-quiet outline-none hover:text-ink focus-visible:ring-2 focus-visible:ring-signal-blue', view === value && 'bg-graphite-hover text-ink')}>{label}</button>)}</div>
-              <SearchField value={search} onValueChange={setSearch} placeholder="Search label, Type ID, or capability" label="Search receiver directory" rootClassName="w-full sm:w-[310px]" />
-            </div>
-            {directoryQuery.isLoading && !directoryQuery.data ? <DirectoryLoading /> : view === 'mine' && !signerInfo ? (
-              <div className="flex min-h-44 flex-col items-center justify-center px-6 text-center"><UserRound className="mb-3 size-5 text-ink-quiet" /><p className="text-sm font-semibold text-ink">Connect a testnet wallet to find your receivers</p><p className="mt-1 max-w-md text-xs leading-5 text-ink-quiet">Ownership is matched against the complete CKB lock script from your wallet. No address is sent to the MLAT backend.</p><Button className="mt-4" size="sm" variant="primary" onClick={open}>Connect testnet wallet</Button></div>
-            ) : (
-              <DataGrid data={filtered} columns={columns} getRowId={(row) => row.key} onRowClick={(row) => selectReceiver(row.key)} isRowSelected={(row) => row.key === selectedUi?.key} keyboardColumnLabel={(row) => row.label} emptyLabel={search ? 'No receivers match this search and view. Clear the search or choose another state.' : view === 'mine' ? 'This wallet does not own a current Registry V2 receiver. Connect another wallet or choose All states.' : 'No receivers are available in this view. Refresh the directory or choose another state.'} ariaLabel="Receiver identity and MLAT status directory" height={Math.min(460, Math.max(184, filtered.length * 48))} />
-            )}
-          </WorkspacePanel>
-
-          {perspective === 'registry' ? <RegistryActionPanel sdk={sdk} signer={signerInfo?.signer} selected={selected} ownsSelected={selectedOwned} onCommitted={refreshAfterTransaction} /> : (
-            <WorkspacePanel title="Registry events and MLAT behavior" detail="Registry lifecycle changes have specific operational effects.">
-              <Timeline items={[
-                { title: 'Receiver registered', detail: 'The identity becomes available to Registry discovery. MLAT still applies status and capability checks.', tone: 'trust' },
-                { title: 'Receiver updated', detail: 'Discovery refreshes metadata while the canonical Type ID stays unchanged.', tone: 'selection' },
-                { title: 'Receiver transferred', detail: 'Ownership changes, but MLAT and historical aircraft links keep the same canonical identity.', tone: 'trust' },
-                { title: 'Receiver revoked', detail: 'Discovery excludes the identity from the active MLAT pool. Historical Registry and aircraft evidence remains inspectable.', tone: 'failure' },
-              ]} />
-            </WorkspacePanel>
-          )}
-        </div>}
-        secondary={<ReceiverInspector
-          receiver={selectedInspector}
-          perspective={perspective}
-          lifecycle={perspective === 'registry' && selected ? <RegistryHistory history={historyQuery.data} loading={historyQuery.isLoading} error={historyQuery.error} /> : undefined}
-          actions={selected ? <>{returnToAircraft}<Button size="sm" variant="secondary" onClick={exportSelected}><Download className="size-3.5" />Export record</Button><a href={explorerTransactionUrl(selected.provenance.outPoint.txHash)} target="_blank" rel="noreferrer" className={buttonVariants({ variant: 'secondary', size: 'sm' })}>Verify transaction<ArrowUpRight className="size-3.5" /></a></> : selectedUi ? <><Link href={`/app/localization?receiver=${encodeURIComponent(selectedUi.key)}`} className={buttonVariants({ variant: 'secondary', size: 'sm' })}>Open live map<ArrowUpRight className="size-3.5" /></Link>{returnToAircraft}</> : returnToAircraft}
-          className="self-start xl:sticky xl:top-20"
-        />}
-      />
+      {perspective === 'registry' ? (
+        <div className="grid min-w-0 gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(320px,390px)]" data-registry-workflow>
+          <div className="min-w-0 xl:col-start-1 xl:row-start-1" data-registry-workflow-item="directory">{directoryPanel}</div>
+          <div className="min-w-0 xl:col-start-2 xl:row-span-2 xl:row-start-1" data-registry-workflow-item="receiver-context">{receiverInspectorPanel}</div>
+          <div className="min-w-0 xl:col-start-1 xl:row-start-2" data-registry-workflow-item="owner-actions">
+            <RegistryActionPanel sdk={sdk} signer={signerInfo?.signer} selected={selected} ownsSelected={selectedOwned} onCommitted={refreshAfterTransaction} />
+          </div>
+        </div>
+      ) : (
+        <WorkspaceSplit
+          secondaryWidth="390px"
+          primary={<div className="space-y-4">{directoryPanel}{registryEventsPanel}</div>}
+          secondary={receiverInspectorPanel}
+        />
+      )}
 
       {perspective === 'registry' ? (registryEvidence ? <WorkspacePanel title="Verified testnet lifecycle" detail="Saved evidence anchors the Registry V2 contract deployment used by this directory." tone="trust"><div className="flex flex-col gap-3 p-4 text-xs sm:flex-row sm:items-center"><Check className="size-4 shrink-0 text-healthy" /><p className="flex-1 leading-5 text-ink-secondary">The saved testnet lifecycle completed create, update, transfer, and permanent revoke on {registryEvidence.network}. It is technical evidence, not evidence that an external operator completed a pilot.</p><a href={explorerTransactionUrl(registryEvidence.contract.deployment_transaction)} target="_blank" rel="noreferrer" className={buttonVariants({ variant: 'secondary', size: 'sm' })}>Verify contract deployment<ArrowUpRight className="size-3.5" /></a></div></WorkspacePanel> : <div className="flex items-start gap-3 rounded-md border border-attention/35 bg-attention/[0.06] p-4 text-xs leading-5 text-ink-secondary"><CircleAlert className="mt-0.5 size-4 shrink-0 text-attention" />Saved testnet lifecycle evidence is unavailable. Registry discovery remains independent, but this deployment should not be published without its checksum-verifiable evidence bundle.</div>) : null}
     </div>

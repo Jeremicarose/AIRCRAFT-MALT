@@ -70,15 +70,17 @@ jobs:
       - name: Install the browser used for Registry accessibility checks
         working-directory: reference/mlat/frontend
         run: npx playwright install --with-deps chromium
+      - name: Build and test the Registry page with browser evidence
+        working-directory: reference/mlat/frontend
+        run: |
+          npm run build
+          BROWSER_QA_REPORT="$RUNNER_TEMP/browser-qa.json" \
+            npm run test:e2e:prepared
       - name: Run the clean-clone Registry and MLAT evidence bundle
         run: |
           python tools/registry/generate_registry_v2_review_evidence.py \
-            --output "$PILOT_ARTIFACT_DIR/review"
-      - name: Test the built Registry page and record browser evidence
-        working-directory: reference/mlat/frontend
-        run: |
-          BROWSER_QA_REPORT="$GITHUB_WORKSPACE/$PILOT_ARTIFACT_DIR/browser-qa.json" \
-            npm run test:e2e:prepared
+            --output "$PILOT_ARTIFACT_DIR/review" \
+            --browser-report "$RUNNER_TEMP/browser-qa.json"
       - name: Run strict live preflight and preserve its blockers
         continue-on-error: true
         run: |

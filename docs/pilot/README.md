@@ -53,8 +53,9 @@ and clean source-bound CI evidence must be published.
   repository changes and remaining external gates
 - [Evidence template](EVIDENCE_TEMPLATE.md): technical artifact manifest
 
-The working recruitment tracker is
-[`artifacts/receiver-pilot-tracker.csv`](../../artifacts/receiver-pilot-tracker.csv).
+The maintainer-local recruitment tracker is
+`artifacts/receiver-pilot-tracker.csv`. It is intentionally excluded from source
+control because it may contain contact and recruitment status data.
 
 ## Status definitions
 

@@ -33,5 +33,6 @@ reference/mlat/frontend/.vercel/
 artifacts/registry-v2/conformance-report.json
 artifacts/
 reference/mlat/frontend/playwright-report/
+reference/mlat/frontend/playwright.local-*.config.mjs
 reference/mlat/frontend/test-results/
 reference/mlat/frontend/tmp/

@@ -15,6 +15,7 @@ import { CopyValue } from '@/components/ui/copy-value';
 import { ProgressBar } from '@/components/ui/progress-bar';
 import { StatusChip } from '@/components/ui/status-chip';
 import { WalletControl } from '@/components/wallet-control';
+import { titleCase, truncateMiddle } from '@/lib/format';
 import { explainRegistryError, explorerTransactionUrl } from '@/lib/registry';
 import { cn } from '@/lib/utils';
 
@@ -66,6 +67,51 @@ const labelClass = 'text-xs font-semibold text-ink-secondary';
 
 function Field({ label, hint, children }: { label: string; hint?: string; children: ReactNode }) {
   return <label className="block min-w-0"><span className={labelClass}>{label}</span>{children}{hint ? <span className="mt-1 block text-[11px] leading-5 text-ink-quiet">{hint}</span> : null}</label>;
+}
+
+function ActionTarget({ receiver }: { receiver: DiscoveredReceiver }) {
+  const statusTone = receiver.record.status === 'revoked'
+    ? 'failure'
+    : receiver.record.status === 'degraded'
+      ? 'attention'
+      : receiver.record.status === 'online'
+        ? 'healthy'
+        : 'neutral';
+
+  return (
+    <section className="mb-4 border-b border-line pb-4" aria-label={`Selected receiver ${receiver.record.receiver_id}`} data-registry-action-target>
+      <div className="flex min-w-0 items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-[11px] font-semibold text-ink-quiet">Selected receiver</p>
+          <p className="mt-1 break-words text-sm font-semibold text-ink">{receiver.record.receiver_id}</p>
+          <div className="mt-1 text-[11px] text-ink-quiet">
+            <CopyValue
+              value={receiver.receiver_identity}
+              displayValue={truncateMiddle(receiver.receiver_identity, 12, 10)}
+              label="selected receiver Type ID"
+            />
+          </div>
+        </div>
+        <StatusChip label={titleCase(receiver.record.status)} tone={statusTone} />
+      </div>
+      <dl className="mt-3 grid gap-3 text-xs sm:grid-cols-2">
+        <div className="min-w-0">
+          <dt className="text-[11px] text-ink-quiet">Lifecycle sequence</dt>
+          <dd className="mt-1 font-mono font-semibold text-ink-secondary">{receiver.record.sequence.toString()}</dd>
+        </div>
+        <div className="min-w-0">
+          <dt className="text-[11px] text-ink-quiet">Current owner lock</dt>
+          <dd className="mt-1 text-ink-secondary">
+            <CopyValue
+              value={receiver.provenance.ownerLock.args}
+              displayValue={truncateMiddle(receiver.provenance.ownerLock.args, 9, 7)}
+              label="current owner lock"
+            />
+          </dd>
+        </div>
+      </dl>
+    </section>
+  );
 }
 
 function recordFormFrom(receiver?: DiscoveredReceiver): RecordFormState {
@@ -247,7 +293,9 @@ export function RegistryActionPanel({
       ? 'Update receiver record'
       : action === 'transfer'
         ? 'Transfer receiver ownership'
-        : 'Permanently revoke receiver';
+        : selected
+          ? `Permanently revoke ${selected.record.receiver_id}`
+          : 'Permanently revoke receiver';
 
   return (
     <WorkspacePanel
@@ -276,6 +324,8 @@ export function RegistryActionPanel({
       </div>
 
       <form onSubmit={submit} className="p-4">
+        {action !== 'create' && selected ? <ActionTarget receiver={selected} /> : null}
+
         <div className="mb-4 flex items-start gap-3 rounded-md bg-graphite-raised/70 p-3">
           {action === 'revoke' ? <ShieldAlert className="mt-0.5 size-4 shrink-0 text-failure" /> : <CircleAlert className="mt-0.5 size-4 shrink-0 text-trust-cyan" />}
           <div className="text-xs leading-5 text-ink-secondary">
@@ -364,7 +414,7 @@ export function RegistryActionPanel({
 
         {action === 'revoke' ? (
           <div className="space-y-4">
-            <div className="rounded-md border border-failure/35 bg-failure/[0.07] p-3 text-xs leading-5 text-ink-secondary"><strong className="text-[#ff9ba0]">Revocation is permanent.</strong> The current stream fields will be removed and this Type ID can never return to an active state.</div>
+            <div className="rounded-md border border-failure/35 bg-failure/[0.07] p-3 text-xs leading-5 text-ink-secondary"><strong className="text-[#ff9ba0]">{selected ? `Revoking ${selected.record.receiver_id} is permanent.` : 'Revocation is permanent.'}</strong> The current stream fields will be removed and this Type ID can never return to an active state.</div>
             <Field label={`Type ${expectedConfirmation || 'the receiver label'} to confirm`}>
               <input className={inputClass} required value={confirmationText} onChange={(event) => setConfirmationText(event.target.value)} autoComplete="off" />
             </Field>
@@ -390,6 +440,7 @@ export function RegistryActionPanel({
           <Button
             type="submit"
             variant={action === 'revoke' ? 'danger' : 'primary'}
+            className={action === 'revoke' ? 'h-auto min-h-9 max-w-full whitespace-normal py-2 text-center' : undefined}
             disabled={Boolean(blocker) || busy || ((action === 'create' || action === 'update') && !privacyAccepted) || (labelConfirmationRequired && confirmationText !== expectedConfirmation)}
           >
             {busy ? <LoaderCircle className="size-4 animate-spin" /> : action === 'revoke' ? <Ban className="size-4" /> : action === 'transfer' ? <Send className="size-4" /> : action === 'update' ? <Pencil className="size-4" /> : <FilePlus2 className="size-4" />}
