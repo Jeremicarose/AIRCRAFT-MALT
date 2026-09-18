@@ -102,6 +102,7 @@ CHECKS = (
 REVIEW_PATHS = (
     ".env.example",
     ".github/workflows/pilot-readiness.yml",
+    ".github/workflows/reproducibility.yml",
     ".github/workflows/registry-v2.yml",
     "contracts/registry-v2/Cargo.lock",
     "contracts/registry-v2/examples/conformance.rs",
@@ -155,6 +156,7 @@ REVIEW_PATHS = (
     "tests/registry/test_registry_v2_conformance_report.py",
     "tests/registry/test_registry_v2_review_evidence.py",
     "tests/test_environment_documentation.py",
+    "tests/test_release_readiness.py",
     "tools/check_environment_documentation.py",
     "tools/registry/generate_registry_v2_conformance_report.py",
     "tools/registry/generate_registry_v2_review_evidence.py",

@@ -1,10 +1,36 @@
 import json
+import re
 
 from tools import check_release_readiness as readiness
 
 
+def workflow_job(source: str, name: str) -> str:
+    match = re.search(
+        rf"^  {re.escape(name)}:\n(?P<body>.*?)(?=^  [a-z0-9-]+:\n|\Z)",
+        source,
+        flags=re.MULTILINE | re.DOTALL,
+    )
+    assert match is not None, f"workflow job {name} was not found"
+    return match.group("body")
+
+
 def test_repository_release_checks_pass():
     assert [check.detail for check in readiness.repository_checks() if not check.passed] == []
+
+
+def test_frontend_ci_installs_local_sdk_dependencies_first():
+    workflow = (readiness.ROOT / ".github/workflows/reproducibility.yml").read_text(
+        encoding="utf-8"
+    )
+    sdk_install = "working-directory: sdk/typescript\n        run: npm ci"
+
+    for job_name, frontend_step in (
+        ("frontend-build", "- name: Install locked frontend dependencies"),
+        ("frontend-browser", "- name: Install locked application dependencies"),
+    ):
+        job = workflow_job(workflow, job_name)
+        assert sdk_install in job
+        assert job.index(sdk_install) < job.index(frontend_step)
 
 
 def test_stable_release_rejects_incomplete_example_manifest():
