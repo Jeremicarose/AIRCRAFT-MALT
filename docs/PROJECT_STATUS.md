@@ -1,6 +1,6 @@
 # Project Status
 
-Status date: 2026-09-14
+Status date: 2026-09-18
 
 `COMPLETE` means the repository implementation and its local verification are
 complete. It does not mean independently audited, deployed to mainnet, or
@@ -19,16 +19,16 @@ validated by external users.
 | Historical CKB testnet lifecycle | COMPLETE | Frozen 2026-07-30 create-update-transfer-revoke and seven rejected attacks pass the offline verifier | Evidence is historical and uses the older tooling |
 | Fresh immutable testnet lifecycle | COMPLETE | The CKB CLI-signed `data1` deployment, create, update, transfer, revoke, seven rejected attacks, source-review linkage, local CI, and 100 live-chain checks are preserved without private keys | GitHub CI provenance and independent review are still required for a stable release, but not for the factual testnet lifecycle claim |
 | Browser/SDK-driven lifecycle | BLOCKED | The SDK and browser journey use the fresh immutable deployment and mutable deployments still fail closed | Connect a funded CCC testnet wallet and approve a new create-update-transfer-revoke rehearsal; no SDK-driven transaction is claimed yet |
-| MLAT reference software | PARTIAL | Full 199-test repository Python suite passes; strict live gates and evidence verifier exist | Physical synchronized receiver run and independent reference data are absent |
-| Operator frontend | PARTIAL | The shell starts on the Receiver Registry, uses only explicit `receiver_identity` values for CKB rows, excludes malformed identity rows from MLAT, preserves aircraft-receiver return context, and uses the SDK for Registry lifecycle actions; 22 unit tests and type checking pass, and the Node 22 production build generates 17 routes | Run the current 12-test browser suite from a clean final commit in CI and complete a funded wallet-signed browser run |
-| Review evidence for current source | PARTIAL | `evidence/registry-v2-review-2026-09-14-final` is a complete, passing bundle for commit `4fc8fce` and tree `3facd3f`, including 16 checks, 57 conformance cases, exact binary hashes, and 9 clean browser checks | Later frontend commits are outside that bundle; generate a new clean source-bound bundle, then add GitHub CI provenance and independent review |
+| MLAT reference software | PARTIAL | Full 201-test repository Python suite passes; strict live gates and evidence verifier exist | Physical synchronized receiver run and independent reference data are absent |
+| Operator frontend | PARTIAL | The shell starts on the Receiver Registry, keeps the selected receiver visible before owner actions, excludes malformed Registry identities from MLAT, preserves aircraft-receiver return context, and uses the SDK for lifecycle actions; 24 unit tests, type checking, a 17-route Node 22 build, and 13 clean browser checks pass | Reproduce the browser report in public CI and complete a funded wallet-signed browser run |
+| Review evidence for current source | PARTIAL | `evidence/registry-v2-review-2026-09-18-final` is a complete, passing local bundle for commit `e99ea8d` and tree `e50bd66`, including 16 stages, 57 conformance cases, exact binary hashes, and 13 clean browser checks; its verifier passes 88 checks across 21 files | Add GitHub CI provenance and independent review |
 | Pilot materials | PARTIAL | Browser workflow, readiness gate, owner/coordinator tasks, feedback form, evidence template, proposal, and recruitment research exist | Consent materials, a maintainer wallet rehearsal, recruitment, and observed sessions remain |
 | Security/release baseline | PARTIAL | CodeQL, dependency review, SBOM, attestations, locked dependencies, MIT license, protected general release, and protected provenance-backed SDK release workflows exist | The npm organization and first package release need maintainer approval; workflows need a public green run; independent audit is absent; one low upstream npm advisory remains |
 | Product demand | MISSING | No customer, partner, participant, revenue, or adoption evidence is claimed | Recruit and run the precommitted product-validation pilot |
 
 ## Verification on this tree
 
-- `python3 -m pytest -q`: 199 passed.
+- `python3 -m pytest -q`: 201 passed.
 - `python3 -m black --check src/ckb_registry src/mlat_reference tools tests`:
   passed.
 - `python3 -m flake8 src tools tests`: passed.
@@ -36,26 +36,26 @@ validated by external users.
   11 CKB-VM tests, and the RISC-V contract check passed.
 - `npm test && npm run build` in `sdk/typescript`: 72 tests and TypeScript
   compilation passed.
-- `npm test` in the frontend: 22 canonical-identity, API-error, fail-closed discovery, precision,
+- `npm test` in the frontend: 24 canonical-identity, API-error, fail-closed discovery, precision,
   freshness, map-configuration, receiver-reference, standalone-asset, and
   browser-evidence contract tests passed.
-- `npm run test:e2e` from the clean Node 22 source commit `4fc8fce` passed all 9 Registry,
-  MLAT reference, investigation-flow, accessibility, responsive-layout, asset,
-  and security-header checks. The source-bound report records commit `4fc8fce`,
-  tree `3facd3f`, a clean worktree, and zero serious or critical accessibility
+- `npm run test:e2e` plus a clean isolated rerun from Node 22 source commit
+  `e99ea8d` passed all 13 Registry, MLAT reference, investigation-flow,
+  accessibility, responsive-layout, asset, and security-header checks. The
+  source-bound report records commit `e99ea8d`, tree `e50bd66`, a clean
+  worktree, and zero serious or critical accessibility
   findings.
 - `python3 tools/registry/generate_registry_v2_conformance_report.py`: 57
   shared cases, 171 runtime assertions, and zero failures.
 - `npm run typecheck` and `next build --webpack` in the current frontend passed
-  under Node 22 and generated all 17 routes. The current suite enumerates 12
-  browser checks, but no passing clean source-bound report is claimed for them.
+  under Node 22.23.1 and generated all 17 routes.
 - `python3 tools/check_documentation.py`: all checked Markdown links passed.
 - `npm audit --audit-level=moderate` passed for both npm projects; the known
   low-severity `elliptic` advisory remains documented in `SECURITY.md`.
 - `python3 -m pip check`: no broken Python requirements.
 - `python3 tools/registry/verify_registry_v2_review_evidence.py --bundle
-  evidence/registry-v2-review-2026-09-14-final`: 87 verification checks across
-  21 bundled files passed for commit `4fc8fce` and tree `3facd3f`, including the
+  evidence/registry-v2-review-2026-09-18-final`: 88 verification checks across
+  21 bundled files passed for commit `e99ea8d` and tree `e50bd66`, including the
   clean browser report and exact deployed binary hashes.
 - The fresh `data1` lifecycle bundle verifies 50 checksummed files, a passing
   local CI rebuild, and 100 chain, binary, lifecycle, rejection, discovery, API,

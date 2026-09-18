@@ -1,6 +1,6 @@
 # Pilot Readiness
 
-Status date: 2026-09-14
+Status date: 2026-09-18
 Overall status: `NOT READY`
 
 ## What happened
@@ -29,7 +29,7 @@ review are still missing; the stable release gate must repeat the live check.
 | TypeScript SDK | Prepared | 72 SDK tests pass, discovery and history pagination fail closed, and the current testnet factory uses the immutable deployment | Run a funded CCC wallet lifecycle through the browser |
 | MLAT replay | Prepared | Python integration suite passes | Keep replay labels visible |
 | MLAT live field use | Blocked | Harness exists; no synchronized physical run | Obtain four qualified receiver feeds |
-| UI | Partial | 22 current unit/contract tests and the 17-route Node 22 production build pass; malformed Registry rows without explicit canonical identity are excluded; the older source-bound bundle records nine browser checks for commit `4fc8fce` | Run the current 12-test browser suite from a clean final commit in public CI and complete a funded wallet-signed lifecycle |
+| UI | Partial | 24 unit/contract tests and the 17-route Node 22 production build pass; the current source-bound bundle records 13 clean browser checks with zero accessibility findings for commit `e99ea8d` | Reproduce the browser report in public CI and complete a funded wallet-signed lifecycle |
 | Public deployment | Blocked | No verified complete hosted URL | Deploy frontend, API, and processor |
 | Recruitment | Prepared, not executed | 13 public leads; messages and tracker exist | Send authorized permission requests and invitations |
 | Pilot | Not started | 0 contacted, 0 confirmed, 0 completed | Clear P0 gates before inviting |
@@ -57,23 +57,21 @@ documented low-severity upstream advisory.
 
 ## Verification results
 
-- Python: 199 passed with `python -m pytest`.
+- Python: 201 passed with `python -m pytest`.
 - Registry contract: 16 tests passed.
 - TypeScript SDK: 72 tests passed.
 - Cross-language conformance: 57 cases, 171 assertions, zero failures.
 - Historical offline evidence verifier: passed all checks.
 - Frontend type check: passed.
-- Frontend: 22 unit/contract tests, type check, and a Node 22 production build
+- Frontend: 24 unit/contract tests, type check, and a Node 22 production build
   passed and generated all 17 routes.
-- Browser: the current Playwright suite defines 12 checks covering the Registry
-  landing route, MLAT investigation and recovery paths, map degradation,
-  accessibility, mobile layout, assets, and security headers. A clean run of
-  this expanded suite is still required. The older nine-check suite covered the
-  secondary MLAT reference navigation, the aircraft-receiver return path,
-  production assets, mobile width, security headers, and WCAG scans. The
-  source-bound review bundle at commit `4fc8fce` records all 9 as passing with
-  0 serious or critical accessibility findings. That report does not certify
-  later frontend commits.
+- Browser: all 13 Playwright checks passed from clean source commit `e99ea8d`.
+  They cover the Registry landing route and stacked workflow, MLAT investigation
+  and recovery paths, map degradation, accessibility, mobile layout, assets,
+  and security headers. The source-bound report records zero serious or critical
+  accessibility findings. Public CI reproduction is still pending.
+- Current source-bound review bundle: 16 recorded verification stages passed,
+  and its independent verifier passed 88 checks across 21 bundled files.
 - Fresh immutable lifecycle: 50 bundled files, local CI, and 100 live-chain
   checks passed. The lifecycle-bundle verifier now fails closed only because
   its GitHub CI record is missing. The stable release gate separately requires
@@ -104,13 +102,11 @@ documented low-severity upstream advisory.
 
 ## Next actions
 
-1. Freeze and commit the remaining frontend source, then run the expanded
-   browser suite from that clean commit.
+1. Push the final source and evidence commits, confirm public CI, and preserve
+   the run and browser artifacts.
 2. Obtain independent review attesting the deployed binary SHA-256 and CKB data hash.
 3. Repeat live verification at release time using normal TLS verification.
-4. Generate a new source-bound review bundle for the final canonical commit and
-   preserve its browser report in CI.
-5. Complete the funded CCC wallet acceptance lifecycle in the browser.
-6. Deploy a complete pilot environment.
-7. Send permission requests and direct invitations from the maintainer's named
+4. Complete the funded CCC wallet acceptance lifecycle in the browser.
+5. Deploy a complete pilot environment.
+6. Send permission requests and direct invitations from the maintainer's named
    public account, then update the tracker with actual responses.

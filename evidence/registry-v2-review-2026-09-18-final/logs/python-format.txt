@@ -1,0 +1,9 @@
+$ /Users/jeremicarose/Downloads/mlat-system 2/.venv/bin/python -m black --check src/ckb_registry src/mlat_reference tools tests
+cwd: .
+exit_code: 0
+
+STDOUT
+
+STDERR
+All done! ✨ 🍰 ✨
+89 files would be left unchanged.

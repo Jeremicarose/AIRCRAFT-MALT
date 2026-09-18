@@ -1,0 +1,173 @@
+$ npm test
+cwd: reference/mlat/frontend
+exit_code: 0
+
+STDOUT
+
+> mlat-airspace-console@0.1.0 test
+> node --experimental-transform-types --test test/*.test.mjs
+
+TAP version 13
+# (node:14249) ExperimentalWarning: Transform Types is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: keeps low-level API failures behind technical details
+ok 1 - keeps low-level API failures behind technical details
+  ---
+  duration_ms: 1.714614
+  type: 'test'
+  ...
+# Subtest: explains timeouts and rate limits with a recovery action
+ok 2 - explains timeouts and rate limits with a recovery action
+  ---
+  duration_ms: 0.458462
+  type: 'test'
+  ...
+# Subtest: uses the caller explanation for an unexpected error
+ok 3 - uses the caller explanation for an unexpected error
+  ---
+  duration_ms: 0.226875
+  type: 'test'
+  ...
+# Subtest: browser evidence fails closed and records test and accessibility failures
+ok 4 - browser evidence fails closed and records test and accessibility failures
+  ---
+  duration_ms: 100.91919
+  type: 'test'
+  ...
+# Subtest: bounds browser API requests and preserves readable failure context
+ok 5 - bounds browser API requests and preserves readable failure context
+  ---
+  duration_ms: 1.668992
+  type: 'test'
+  ...
+# Subtest: fails closed when Registry discovery is unavailable
+ok 6 - fails closed when Registry discovery is unavailable
+  ---
+  duration_ms: 0.269308
+  type: 'test'
+  ...
+# Subtest: excludes CKB Registry rows without an explicit canonical identity
+ok 7 - excludes CKB Registry rows without an explicit canonical identity
+  ---
+  duration_ms: 0.432657
+  type: 'test'
+  ...
+# (node:14252) ExperimentalWarning: Transform Types is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: formats the complete u64 range without JavaScript number rounding
+ok 8 - formats the complete u64 range without JavaScript number rounding
+  ---
+  duration_ms: 42.651091
+  type: 'test'
+  ...
+# Subtest: does not round an out-of-range Registry timestamp into a different date
+ok 9 - does not round an out-of-range Registry timestamp into a different date
+  ---
+  duration_ms: 0.396141
+  type: 'test'
+  ...
+# Subtest: keeps the production OpenStreetMap source and an explicit unavailable state
+ok 10 - keeps the production OpenStreetMap source and an explicit unavailable state
+  ---
+  duration_ms: 1.731972
+  type: 'test'
+  ...
+# Subtest: uses a cross-origin referrer policy compatible with OSM tiles without dropping security headers
+ok 11 - uses a cross-origin referrer policy compatible with OSM tiles without dropping security headers
+  ---
+  duration_ms: 0.735204
+  type: 'test'
+  ...
+# Subtest: starts browser QA API with the repository Python environment
+ok 12 - starts browser QA API with the repository Python environment
+  ---
+  duration_ms: 1.232456
+  type: 'test'
+  ...
+# (node:14255) ExperimentalWarning: Transform Types is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: classifies observations inside the freshness window as fresh
+ok 13 - classifies observations inside the freshness window as fresh
+  ---
+  duration_ms: 1.51497
+  type: 'test'
+  ...
+# Subtest: classifies observations outside the freshness window as stale
+ok 14 - classifies observations outside the freshness window as stale
+  ---
+  duration_ms: 0.377291
+  type: 'test'
+  ...
+# Subtest: fails closed for missing, malformed, or non-positive timestamps
+ok 15 - fails closed for missing, malformed, or non-positive timestamps
+  ---
+  duration_ms: 0.222931
+  type: 'test'
+  ...
+# Subtest: rejects observations beyond the allowed future clock skew
+ok 16 - rejects observations beyond the allowed future clock skew
+  ---
+  duration_ms: 0.243718
+  type: 'test'
+  ...
+# (node:14268) ExperimentalWarning: Transform Types is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: matches a replay correlation ID to its namespaced operational receiver
+ok 17 - matches a replay correlation ID to its namespaced operational receiver
+  ---
+  duration_ms: 1.315878
+  type: 'test'
+  ...
+# Subtest: uses only the canonical identity after a receiver is registered
+ok 18 - uses only the canonical identity after a receiver is registered
+  ---
+  duration_ms: 0.296484
+  type: 'test'
+  ...
+# Subtest: requires receiver_identity instead of promoting a human receiver_id
+ok 19 - requires receiver_identity instead of promoting a human receiver_id
+  ---
+  duration_ms: 0.228536
+  type: 'test'
+  ...
+# Subtest: keeps the selected receiver visible for every existing-identity action
+ok 20 - keeps the selected receiver visible for every existing-identity action
+  ---
+  duration_ms: 1.609398
+  type: 'test'
+  ...
+# Subtest: names the exact receiver in the permanent revoke confirmation
+ok 21 - names the exact receiver in the permanent revoke confirmation
+  ---
+  duration_ms: 1.370228
+  type: 'test'
+  ...
+# Subtest: keeps production output separate from the development build
+ok 22 - keeps production output separate from the development build
+  ---
+  duration_ms: 2.797503
+  type: 'test'
+  ...
+# Subtest: prepares static assets beside the nested standalone server
+ok 23 - prepares static assets beside the nested standalone server
+  ---
+  duration_ms: 28.188236
+  type: 'test'
+  ...
+# Subtest: stages an immutable server and asset snapshot before startup
+ok 24 - stages an immutable server and asset snapshot before startup
+  ---
+  duration_ms: 30.413141
+  type: 'test'
+  ...
+1..24
+# tests 24
+# suites 0
+# pass 24
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 760.464989
+
+STDERR

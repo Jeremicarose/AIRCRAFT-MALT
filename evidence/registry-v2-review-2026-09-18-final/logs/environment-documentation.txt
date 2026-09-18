@@ -1,0 +1,8 @@
+$ /Users/jeremicarose/Downloads/mlat-system 2/.venv/bin/python tools/check_environment_documentation.py
+cwd: .
+exit_code: 0
+
+STDOUT
+environment documentation: pass (85 variables)
+
+STDERR

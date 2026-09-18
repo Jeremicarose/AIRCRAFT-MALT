@@ -11,27 +11,25 @@ metadata.
 
 ## Current Source-Bound Review Bundle
 
-Path: `evidence/registry-v2-review-2026-09-14-final`
+Path: `evidence/registry-v2-review-2026-09-18-final`
 
-This bundle is bound to source commit `4fc8fce48a86cd0dbfab70c4910580eac2c61730`
-and Git tree `3facd3f14a2d1224432c5b99c0fce5abeabd082f`. It records 16 passing
+This bundle is bound to source commit `e99ea8d55403254e2b31bcc128baaf45cf26b325`
+and Git tree `e50bd667852a4e9a30e6638840fa3867cd421199`. It records 16 passing
 repository checks, the exact deployed contract binary hashes, 57 shared
-conformance cases, and a clean Node 22 browser report with 9 passing tests and
+conformance cases, and a clean Node 22 browser report with 13 passing tests and
 0 serious or critical accessibility findings. Verify it with:
 
 ```bash
 python3 tools/registry/verify_registry_v2_review_evidence.py \
-  --bundle evidence/registry-v2-review-2026-09-14-final
+  --bundle evidence/registry-v2-review-2026-09-18-final
 ```
 
 The bundle does not claim a browser-wallet lifecycle or independent security
 review. Those remain external dependencies.
 
-The repository now contains later frontend commits. The bundle remains valid
-for the exact source it names, but it does not certify those later UI changes.
-The current frontend has 22 passing unit tests and defines 12 browser checks; a
-new clean browser report and review bundle are still required for the final
-source revision.
+The bundle verifier passes 88 checks across 21 bundled files. Public GitHub CI
+for the source commit is still required before the local result can be treated
+as public CI provenance.
 
 ## Current Registry V2 Testnet Package
 
@@ -147,7 +145,7 @@ expanding its claim scope.
 
 - independent Registry V2 audit report
 - funded CCC browser/TypeScript-SDK lifecycle
-- clean public CI and browser evidence for the final source revision
+- public GitHub CI provenance for the final source revision
 - generalized physical-infrastructure integration
 - synchronized physical four-receiver MLAT input
 - aligned trusted reference dataset
