@@ -91,6 +91,7 @@ CHECKS = (
         "deterministic-mlat-evidence",
         (sys.executable, "tools/mlat/run_reproducible_benchmark.py", "--verify-only"),
     ),
+    Check("contract-clean", ("make", "clean"), CONTRACT),
     Check("contract-tests", ("make", "test"), CONTRACT),
     Check("contract-target-check", ("make", "check"), CONTRACT),
     Check("typescript-sdk-tests", ("npm", "test"), SDK),

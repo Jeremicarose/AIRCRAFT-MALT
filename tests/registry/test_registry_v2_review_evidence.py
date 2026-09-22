@@ -48,6 +48,13 @@ def test_review_generator_rejects_an_unpinned_node_version(monkeypatch):
         review.require_pinned_node_version()
 
 
+def test_review_generator_cleans_contract_before_building_it():
+    check_names = [check.name for check in review.CHECKS]
+
+    assert "contract-clean" in check_names
+    assert check_names.index("contract-clean") < check_names.index("contract-tests")
+
+
 def browser_report(commit: str, tree: str) -> dict:
     return {
         "schema_version": 1,

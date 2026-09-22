@@ -33,6 +33,19 @@ def test_frontend_ci_installs_local_sdk_dependencies_first():
         assert job.index(sdk_install) < job.index(frontend_step)
 
 
+def test_registry_ci_attests_the_exact_deployed_binary_from_pinned_toolchain():
+    workflow = (readiness.ROOT / ".github/workflows/registry-v2.yml").read_text(encoding="utf-8")
+    provenance = workflow_job(workflow, "deployed-binary-provenance")
+
+    assert "runs-on: macos-15-intel" in provenance
+    assert "riscv64-elf-binutils@2.46.0" in provenance
+    assert "riscv64-elf-gcc@16.1.0" in provenance
+    assert "087a8b19ca99170d8d1e8c018b749259ce067ad3cb1cc8cef3b4a490ccae0465" in provenance
+    assert "make clean" in provenance
+    assert provenance.index("make clean") < provenance.index("make build")
+    assert "actions/attest@" in provenance
+
+
 def test_stable_release_rejects_incomplete_example_manifest():
     checks = readiness.stable_release_checks(
         readiness.ROOT / "release" / "release.example.json",

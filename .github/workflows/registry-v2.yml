@@ -19,6 +19,7 @@ on:
       - "tools/registry/**"
       - "tests/registry/**"
       - "sdk/typescript/**"
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -76,14 +77,55 @@ jobs:
         run: make test
       - name: Check deployable CKB target
         run: make check
-      - name: Hash deployable contract
-        run: >-
-          sha256sum target/riscv64imac-unknown-none-elf/release/receiver-registry
-          > receiver-registry.sha256
-      - name: Upload contract evidence
+
+  deployed-binary-provenance:
+    runs-on: macos-15-intel
+    timeout-minutes: 30
+    permissions:
+      attestations: write
+      contents: read
+      id-token: write
+    env:
+      EXPECTED_RECEIVER_REGISTRY_SHA256: 087a8b19ca99170d8d1e8c018b749259ce067ad3cb1cc8cef3b4a490ccae0465
+    defaults:
+      run:
+        working-directory: contracts/registry-v2
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - name: Install pinned Rust target
+        run: rustup show
+      - name: Install exact deployment RISC-V toolchain
+        env:
+          HOMEBREW_NO_AUTO_UPDATE: 1
+        run: |
+          brew version-install riscv64-elf-binutils@2.46.0
+          brew version-install riscv64-elf-gcc@16.1.0
+      - name: Rebuild the deployed contract from clean source
+        run: |
+          GCC_PREFIX="$(brew --prefix riscv64-elf-gcc@16.1.0)"
+          BINUTILS_PREFIX="$(brew --prefix riscv64-elf-binutils@2.46.0)"
+          export CC_riscv64imac_unknown_none_elf="${GCC_PREFIX}/bin/riscv64-elf-gcc"
+          export AR_riscv64imac_unknown_none_elf="${BINUTILS_PREFIX}/bin/riscv64-elf-ar"
+          test "$("${CC_riscv64imac_unknown_none_elf}" -dumpfullversion)" = "16.1.0"
+          "${BINUTILS_PREFIX}/bin/riscv64-elf-ld" --version
+          rustc -vV
+          cargo -V
+          make clean
+          make build
+      - name: Require exact deployed contract bytes
+        run: |
+          BINARY="target/riscv64imac-unknown-none-elf/release/receiver-registry"
+          ACTUAL_SHA256="$(shasum -a 256 "${BINARY}" | awk '{print $1}')"
+          test "${ACTUAL_SHA256}" = "${EXPECTED_RECEIVER_REGISTRY_SHA256}"
+          printf '%s  %s\n' "${ACTUAL_SHA256}" "${BINARY}" > receiver-registry.sha256
+      - name: Attest exact deployed-binary rebuild
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4
+        with:
+          subject-path: contracts/registry-v2/target/riscv64imac-unknown-none-elf/release/receiver-registry
+      - name: Upload exact deployed-binary evidence
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
-          name: receiver-registry-v2-${{ github.sha }}
+          name: receiver-registry-v2-deployed-${{ github.sha }}
           path: |
             contracts/registry-v2/target/riscv64imac-unknown-none-elf/release/receiver-registry
             contracts/registry-v2/receiver-registry.sha256
