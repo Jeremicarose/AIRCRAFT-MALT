@@ -27,9 +27,12 @@ python3 tools/registry/verify_registry_v2_review_evidence.py \
 The bundle does not claim a browser-wallet lifecycle or independent security
 review. Those remain external dependencies.
 
-The bundle verifier passes 90 checks across 21 checksum-covered files. Public
-GitHub CI for the source commit is still required before the local result can
-be treated as public CI provenance.
+Public [Repository CI run 10](https://github.com/Jeremicarose/AIRCRAFT-MALT/actions/runs/35301872760)
+passed for the exact source commit. Its `frontend-browser` job built the
+production application, passed the complete browser/accessibility suite, and
+published `browser-qa-e92a341e01c2637bfaf8e218f748c33bab81e0cf`. The bundle
+stores checksum-covered CI metadata so the offline verifier can bind that run,
+job, and artifact to the same source SHA.
 
 ## Historical Source-Bound Review Bundle
 

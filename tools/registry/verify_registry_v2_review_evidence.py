@@ -96,6 +96,82 @@ def verify_checksums(bundle: Path, verification: Verification) -> None:
     )
 
 
+def verify_github_ci_provenance(
+    bundle: Path,
+    manifest: dict[str, Any],
+    commit: str | None,
+    verification: Verification,
+) -> None:
+    status = manifest.get("external_dependencies", {}).get("github_ci_provenance")
+    summary = manifest.get("github_ci_provenance", {})
+    report_path = bundle / "github-ci-provenance.json"
+    verification.require(
+        "public GitHub CI provenance is completed",
+        status == "completed"
+        and summary.get("report") == "github-ci-provenance.json"
+        and summary.get("source_commit") == commit
+        and report_path.is_file(),
+        str(status),
+    )
+    if not report_path.is_file():
+        return
+
+    report = json.loads(report_path.read_text(encoding="utf-8"))
+    run = report.get("repository_ci_run", {})
+    browser_job = report.get("frontend_browser_job", {})
+    artifacts = report.get("artifacts", [])
+    expected_browser_artifact = f"browser-qa-{commit}"
+    expected_reproducibility_artifact = f"reproducibility-{commit}"
+    artifact_names = {
+        item.get("name")
+        for item in artifacts
+        if isinstance(item, dict)
+        and item.get("expired_when_recorded") is False
+        and isinstance(item.get("id"), int)
+        and item.get("id") > 0
+        and isinstance(item.get("size_in_bytes"), int)
+        and item.get("size_in_bytes") > 0
+    }
+
+    verification.require(
+        "public GitHub CI source matches bundle",
+        report.get("schema_version") == 1
+        and report.get("provider") == "github_actions"
+        and report.get("repository") == "Jeremicarose/AIRCRAFT-MALT"
+        and report.get("source_commit") == commit,
+        str(report.get("source_commit")),
+    )
+    verification.require(
+        "public Repository CI run passed",
+        run.get("name") == "Repository CI"
+        and run.get("workflow_path") == ".github/workflows/reproducibility.yml"
+        and run.get("event") == "push"
+        and run.get("status") == "completed"
+        and run.get("conclusion") == "success"
+        and isinstance(run.get("id"), int)
+        and run.get("id") > 0
+        and run.get("url")
+        == f"https://github.com/Jeremicarose/AIRCRAFT-MALT/actions/runs/{run.get('id')}",
+        str(run.get("url")),
+    )
+    verification.require(
+        "public browser CI job passed",
+        browser_job.get("name") == "frontend-browser"
+        and browser_job.get("status") == "completed"
+        and browser_job.get("conclusion") == "success"
+        and isinstance(browser_job.get("id"), int)
+        and browser_job.get("id") > 0
+        and browser_job.get("url") == f"{run.get('url')}/job/{browser_job.get('id')}",
+        str(browser_job.get("url")),
+    )
+    verification.require(
+        "source-named public CI artifacts were published",
+        expected_browser_artifact in artifact_names
+        and expected_reproducibility_artifact in artifact_names,
+        ", ".join(sorted(str(name) for name in artifact_names)),
+    )
+
+
 def verify_bundle(bundle: Path) -> dict[str, Any]:
     verification = Verification()
     verify_checksums(bundle, verification)
@@ -271,6 +347,7 @@ def verify_bundle(bundle: Path) -> dict[str, Any]:
         manifest.get("private_keys_included") is False,
         str(manifest.get("private_keys_included")),
     )
+    verify_github_ci_provenance(bundle, manifest, commit, verification)
     sdk_lifecycle_status = manifest.get("external_dependencies", {}).get(
         "fresh_sdk_testnet_lifecycle"
     )

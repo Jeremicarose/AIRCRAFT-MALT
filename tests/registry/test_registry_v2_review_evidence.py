@@ -4,6 +4,7 @@ import json
 import pytest
 
 from tools.registry import generate_registry_v2_review_evidence as review
+from tools.registry import verify_registry_v2_review_evidence as verifier
 
 
 def test_clean_worktree_rejects_modified_and_untracked_files(monkeypatch):
@@ -101,3 +102,33 @@ def test_browser_report_fails_closed(tmp_path, field, value, message):
 
     with pytest.raises(RuntimeError, match=message):
         review.validate_browser_report(path, commit, tree)
+
+
+def test_github_ci_provenance_fails_closed_on_wrong_source(tmp_path):
+    commit = "a" * 40
+    report = {
+        "schema_version": 1,
+        "provider": "github_actions",
+        "repository": "Jeremicarose/AIRCRAFT-MALT",
+        "source_commit": "b" * 40,
+        "repository_ci_run": {},
+        "frontend_browser_job": {},
+        "artifacts": [],
+    }
+    (tmp_path / "github-ci-provenance.json").write_text(json.dumps(report), encoding="utf-8")
+    manifest = {
+        "external_dependencies": {"github_ci_provenance": "completed"},
+        "github_ci_provenance": {
+            "report": "github-ci-provenance.json",
+            "source_commit": commit,
+        },
+    }
+    verification = verifier.Verification()
+
+    verifier.verify_github_ci_provenance(tmp_path, manifest, commit, verification)
+
+    assert not verification.passed
+    assert any(
+        check["name"] == "public GitHub CI source matches bundle" and check["pass"] is False
+        for check in verification.checks
+    )

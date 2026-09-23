@@ -33,10 +33,14 @@
   },
   "external_dependencies": {
     "fresh_sdk_testnet_lifecycle": "blocked_browser_wallet_approval",
-    "github_ci_provenance": "not_completed",
+    "github_ci_provenance": "completed",
     "independent_security_review": "not_completed"
   },
   "generated_at": "2026-09-18T07:06:48.009651Z",
+  "github_ci_provenance": {
+    "report": "github-ci-provenance.json",
+    "source_commit": "e92a341e01c2637bfaf8e218f748c33bab81e0cf"
+  },
   "historical_testnet_deployment": {
     "binary_sha256": "688fdc5f755029fa3c93365663f0bd2d118d4bacb53340234a1cecb171ad4f77",
     "bundle": "evidence/registry-v2-testnet-2026-07-30-final",
