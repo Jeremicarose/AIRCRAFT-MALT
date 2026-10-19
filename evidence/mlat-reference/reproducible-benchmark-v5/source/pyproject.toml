@@ -1,0 +1,51 @@
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ckb-registry-v2"
+version = "0.2.0"
+description = "Verifiable identity and lifecycle registry for physical infrastructure on CKB"
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+requires-python = ">=3.11"
+dependencies = [
+  "numpy>=1.21.0",
+  "flask>=2.3.0",
+  "flask-cors>=4.0.0",
+  "flask-socketio>=5.3.0",
+  "python-socketio>=5.9.0",
+  "websockets>=12.0,<14.0",
+  "gunicorn>=23.0.0",
+  "python-dotenv>=1.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=7.0.0",
+  "pytest-asyncio>=0.18.0",
+  "black>=22.0.0",
+  "flake8>=4.0.0",
+  "mypy>=0.950",
+]
+
+[project.scripts]
+mlat-api = "mlat_reference.api.rest_api:main"
+mlat-processor = "mlat_reference.runtime:main_cli"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["ckb_registry*", "mlat_reference*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = [".", "src"]
+addopts = "-ra"
+
+[tool.black]
+line-length = 100
+target-version = ["py311"]

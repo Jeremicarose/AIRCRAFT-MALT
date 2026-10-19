@@ -20,7 +20,7 @@ if str(SCRIPTS) not in sys.path:
 from benchmark_mlat_against_reference import build_report, load_jsonl  # noqa: E402
 
 GENERATED_AT = "2024-03-09T16:00:03Z"
-DEFAULT_BUNDLE = ROOT / "evidence" / "mlat-reference" / "reproducible-benchmark-v4"
+DEFAULT_BUNDLE = ROOT / "evidence" / "mlat-reference" / "reproducible-benchmark-v5"
 FIXTURES = ROOT / "reference" / "mlat" / "benchmarks" / "fixtures"
 PACKAGE_SOURCES = {
     "inputs/mlat.jsonl": FIXTURES / "reproducible-mlat.jsonl",

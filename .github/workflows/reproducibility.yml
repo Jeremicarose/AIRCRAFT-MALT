@@ -67,7 +67,7 @@ jobs:
       - name: Verify hashes and claim scope
         run: python tools/mlat/run_reproducible_benchmark.py --output-dir "${RUNNER_TEMP}/benchmark-a" --verify-only
       - name: Require committed artifact to be current
-        run: diff -ru evidence/mlat-reference/reproducible-benchmark-v4 "${RUNNER_TEMP}/benchmark-a"
+        run: diff -ru evidence/mlat-reference/reproducible-benchmark-v5 "${RUNNER_TEMP}/benchmark-a"
       - name: Capture CI environment
         run: |
           mkdir -p ci-artifact

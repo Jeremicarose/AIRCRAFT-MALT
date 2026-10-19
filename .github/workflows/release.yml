@@ -95,7 +95,7 @@ jobs:
           mkdir -p artifacts
           cp contracts/registry-v2/target/riscv64imac-unknown-none-elf/release/receiver-registry artifacts/receiver-registry-v2
           git archive --format=tar.gz --prefix="ckb-registry-v2-${GITHUB_REF_NAME}/" --output="artifacts/ckb-registry-v2-${GITHUB_REF_NAME}.tar.gz" HEAD
-          tar -czf artifacts/mlat-reproducible-benchmark-v4.tar.gz evidence/mlat-reference/reproducible-benchmark-v4
+          tar -czf artifacts/mlat-reproducible-benchmark-v5.tar.gz evidence/mlat-reference/reproducible-benchmark-v5
       - name: Package TypeScript Registry V2 SDK
         working-directory: sdk/typescript
         run: npm pack --pack-destination ../../artifacts
@@ -111,7 +111,7 @@ jobs:
         working-directory: artifacts
         run: >-
           sha256sum receiver-registry-v2 aircraft-malt-registry-v2-*.tgz
-          ckb-registry-v2-*.tar.gz mlat-reproducible-benchmark-v4.tar.gz
+          ckb-registry-v2-*.tar.gz mlat-reproducible-benchmark-v5.tar.gz
           registry-v2-conformance-report.json ckb-registry-v2.spdx.json
           > checksums.sha256
       - name: Attest contract provenance

@@ -21,7 +21,8 @@ COPY .env.example ./
 # Build isolation would resolve build dependencies outside the lockfile.
 RUN pip install --no-cache-dir --no-deps --no-build-isolation .
 
-RUN groupadd --gid 10001 mlat && useradd --uid 10001 --gid mlat --no-create-home mlat \
+RUN groupadd --gid 10001 mlat && useradd --uid 10001 --gid mlat --create-home mlat \
+    && chmod 700 /home/mlat \
     && mkdir -p /app/data /app/logs && chown -R mlat:mlat /app/data /app/logs
 USER mlat
 

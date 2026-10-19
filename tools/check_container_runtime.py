@@ -141,9 +141,19 @@ def main():
         assert command("inspect", "--format", "{{.State.ExitCode}}", processor) == "0"
         before = wait_positions(base)
         command("restart", "--time", "10", backend)
+        # Docker can allocate a new host port for an ephemeral binding on restart.
+        api_port = command("port", backend, "5000/tcp").rsplit(":", 1)[1]
+        base = f"http://127.0.0.1:{api_port}"
         wait_http(base + "/healthz")
         assert wait_http(base + "/api/positions/recent")["positions"][0]["id"] == before[0]["id"]
         report["checks"]["persistence_after_restart"] = True
+        api_log = subprocess.run(
+            ["docker", "logs", backend], capture_output=True, text=True, check=True
+        )
+        assert (
+            "Control server error" not in api_log.stdout + api_log.stderr
+        ), "Gunicorn control socket failed under the non-root API user"
+        report["checks"]["non_root_control_socket_startup"] = True
         for operation, source, destination in (
             ("backup", "/app/data/smoke.db", "/app/data/backup.db"),
             ("restore", "/app/data/backup.db", "/app/data/restored.db"),
