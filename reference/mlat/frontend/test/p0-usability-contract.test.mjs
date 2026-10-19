@@ -57,4 +57,3 @@ test('isolates page sections and maps without exposing raw errors in the UI', ()
   assert.match(boundary, /console\.error/);
   assert.doesNotMatch(boundary, /error\.message/);
 });
-

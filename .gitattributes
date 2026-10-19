@@ -1,0 +1,5 @@
+# Preserve checksum-bound evidence bytes, including captured log whitespace.
+/evidence/** -text -whitespace
+# Historical CSV exports and upstream benchmark inputs retain original line endings.
+/docs/audit/*.csv -text -whitespace
+/reference/mlat/benchmarks/fixtures/compact-public/*.csv -text -whitespace
