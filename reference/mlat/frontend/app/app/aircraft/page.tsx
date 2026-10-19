@@ -15,5 +15,5 @@ export default async function AircraftRoute({ searchParams }: { searchParams: Pr
     fetchJsonSafe<Position | null>(`/api/aircraft/${encodeURIComponent(aircraftId)}/latest`, null),
     fetchJsonSafe<PositionsResponse>(`/api/aircraft/${encodeURIComponent(aircraftId)}/track?limit=120`, { positions: [] }),
   ]) : [null, { positions: [] }];
-  return <AppShell pageKey="aircraft" title="Aircraft" description="Explore tracks, confidence history, and receiver contribution." snapshot={snapshot}><AircraftPage positionsData={positionsData} positionsError={positionsState.error} selectedAircraftId={aircraftId} initialLatest={latest} initialTrack={track} modeData={snapshot.modeData} receiverData={snapshot.receiverData} /></AppShell>;
+  return <AppShell pageKey="aircraft" title="Aircraft" description="Explore tracks, solver quality, and receiver contribution." snapshot={snapshot}><AircraftPage positionsData={positionsData} positionsError={positionsState.error} selectedAircraftId={aircraftId} initialLatest={latest} initialTrack={track} modeData={snapshot.modeData} receiverData={snapshot.receiverData} /></AppShell>;
 }

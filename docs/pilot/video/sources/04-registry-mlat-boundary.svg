@@ -1,0 +1,93 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="788" viewBox="0 0 1400 788" role="img" aria-labelledby="title desc">
+  <title id="title">Responsibility boundary between Registry V2 and MLAT</title>
+  <desc id="desc">Registry V2 verifies owner-authorized receiver lifecycle records. The MLAT reference consumes eligible receiver observations to estimate an aircraft position. Neither system proves all physical claims.</desc>
+  <defs>
+    <marker id="arrow-cyan" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto" markerUnits="strokeWidth">
+      <path d="M0 0L10 5L0 10Z" fill="#68d5e8"/>
+    </marker>
+    <style>
+      .title { font: 650 34px Inter, "IBM Plex Sans", Arial, sans-serif; fill: #f1f4f8; }
+      .subtitle { font: 400 18px Inter, "IBM Plex Sans", Arial, sans-serif; fill: #aab2bd; }
+      .eyebrow { font: 600 13px Inter, "IBM Plex Sans", Arial, sans-serif; fill: #68d5e8; }
+      .column-title { font: 650 26px Inter, "IBM Plex Sans", Arial, sans-serif; fill: #f1f4f8; }
+      .column-sub { font: 500 15px Inter, "IBM Plex Sans", Arial, sans-serif; fill: #aab2bd; }
+      .item-title { font: 600 17px Inter, "IBM Plex Sans", Arial, sans-serif; fill: #f1f4f8; }
+      .body { font: 400 15px Inter, "IBM Plex Sans", Arial, sans-serif; fill: #aab2bd; }
+      .small { font: 500 13px Inter, "IBM Plex Sans", Arial, sans-serif; fill: #8f99a6; }
+      .quote { font: 600 18px Inter, "IBM Plex Sans", Arial, sans-serif; fill: #f1f4f8; }
+      .icon { fill: none; stroke-linecap: round; stroke-linejoin: round; stroke-width: 2.4; }
+    </style>
+  </defs>
+
+  <rect width="1400" height="788" fill="#080a0d"/>
+  <text x="64" y="58" class="eyebrow">CLEAR RESPONSIBILITY BOUNDARY</text>
+  <text x="64" y="104" class="title">Registry state and MLAT output are different facts.</text>
+  <text x="64" y="138" class="subtitle">The reference application connects them without claiming that one system proves the work of the other.</text>
+
+  <g transform="translate(64 188)">
+    <rect width="570" height="416" rx="8" fill="#0d1014" stroke="#2a3039"/>
+    <rect width="570" height="5" rx="2" fill="#68d5e8"/>
+    <g transform="translate(28 30)" class="icon" stroke="#68d5e8">
+      <path d="M22 2l18 10v20L22 42 4 32V12zM4 12l18 10 18-10M22 22v20"/>
+      <path d="M13 17l18 10" opacity=".55"/>
+    </g>
+    <text x="88" y="52" class="column-title">CKB Registry V2</text>
+    <text x="88" y="78" class="column-sub">Identity, ownership, lifecycle, and discovery</text>
+
+    <circle cx="38" cy="126" r="6" fill="#68d5e8"/>
+    <text x="58" y="122" class="item-title">Verifies contract-valid change</text>
+    <text x="58" y="146" class="body">Owner authorization, exact sequence, stable identity.</text>
+
+    <circle cx="38" cy="194" r="6" fill="#68d5e8"/>
+    <text x="58" y="190" class="item-title">Stores the declared receiver record</text>
+    <text x="58" y="214" class="body">Current metadata, owner lock, status, and capability.</text>
+
+    <circle cx="38" cy="262" r="6" fill="#68d5e8"/>
+    <text x="58" y="258" class="item-title">Supports discovery and history</text>
+    <text x="58" y="282" class="body">Current records plus an inspectable transition chain.</text>
+
+    <rect x="28" y="320" width="514" height="68" rx="6" fill="#14181e" stroke="#2a3039"/>
+    <text x="48" y="346" class="small">DOES NOT PROVE</text>
+    <text x="48" y="372" class="body">Hardware existence, location truth, clock quality, or feed honesty.</text>
+  </g>
+
+  <g transform="translate(766 188)">
+    <rect width="570" height="416" rx="8" fill="#0d1014" stroke="#2a3039"/>
+    <rect width="570" height="5" rx="2" fill="#5b9cff"/>
+    <g transform="translate(28 30)" class="icon" stroke="#5b9cff">
+      <circle cx="22" cy="22" r="3" fill="#5b9cff" stroke="none"/>
+      <path d="M22 2v40M2 22h40M8 8l28 28M36 8L8 36" opacity=".5"/>
+      <circle cx="22" cy="22" r="13"/>
+      <path d="M22 22l12-8"/>
+    </g>
+    <text x="88" y="52" class="column-title">MLAT reference</text>
+    <text x="88" y="78" class="column-sub">Observations, timing comparison, and position estimate</text>
+
+    <circle cx="38" cy="126" r="6" fill="#5b9cff"/>
+    <text x="58" y="122" class="item-title">Uses qualified receiver observations</text>
+    <text x="58" y="146" class="body">At least four synchronized receivers with useful geometry.</text>
+
+    <circle cx="38" cy="194" r="6" fill="#5b9cff"/>
+    <text x="58" y="190" class="item-title">Correlates one transmission</text>
+    <text x="58" y="214" class="body">Matches observations and compares reception times.</text>
+
+    <circle cx="38" cy="262" r="6" fill="#5b9cff"/>
+    <text x="58" y="258" class="item-title">Estimates an aircraft position</text>
+    <text x="58" y="282" class="body">Reports the result with contributing receiver identities.</text>
+
+    <rect x="28" y="320" width="514" height="68" rx="6" fill="#14181e" stroke="#2a3039"/>
+    <text x="48" y="346" class="small">DOES NOT CONTROL</text>
+    <text x="48" y="372" class="body">Registry ownership, lifecycle authorization, or revocation.</text>
+  </g>
+
+  <path d="M635 404H756" stroke="#68d5e8" stroke-width="3" marker-end="url(#arrow-cyan)"/>
+  <rect x="638" y="356" width="116" height="32" rx="4" fill="#14181e" stroke="#2a3039"/>
+  <text x="696" y="377" class="small" text-anchor="middle">records consumed</text>
+
+  <line x1="64" y1="654" x2="1336" y2="654" stroke="#2a3039"/>
+  <text x="64" y="697" class="quote">Registry question:</text>
+  <text x="228" y="697" class="body">Which lifecycle record is authorized now?</text>
+  <text x="760" y="697" class="quote">MLAT question:</text>
+  <text x="914" y="697" class="body">Where do the timed observations place the aircraft?</text>
+  <text x="64" y="754" class="small">CKB Receiver Registry V2 · Testnet pilot visual</text>
+</svg>

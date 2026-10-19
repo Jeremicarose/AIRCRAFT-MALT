@@ -10,5 +10,5 @@ export default async function LiveMapRoute({ searchParams }: { searchParams: Pro
     fetchJsonState<PositionsResponse>(PUBLIC_POSITIONS_PATH, { positions: [] }),
     fetchJsonState<ReceiversResponse>('/api/receivers', { receivers: [] }),
   ]);
-  return <AppShell pageKey="localization" title="Live map" description="Select aircraft or receivers and keep their evidence in context." snapshot={snapshot}><LiveMapPage initialModeData={snapshot.modeData} initialHealthData={snapshot.healthData} initialPositionsData={positionsState.data} initialPositionsError={positionsState.error} initialReceiversData={receiversState.data} initialReceiversError={receiversState.error} initialSelectedAircraftId={aircraft} initialSelectedReceiverId={receiver} /></AppShell>;
+  return <AppShell pageKey="localization" title="Airspace map" description="Inspect aircraft positions and receiver geometry from the current runtime source." snapshot={snapshot}><LiveMapPage initialModeData={snapshot.modeData} initialHealthData={snapshot.healthData} initialPositionsData={positionsState.data} initialPositionsError={positionsState.error} initialReceiversData={receiversState.data} initialReceiversError={receiversState.error} initialSelectedAircraftId={aircraft} initialSelectedReceiverId={receiver} /></AppShell>;
 }

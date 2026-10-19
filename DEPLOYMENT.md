@@ -46,11 +46,20 @@ cp .env.example .env
 python3 -m pip install --require-hashes -r requirements-dev.lock
 ```
 
-Replay mode:
+Synthetic demonstration (explicitly labelled, with generated aircraft):
 
 ```bash
 ./run-demo.sh
 ```
+
+Historical replay (separate database and API on port 5058):
+
+```bash
+./run-replay.sh
+```
+
+Open `/app/replay` with the frontend's `MLAT_API_INTERNAL_URL` set to
+`http://127.0.0.1:5058`. See [historical replay](docs/mlat/HISTORICAL_REPLAY.md).
 
 Strict live mode validates prerequisites before starting:
 
@@ -58,6 +67,7 @@ Strict live mode validates prerequisites before starting:
 ./run-live.sh
 ```
 
+The installed `mlat-api` command uses one Gunicorn worker with four threads.
 The launcher supervises one API process and one processor process. It uses one
 SQLite database path and stops both when either exits.
 
@@ -70,6 +80,9 @@ npm run dev
 ```
 
 Open `http://127.0.0.1:3000/app/overview`.
+
+Install/build `sdk/typescript` with `npm ci` before installing the frontend.
+Use Node 22.23.1 and Python 3.12.11 to match the tested dependency locks.
 
 ## Docker Compose
 
@@ -88,6 +101,10 @@ Services:
 
 The processor and API share local `data/` and `logs/` bind mounts. This is a
 single-host topology. Do not place them on different hosts with SQLite.
+The Python image runs as UID/GID 10001. Prepare writable host directories for
+that identity, or use locally managed volumes. This audit did not execute Docker
+because no Docker engine was installed in its environment; CI retains the image
+build and installed-entrypoint smoke test.
 
 ## Strict Live Configuration
 
@@ -156,5 +173,10 @@ new code hash and returning consumers to a prior deployment where compatible.
 Records under different code hashes are separate registries and must never be
 merged without an explicit migration policy.
 
-The MLAT reference has no automated schema rollback. Back up SQLite before
-upgrades and validate restore behavior in the target environment.
+Schema version 2 migrates position identity and adds provenance in one SQLite
+transaction. Existing rows keep their IDs and become UNKNOWN, because their
+original data source cannot be recovered safely. Each runtime database is bound
+to LIVE, SYNTHETIC, or HISTORICAL_REPLAY; switching modes requires a separate file.
+There is no automated schema rollback. Back up SQLite before upgrades, including
+its WAL contents through SQLite's backup API, and restore the backup if rolling
+back application code. See [operations](docs/mlat/OPERATIONS.md).

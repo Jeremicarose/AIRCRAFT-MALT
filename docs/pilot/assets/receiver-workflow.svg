@@ -1,0 +1,175 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900" role="img" aria-labelledby="title desc">
+  <title id="title">Receiver Registry and MLAT reference workflow</title>
+  <desc id="desc">Nine stages show an aircraft transmission being observed by receivers, linked to current Registry records, qualified by runtime checks, correlated, timed, solved, and displayed with contributing receiver identities.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto" markerUnits="strokeWidth">
+      <path d="M0 0L10 5L0 10Z" fill="#5b9cff"/>
+    </marker>
+    <style>
+      .title { font: 650 34px Inter, "IBM Plex Sans", Arial, sans-serif; fill: #f1f4f8; }
+      .subtitle { font: 400 18px Inter, "IBM Plex Sans", Arial, sans-serif; fill: #aab2bd; }
+      .eyebrow { font: 600 13px Inter, "IBM Plex Sans", Arial, sans-serif; fill: #68d5e8; }
+      .lane { font: 650 18px Inter, "IBM Plex Sans", Arial, sans-serif; fill: #f1f4f8; }
+      .lane-sub { font: 400 13px Inter, "IBM Plex Sans", Arial, sans-serif; fill: #8f99a6; }
+      .stage { font: 600 18px Inter, "IBM Plex Sans", Arial, sans-serif; fill: #f1f4f8; }
+      .body { font: 400 14px Inter, "IBM Plex Sans", Arial, sans-serif; fill: #aab2bd; }
+      .small { font: 500 13px Inter, "IBM Plex Sans", Arial, sans-serif; fill: #8f99a6; }
+      .number { font: 650 14px Inter, "IBM Plex Sans", Arial, sans-serif; fill: #080a0d; text-anchor: middle; dominant-baseline: central; }
+      .icon { fill: none; stroke-linecap: round; stroke-linejoin: round; stroke-width: 2.2; }
+    </style>
+  </defs>
+
+  <rect width="1600" height="900" fill="#080a0d"/>
+  <text x="64" y="58" class="eyebrow">REGISTRY + MLAT REFERENCE</text>
+  <text x="64" y="104" class="title">From radio transmission to a traceable position estimate</text>
+  <text x="64" y="138" class="subtitle">Registry lifecycle proof and MLAT operational checks remain separate throughout the workflow.</text>
+
+  <line x1="218" y1="190" x2="218" y2="810" stroke="#2a3039"/>
+  <line x1="64" y1="382" x2="1536" y2="382" stroke="#2a3039"/>
+  <line x1="64" y1="602" x2="1536" y2="602" stroke="#2a3039"/>
+
+  <text x="64" y="226" class="lane">SIGNAL</text>
+  <text x="64" y="252" class="lane-sub">Physical observations</text>
+  <text x="64" y="446" class="lane">TRUST</text>
+  <text x="64" y="472" class="lane-sub">Lifecycle + readiness</text>
+  <text x="64" y="666" class="lane">SOLVE</text>
+  <text x="64" y="692" class="lane-sub">Timing + provenance</text>
+
+  <path d="M622 273H666" fill="none" stroke="#5b9cff" stroke-width="2.5" marker-end="url(#arrow)"/>
+  <path d="M1040 273H1084" fill="none" stroke="#5b9cff" stroke-width="2.5" marker-end="url(#arrow)"/>
+  <path d="M1458 273H1500V382H238V493H248" fill="none" stroke="#5b9cff" stroke-width="2.5" marker-end="url(#arrow)"/>
+  <path d="M622 493H666" fill="none" stroke="#5b9cff" stroke-width="2.5" marker-end="url(#arrow)"/>
+  <path d="M1040 493H1084" fill="none" stroke="#5b9cff" stroke-width="2.5" marker-end="url(#arrow)"/>
+  <path d="M1458 493H1500V602H238V713H248" fill="none" stroke="#5b9cff" stroke-width="2.5" marker-end="url(#arrow)"/>
+  <path d="M622 713H666" fill="none" stroke="#5b9cff" stroke-width="2.5" marker-end="url(#arrow)"/>
+  <path d="M1040 713H1084" fill="none" stroke="#5b9cff" stroke-width="2.5" marker-end="url(#arrow)"/>
+
+  <g transform="translate(264 200)">
+    <rect width="358" height="146" rx="8" fill="#0d1014" stroke="#2a3039"/>
+    <rect width="5" height="146" rx="2" fill="#c7a85b"/>
+    <circle cx="34" cy="30" r="15" fill="#c7a85b"/>
+    <text x="34" y="30" class="number">1</text>
+    <g transform="translate(302 18)" class="icon" stroke="#c7a85b">
+      <path d="M4 22h18l8-13M4 22l8 9M11 22l8-8"/>
+      <path d="M30 17c6 3 6 8 0 11M34 12c12 6 12 16 0 22"/>
+    </g>
+    <text x="24" y="76" class="stage">Aircraft transmits</text>
+    <text x="24" y="104" class="body">A Mode S or ADS-B message enters</text>
+    <text x="24" y="126" class="body">radio range. Position is not assumed.</text>
+  </g>
+
+  <g transform="translate(682 200)">
+    <rect width="358" height="146" rx="8" fill="#0d1014" stroke="#2a3039"/>
+    <rect width="5" height="146" rx="2" fill="#c7a85b"/>
+    <circle cx="34" cy="30" r="15" fill="#c7a85b"/>
+    <text x="34" y="30" class="number">2</text>
+    <g transform="translate(301 18)" class="icon" stroke="#c7a85b">
+      <circle cx="20" cy="20" r="4" fill="#c7a85b" stroke="none"/>
+      <path d="M10 20a10 10 0 0 1 20 0M4 20a16 16 0 0 1 32 0M20 24v16M12 40h16"/>
+    </g>
+    <text x="24" y="76" class="stage">Receivers capture it</text>
+    <text x="24" y="104" class="body">Four or more synchronized receivers</text>
+    <text x="24" y="126" class="body">observe the same transmission.</text>
+  </g>
+
+  <g transform="translate(1100 200)">
+    <rect width="358" height="146" rx="8" fill="#0d1014" stroke="#2a3039"/>
+    <rect width="5" height="146" rx="2" fill="#c7a85b"/>
+    <circle cx="34" cy="30" r="15" fill="#c7a85b"/>
+    <text x="34" y="30" class="number">3</text>
+    <g transform="translate(300 18)" class="icon" stroke="#c7a85b">
+      <rect x="2" y="5" width="38" height="32" rx="4"/>
+      <path d="M8 27l6-8 6 4 6-12 8 8M9 43h24"/>
+    </g>
+    <text x="24" y="76" class="stage">Observations are recorded</text>
+    <text x="24" y="104" class="body">Each includes receiver identity, time,</text>
+    <text x="24" y="126" class="body">message data, and clock metadata.</text>
+  </g>
+
+  <g transform="translate(264 420)">
+    <rect width="358" height="146" rx="8" fill="#0d1014" stroke="#2a3039"/>
+    <rect width="5" height="146" rx="2" fill="#68d5e8"/>
+    <circle cx="34" cy="30" r="15" fill="#68d5e8"/>
+    <text x="34" y="30" class="number">4</text>
+    <g transform="translate(302 18)" class="icon" stroke="#68d5e8">
+      <path d="M20 2l18 10v20L20 42 2 32V12zM2 12l18 10 18-10M20 22v20"/>
+    </g>
+    <text x="24" y="76" class="stage">Registry records discovered</text>
+    <text x="24" y="104" class="body">Current contract-valid lifecycle records</text>
+    <text x="24" y="126" class="body">are returned by canonical identity.</text>
+  </g>
+
+  <g transform="translate(682 420)">
+    <rect width="358" height="146" rx="8" fill="#0d1014" stroke="#2a3039"/>
+    <rect width="5" height="146" rx="2" fill="#4fd18b"/>
+    <circle cx="34" cy="30" r="15" fill="#4fd18b"/>
+    <text x="34" y="30" class="number">5</text>
+    <g transform="translate(302 18)" class="icon" stroke="#4fd18b">
+      <path d="M20 2l17 7v12c0 11-7 18-17 22C10 39 3 32 3 21V9z"/>
+      <path d="M12 22l6 6 11-13"/>
+    </g>
+    <text x="24" y="76" class="stage">Runtime qualifies receivers</text>
+    <text x="24" y="104" class="body">Feed binding, timing, freshness, and</text>
+    <text x="24" y="126" class="body">geometry checks determine eligibility.</text>
+  </g>
+
+  <g transform="translate(1100 420)">
+    <rect width="358" height="146" rx="8" fill="#0d1014" stroke="#2a3039"/>
+    <rect width="5" height="146" rx="2" fill="#4fd18b"/>
+    <circle cx="34" cy="30" r="15" fill="#4fd18b"/>
+    <text x="34" y="30" class="number">6</text>
+    <g transform="translate(301 18)" class="icon" stroke="#4fd18b">
+      <path d="M3 11h12l6 9 6-9h12M3 31h12l6-9 6 9h12"/>
+      <circle cx="21" cy="21" r="3" fill="#4fd18b" stroke="none"/>
+    </g>
+    <text x="24" y="76" class="stage">Observations are correlated</text>
+    <text x="24" y="104" class="body">Matching message content and time window</text>
+    <text x="24" y="126" class="body">group one physical transmission.</text>
+  </g>
+
+  <g transform="translate(264 640)">
+    <rect width="358" height="146" rx="8" fill="#0d1014" stroke="#2a3039"/>
+    <rect width="5" height="146" rx="2" fill="#5b9cff"/>
+    <circle cx="34" cy="30" r="15" fill="#5b9cff"/>
+    <text x="34" y="30" class="number">7</text>
+    <g transform="translate(301 18)" class="icon" stroke="#5b9cff">
+      <circle cx="21" cy="23" r="17"/>
+      <path d="M21 23l9-7M21 6V1M12 3h18M21 23v-9"/>
+    </g>
+    <text x="24" y="76" class="stage">Reception times compared</text>
+    <text x="24" y="104" class="body">The solver calculates arrival-time</text>
+    <text x="24" y="126" class="body">differences across the receiver set.</text>
+  </g>
+
+  <g transform="translate(682 640)">
+    <rect width="358" height="146" rx="8" fill="#0d1014" stroke="#2a3039"/>
+    <rect width="5" height="146" rx="2" fill="#5b9cff"/>
+    <circle cx="34" cy="30" r="15" fill="#5b9cff"/>
+    <text x="34" y="30" class="number">8</text>
+    <g transform="translate(301 18)" class="icon" stroke="#5b9cff">
+      <circle cx="21" cy="18" r="14"/>
+      <path d="M21 32v10M13 42h16M21 18l8-5M5 18h32"/>
+    </g>
+    <text x="24" y="76" class="stage">Position estimated</text>
+    <text x="24" y="104" class="body">The MLAT solver estimates a position</text>
+    <text x="24" y="126" class="body">from timing differences and geometry.</text>
+  </g>
+
+  <g transform="translate(1100 640)">
+    <rect width="358" height="146" rx="8" fill="#0d1014" stroke="#2a3039"/>
+    <rect width="5" height="146" rx="2" fill="#5b9cff"/>
+    <circle cx="34" cy="30" r="15" fill="#5b9cff"/>
+    <text x="34" y="30" class="number">9</text>
+    <g transform="translate(300 18)" class="icon" stroke="#5b9cff">
+      <rect x="2" y="4" width="39" height="29" rx="3"/>
+      <path d="M10 40h23M17 33v7M28 33v7"/>
+      <circle cx="26" cy="17" r="4" fill="#5b9cff" stroke="none"/>
+      <path d="M8 26l9-7 6 3 10-10"/>
+    </g>
+    <text x="24" y="76" class="stage">Result keeps provenance</text>
+    <text x="24" y="104" class="body">The application shows the estimate and</text>
+    <text x="24" y="126" class="body">its contributing receiver identities.</text>
+  </g>
+
+  <text x="64" y="854" class="small">CKB proves the authorized Registry lifecycle. Operational checks and MLAT calculations remain separate evidence.</text>
+</svg>

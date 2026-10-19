@@ -1,0 +1,72 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900" role="img" aria-labelledby="title desc">
+  <title id="title">CKB Receiver Registry V2 video title</title>
+  <desc id="desc">A title frame introducing a stable receiver identity that remains constant while owner, metadata, network, and status change.</desc>
+  <defs>
+    <style>
+      .eyebrow { font: 600 15px Inter, "IBM Plex Sans", Arial, sans-serif; fill: #68d5e8; }
+      .title { font: 650 54px Inter, "IBM Plex Sans", Arial, sans-serif; fill: #f1f4f8; }
+      .subtitle { font: 400 22px Inter, "IBM Plex Sans", Arial, sans-serif; fill: #aab2bd; }
+      .label { font: 600 16px Inter, "IBM Plex Sans", Arial, sans-serif; fill: #f1f4f8; }
+      .small { font: 500 14px Inter, "IBM Plex Sans", Arial, sans-serif; fill: #8f99a6; }
+      .dark-small { font: 600 14px Inter, "IBM Plex Sans", Arial, sans-serif; fill: #080a0d; }
+      .mono { font: 600 18px "IBM Plex Mono", Consolas, monospace; fill: #080a0d; }
+      .icon { fill: none; stroke-linecap: round; stroke-linejoin: round; stroke-width: 2.5; }
+    </style>
+  </defs>
+  <rect width="1600" height="900" fill="#080a0d"/>
+  <path d="M0 706H1600M914 0V900" stroke="#14181e"/>
+
+  <text x="80" y="92" class="eyebrow">CKB RECEIVER REGISTRY V2</text>
+  <text x="80" y="170" class="title">A stable receiver identity,</text>
+  <text x="80" y="236" class="title">even when everything else changes.</text>
+  <text x="80" y="298" class="subtitle">A testnet product pilot for independently operated</text>
+  <text x="80" y="332" class="subtitle">ADS-B and Mode S receiver networks.</text>
+
+  <g transform="translate(1138 430)">
+    <circle r="184" fill="none" stroke="#2a3039" stroke-width="2"/>
+    <circle r="130" fill="none" stroke="#2a3039" stroke-dasharray="5 8"/>
+    <path d="M0-98L85-49V49L0 98-85 49V-49Z" fill="#68d5e8" stroke="#f1f4f8" stroke-width="2"/>
+    <text x="0" y="-36" class="dark-small" text-anchor="middle">INFRASTRUCTURE</text>
+    <text x="0" y="-16" class="dark-small" text-anchor="middle">IDENTITY</text>
+    <text x="0" y="20" class="mono" text-anchor="middle">0x7f2a...9c10</text>
+    <text x="0" y="52" class="dark-small" text-anchor="middle">remains the same</text>
+
+    <g transform="translate(-176 -102)">
+      <circle r="42" fill="#14181e" stroke="#5b9cff"/>
+      <g transform="translate(-17 -18)" class="icon" stroke="#5b9cff">
+        <circle cx="17" cy="12" r="8"/>
+        <path d="M4 35c2-9 8-14 13-14s11 5 13 14"/>
+      </g>
+      <text x="0" y="68" class="label" text-anchor="middle">Owner</text>
+    </g>
+    <g transform="translate(176 -102)">
+      <circle r="42" fill="#14181e" stroke="#9b8cf4"/>
+      <g transform="translate(-18 -18)" class="icon" stroke="#9b8cf4">
+        <path d="M3 8h32M3 18h22M3 28h28M3 38h17"/>
+        <circle cx="29" cy="18" r="3" fill="#9b8cf4" stroke="none"/>
+      </g>
+      <text x="0" y="68" class="label" text-anchor="middle">Metadata</text>
+    </g>
+    <g transform="translate(-176 102)">
+      <circle r="42" fill="#14181e" stroke="#4bb6a3"/>
+      <g transform="translate(-19 -18)" class="icon" stroke="#4bb6a3">
+        <circle cx="7" cy="19" r="5"/><circle cx="31" cy="7" r="5"/><circle cx="31" cy="31" r="5"/>
+        <path d="M12 17l14-8M12 21l14 8"/>
+      </g>
+      <text x="0" y="68" class="label" text-anchor="middle">Network</text>
+    </g>
+    <g transform="translate(176 102)">
+      <circle r="42" fill="#14181e" stroke="#e6c45d"/>
+      <g transform="translate(-18 -18)" class="icon" stroke="#e6c45d">
+        <path d="M18 2l16 7v11c0 10-7 17-16 21C9 37 2 30 2 20V9z"/>
+        <path d="M10 21l5 5 11-12"/>
+      </g>
+      <text x="0" y="68" class="label" text-anchor="middle">Status</text>
+    </g>
+  </g>
+
+  <rect x="80" y="760" width="1440" height="72" rx="8" fill="#0d1014" stroke="#2a3039"/>
+  <circle cx="112" cy="796" r="8" fill="#68d5e8"/>
+  <text x="136" y="802" class="label">Product-validation pilot</text>
+  <text x="374" y="802" class="small">Testnet only · Experimental and unaudited · Not for aviation safety decisions</text>
+</svg>

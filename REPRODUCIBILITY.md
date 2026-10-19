@@ -108,7 +108,7 @@ python3 tools/mlat/run_reproducible_benchmark.py --verify-only
 ```
 
 The runner copies all source inputs needed to reproduce the output into
-`evidence/mlat-reference/reproducible-benchmark-v2/source`, writes canonical
+`evidence/mlat-reference/reproducible-benchmark-v4/source`, writes canonical
 JSON, and verifies every checksum. CI generates the bundle twice, compares the
 two byte-for-byte, and compares the result with the committed package.
 

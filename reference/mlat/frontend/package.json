@@ -15,7 +15,8 @@
     "test:e2e": "npm run build && playwright test",
     "test:e2e:prepared": "playwright test",
     "lint": "tsc --noEmit",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test:e2e:replay": "PLAYWRIGHT_DATA_MODE=historical playwright test"
   },
   "dependencies": {
     "@aircraft-malt/registry-v2": "file:../../../sdk/typescript",
@@ -36,11 +37,11 @@
     "framer-motion": "12.43.0",
     "lucide-react": "1.28.0",
     "maplibre-gl": "6.8.0",
-    "next": "16.3.4",
+    "next": "16.3.8",
     "react": "19.2.8",
     "react-dom": "19.2.8",
     "recharts": "3.10.1",
-    "sharp": "0.35.4",
+    "sharp": "0.35.5",
     "tailwind-merge": "3.6.0",
     "tailwindcss": "4.3.3",
     "typescript": "5.9.3",

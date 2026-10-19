@@ -62,10 +62,12 @@ def _load_api_module(monkeypatch, tmp_path, **env):
     return module
 
 
-def _seed_api_db(module, app):
+def _seed_api_db(module, app, *, data_provenance="UNKNOWN"):
     now = time.time()
     with app.app_context():
         db = module.get_db()
+        if data_provenance != "UNKNOWN":
+            db.bind_runtime_provenance(data_provenance, "test-fixture")
         commercial = _seed_commercial_state(db)
         db.store_receiver(
             receiver_id="RECV_NYC_001",
@@ -78,6 +80,8 @@ def _seed_api_db(module, app):
         )
         db.store_position(
             aircraft_id="A1B2C3",
+            data_provenance=data_provenance,
+            source_id="test-fixture",
             timestamp=now,
             latitude=40.75,
             longitude=-73.85,
@@ -205,6 +209,7 @@ def test_registry_evidence_exposes_saved_testnet_lifecycle(monkeypatch, tmp_path
         payload["contract"]["code_hash"]
         == "0x40ebcd7df892234592a97c987faadce70df6bcfb5f7fa24fa78431cc24f3d6fa"
     )
+    assert payload["contract"]["hash_type"] == "data1"
     assert [event["action"] for event in payload["lifecycle"]] == [
         "create",
         "update",
@@ -213,6 +218,19 @@ def test_registry_evidence_exposes_saved_testnet_lifecycle(monkeypatch, tmp_path
     ]
     assert [event["sequence"] for event in payload["lifecycle"]] == ["0", "1", "2", "3"]
     assert payload["lifecycle"][-1]["status"] == "revoked"
+
+
+def test_registry_evidence_default_path_is_independent_of_process_directory(monkeypatch, tmp_path):
+    monkeypatch.chdir(tmp_path)
+    module = _load_api_module(monkeypatch, tmp_path)
+    app = module.create_app()
+
+    response = app.test_client().get("/api/registry/evidence")
+
+    assert response.status_code == 200
+    payload = response.get_json()
+    assert payload["source"] == "saved_testnet_evidence"
+    assert payload["contract"]["hash_type"] == "data1"
 
 
 def test_liveness_does_not_depend_on_database(monkeypatch, tmp_path):
@@ -273,7 +291,7 @@ def test_api_reads_processor_telemetry_from_shared_database(monkeypatch, tmp_pat
         SIMULATE_IF_UNAVAILABLE="false",
     )
     app = module.create_app()
-    _seed_api_db(module, app)
+    _seed_api_db(module, app, data_provenance="LIVE")
     with app.app_context():
         module.get_db().store_statistics(
             total_signals=100,
@@ -329,7 +347,7 @@ def test_public_pipeline_and_metrics_evidence_endpoints(monkeypatch, tmp_path):
         RECEIVER_REGISTRY_TYPE_HASH="0x" + "12" * 32,
     )
     app = module.create_app()
-    _seed_api_db(module, app)
+    _seed_api_db(module, app, data_provenance="LIVE")
     with app.app_context():
         module.get_db().store_statistics(
             total_signals=120,
@@ -774,6 +792,43 @@ def test_position_updates_only_reach_entitled_subscribers(monkeypatch, tmp_path)
     subscribed.disconnect()
 
 
+@pytest.mark.parametrize("revocation", ["key", "account", "entitlement", "expiry"])
+def test_existing_stream_stops_after_authorization_changes(monkeypatch, tmp_path, revocation):
+    module = _load_api_module(monkeypatch, tmp_path)
+    app = module.create_app()
+    commercial = _seed_api_db(module, app)
+    client = module.socketio.test_client(app)
+    client.get_received()
+    client.emit(
+        "subscribe_aircraft", {"aircraft_id": "A1B2C3", "api_key": commercial["premium_key"]}
+    )
+    assert client.get_received()[0]["args"][0]["status"] == "subscribed"
+    try:
+        with app.app_context():
+            db = module.get_db()
+            if revocation == "key":
+                db.conn.execute(
+                    "UPDATE api_keys SET status='revoked' WHERE id=?",
+                    (commercial["premium_api_key_id"],),
+                )
+            elif revocation == "account":
+                db.conn.execute(
+                    "UPDATE accounts SET status='suspended' WHERE id=?", (commercial["account_id"],)
+                )
+            elif revocation == "entitlement":
+                db.conn.execute("UPDATE entitlements SET status='revoked'")
+            else:
+                db.conn.execute("UPDATE entitlements SET ends_at='2000-01-01T00:00:00Z'")
+            db.conn.commit()
+            position = db.get_latest_position()
+            module.broadcast_position_update(
+                position.aircraft_id, module._build_position_payload(position)
+            )
+        assert not any(event["name"] == "position_update" for event in client.get_received())
+    finally:
+        client.disconnect()
+
+
 def test_broadcast_position_update_includes_receiver_ids(monkeypatch, tmp_path):
     module = _load_api_module(monkeypatch, tmp_path)
     app = module.create_app()
@@ -801,6 +856,53 @@ def test_broadcast_position_update_includes_receiver_ids(monkeypatch, tmp_path):
         "RECV_DC_001",
     ]
     assert emitted[0][2] == "A1B2C3"
+
+
+def test_stream_authorization_storage_failure_withholds_delivery(monkeypatch, tmp_path):
+    module = _load_api_module(monkeypatch, tmp_path)
+    app = module.create_app()
+    commercial = _seed_api_db(module, app)
+    client = module.socketio.test_client(app)
+    client.get_received()
+    client.emit(
+        "subscribe_aircraft", {"aircraft_id": "A1B2C3", "api_key": commercial["premium_key"]}
+    )
+    client.get_received()
+    try:
+        with app.app_context():
+            db = module.get_db()
+            position = db.get_latest_position()
+
+            def unavailable(_key_id):
+                raise sqlite3.OperationalError("storage unavailable")
+
+            monkeypatch.setattr(db, "get_api_key_access", unavailable)
+            module.broadcast_position_update(
+                position.aircraft_id, module._build_position_payload(position)
+            )
+        assert client.get_received() == []
+    finally:
+        client.disconnect()
+
+
+def test_stream_subscription_state_is_bounded_and_discarded_on_disconnect(monkeypatch, tmp_path):
+    module = _load_api_module(monkeypatch, tmp_path)
+    app = module.create_app()
+    commercial = _seed_api_db(module, app)
+    client = module.socketio.test_client(app)
+    client.get_received()
+    for number in range(101):
+        client.emit(
+            "subscribe_aircraft",
+            {"aircraft_id": f"AIRCRAFT-{number}", "api_key": commercial["premium_key"]},
+        )
+        status = client.get_received()[0]["args"][0]["status"]
+        assert status == ("subscribed" if number < 100 else "denied")
+    tracked = app.extensions["mlat_stream_subscriptions"]
+    assert sum(len(items) for items in tracked.values()) == 100
+    assert commercial["premium_key"] not in repr(tracked)
+    client.disconnect()
+    assert tracked == {}
 
 
 def test_statistics_exposes_operational_metrics(monkeypatch, tmp_path):
@@ -840,7 +942,9 @@ def test_readiness_exposes_internal_gates_and_unproven_claims(monkeypatch, tmp_p
     assert "reliability" in payload["dimensions"]
     assert "packaging" in payload["dimensions"]
     assert payload["not_yet_proven"]["more_accurate_than_incumbents"] is False
-    assert payload["dimensions"]["quality"]["benchmarkable_output"] is True
+    assert (
+        payload["dimensions"]["quality"]["benchmarkable_output"] is False
+    )  # Legacy rows have UNKNOWN provenance.
     assert payload["external_benchmark"]["available"] is False
 
 
@@ -888,3 +992,69 @@ def test_api_rejects_malformed_benchmark_artifact(monkeypatch, tmp_path):
     assert response.status_code == 503
     assert response.get_json()["available"] is False
     assert response.get_json()["status"] == "invalid"
+
+
+def test_api_publishes_solver_benchmark_summary_without_implying_live_evidence(
+    monkeypatch, tmp_path
+):
+    report_path = tmp_path / "solver-benchmark.json"
+    report = {
+        "schema_version": 1,
+        "benchmark_id": "compact-public-solver-v1",
+        "claim_scope": "solver_only",
+        "synthetic_control": {
+            "data_source": "SIMULATION",
+            "is_live": False,
+            "solved": True,
+            "errors_m": {"three_dimensional": 0.45},
+            "acceptance": {"passed": True, "maximum_3d_error_m": 1.0},
+        },
+        "published_event": {
+            "event_id": "5711382",
+            "data_source": "HISTORICAL_RECORDING",
+            "is_live": False,
+            "solved": True,
+            "ground_truth": {"latitude": 48.55, "longitude": 9.18, "altitude_m": 7711.44},
+            "receivers": [{"receiver_id": "locards:263", "latitude": 48.89}],
+            "errors_m": {"horizontal": 31.46, "three_dimensional": 38.13},
+        },
+        "compact_dataset": {
+            "data_source": "HISTORICAL_RECORDING",
+            "is_live": False,
+            "event_counts": {"total": 362, "solved": 270, "unsolved": 92},
+            "solve_rate": 0.7458,
+            "residual_m": {"median": 5.79, "p95": 20.73},
+            "iterations": {"successful": {"median": 11, "p95": 28.1}},
+            "failure_categories": {"altitude_out_of_bounds": 92},
+            "accuracy_m": {"horizontal": {"median": 59.05, "p95": 295.92}},
+            "source": {"license": "CC-BY-SA-4.0"},
+            "events": [{"event_id": "1", "solved": True}],
+        },
+        "interpretation": {
+            "solver_numeric_behavior_measured": True,
+            "production_pipeline_validated": False,
+            "registry_identity_validated": False,
+            "live_operation_validated": False,
+        },
+    }
+    report_path.write_text(json.dumps(report), encoding="utf-8")
+    module = _load_api_module(
+        monkeypatch,
+        tmp_path,
+        SOLVER_BENCHMARK_REPORT_PATH=str(report_path),
+    )
+    app = module.create_app()
+    client = app.test_client()
+
+    summary_response = client.get("/api/evidence/solver-benchmark/latest")
+    full_response = client.get("/api/evidence/solver-benchmark/latest?include_events=true")
+
+    assert summary_response.status_code == 200
+    summary = summary_response.get_json()
+    assert summary["claim_scope"] == "solver_only"
+    assert summary["is_live"] is False
+    assert "events" not in summary["compact_dataset"]
+    assert summary["compact_dataset"]["residual_m"]["median"] == 5.79
+    assert summary["compact_dataset"]["iterations"]["successful"]["median"] == 11
+    assert summary["compact_dataset"]["failure_categories"] == {"altitude_out_of_bounds": 92}
+    assert full_response.get_json()["compact_dataset"]["events"][0]["event_id"] == "1"

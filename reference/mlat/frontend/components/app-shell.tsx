@@ -2,14 +2,16 @@
 
 import * as Dialog from '@radix-ui/react-dialog';
 import { useQuery } from '@tanstack/react-query';
-import { Activity, ChevronLeft, ChevronRight, Database, Gauge, Map, Menu, PanelLeftClose, PanelRightClose, PanelRightOpen, Plane, RadioTower, Search, Settings, SlidersHorizontal, Workflow, X } from 'lucide-react';
+import { Activity, ChevronLeft, ChevronRight, Crosshair, Database, Gauge, Map, Menu, PanelLeftClose, PanelRightClose, PanelRightOpen, Plane, RadioTower, Search, Settings, SlidersHorizontal, Workflow, X } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useState, type ReactNode } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import type { LucideIcon } from 'lucide-react';
 import { InvestigationActions, InvestigationEvidenceList, InvestigationFacts, InvestigationTimeline } from '@/components/operations-ui';
+import { PageOrientation } from '@/components/data-source-banner';
 import { FirstRunNotice } from '@/components/first-run-notice';
+import { SectionErrorBoundary } from '@/components/section-error-boundary';
 import { WalletControl } from '@/components/wallet-control';
 import { Button } from '@/components/ui/button';
 import { CommandPalette } from '@/components/ui/command-palette';
@@ -17,6 +19,7 @@ import { NotificationCenter } from '@/components/ui/notification-center';
 import { StatusChip } from '@/components/ui/status-chip';
 import { Tooltip } from '@/components/ui/tooltip';
 import { apiQueryKeys, fetchJson } from '@/lib/api';
+import { dataSourceState } from '@/lib/data-source';
 import { toneFromFreshness, truncateMiddle } from '@/lib/format';
 import { useOperatorStore } from '@/lib/operator-store';
 import { consoleRoutes, type ConsoleRoute } from '@/lib/routes';
@@ -31,6 +34,7 @@ const routeIcons: Record<string, LucideIcon> = {
   pipeline: Workflow,
   registry: Database,
   metrics: Activity,
+  benchmark: Crosshair,
   environment: Database,
   settings: Settings,
 };
@@ -40,9 +44,10 @@ const groups: ConsoleRoute['group'][] = ['Registry', 'MLAT reference', 'System']
 function getSystemSummary(snapshot: ShellSnapshot, healthAvailable = true): { label: string; tone: StatusTone; environment: string } {
   const mode = snapshot.modeData;
   if (!mode) return { label: 'Unavailable', tone: 'failure', environment: 'Unknown' };
-  const isReplay = Boolean(mode.demo_mode || mode.simulation_mode || mode.synthetic_feed_mode);
+  const source = dataSourceState(mode, { cached: !healthAvailable });
   const isActive = mode.runtime_status === 'active';
-  if (isReplay) return { label: 'Replay', tone: 'replay', environment: 'Replay' };
+  if (source.kind === 'unknown') return { label: 'Source unknown', tone: 'attention', environment: 'Unknown' };
+  if (source.kind !== 'live') return { label: source.label, tone: source.tone, environment: source.label };
   if (isActive && healthAvailable && snapshot.healthData?.status === 'ok') return { label: 'Healthy', tone: 'healthy', environment: mode.strict_production_mode ? 'Production' : 'Live' };
   if (isActive) return { label: 'Degraded', tone: 'attention', environment: mode.strict_production_mode ? 'Production' : 'Live' };
   if (mode.runtime_status === 'stale') return { label: 'Degraded', tone: 'attention', environment: 'Live' };
@@ -60,7 +65,7 @@ function Navigation({ collapsed, onNavigate }: { collapsed: boolean; onNavigate?
     <div className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto px-2 py-3">
       {groups.map((group) => (
         <div key={group}>
-          {!collapsed ? <p className="mb-1.5 px-2 text-[11px] font-semibold text-ink-quiet">{group}</p> : null}
+          {!collapsed ? <p className="mb-1.5 px-2 text-xs font-semibold text-ink-quiet">{group}</p> : null}
           <nav aria-label={group} className="space-y-0.5">
             {consoleRoutes.filter((route) => route.group === group).map((route) => {
               const active = pathname === route.href || (route.key === 'metrics' && pathname === '/app/analytics');
@@ -96,7 +101,7 @@ function InvestigationDock({ dock, pageKey }: { dock: InvestigationDockState | n
       <div className="border-b border-line px-4 py-4">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <p className="text-[11px] font-medium text-ink-quiet">Selected investigation</p>
+            <p className="text-xs font-medium text-ink-quiet">Selected investigation</p>
             <h2 className="mt-1 break-words text-sm font-semibold text-ink">{dock.title}</h2>
             {dock.subtitle ? <p className="mt-1 text-xs leading-5 text-ink-quiet">{dock.subtitle}</p> : null}
           </div>
@@ -113,10 +118,11 @@ function InvestigationDock({ dock, pageKey }: { dock: InvestigationDockState | n
 
 function ContextBar({ snapshot, selectedAircraftId, selectedReceiverId, pageKey, healthAvailable }: { snapshot: ShellSnapshot; selectedAircraftId: string | null; selectedReceiverId: string | null; pageKey: string; healthAvailable: boolean }) {
   const registryPage = pageKey === 'registry';
+  const source = dataSourceState(snapshot.modeData, { cached: !healthAvailable });
   const summary = registryPage ? { label: 'Registry V2', tone: 'trust' as const } : getSystemSummary(snapshot, healthAvailable);
   const signalAge = snapshot.healthData?.freshness?.last_signal_age_s;
   return (
-    <div className="flex min-h-10 items-center gap-3 overflow-x-auto border-t border-line px-4 py-2 text-[11px] text-ink-quiet sm:px-6">
+    <div tabIndex={0} role="region" aria-label="System source and freshness" className="flex min-h-10 items-center gap-3 overflow-x-auto border-t border-line px-4 py-2 text-xs text-ink-quiet focus-visible:outline-2 sm:px-6">
       <span className="shrink-0 font-semibold text-trust-cyan">CKB Pudge testnet</span>
       <span className="h-3 w-px shrink-0 bg-line" aria-hidden="true" />
       <StatusChip label={summary.label} tone={summary.tone} />
@@ -124,7 +130,7 @@ function ContextBar({ snapshot, selectedAircraftId, selectedReceiverId, pageKey,
       <span className="h-3 w-px shrink-0 bg-line" aria-hidden="true" />
       {selectedReceiverId ? <Link href={`/app/receivers?receiver=${encodeURIComponent(selectedReceiverId)}`} className="shrink-0 rounded-sm text-ink-secondary hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal-blue">Receiver {truncateMiddle(selectedReceiverId, 8, 5)}</Link> : <span className="shrink-0">No receiver selected</span>}
       {selectedAircraftId ? <Link href={`/app/aircraft?aircraft=${encodeURIComponent(selectedAircraftId)}`} className="shrink-0 rounded-sm text-ink-secondary hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal-blue">Aircraft {selectedAircraftId}</Link> : null}
-      <span className="ml-auto hidden shrink-0 sm:inline">{registryPage ? 'Public indexer directory' : !healthAvailable ? 'Signal status unavailable' : `Signal ${signalAge == null ? 'unavailable' : `${Math.round(signalAge)}s ago`}`}</span>
+      <span className="ml-auto hidden shrink-0 sm:inline">{registryPage ? 'Source: CKB testnet public indexer' : source.kind === 'live' ? `Received ${signalAge == null ? 'time unavailable' : `${Math.round(signalAge)}s ago`}` : source.kind === 'replay' ? `Replay position ${signalAge == null ? 'time unavailable' : `${Math.round(signalAge)}s ago`}` : source.kind === 'simulation' ? `Simulation step ${signalAge == null ? 'time unavailable' : `${Math.round(signalAge)}s ago`}` : 'Current source time unavailable'}</span>
     </div>
   );
 }
@@ -224,7 +230,7 @@ export function AppShell({ pageKey, title, description, snapshot, children }: { 
         <div className={cn('flex h-16 items-center border-b border-line', collapsed ? 'justify-center px-2' : 'justify-between px-3')}>
           <Link href="/app/registry" className="flex min-w-0 items-center gap-2.5 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal-blue">
             <span className="relative flex size-8 shrink-0 items-center justify-center rounded-md bg-signal-blue text-[11px] font-bold text-graphite-deep"><span className="absolute inset-[5px] rounded-full border border-graphite-deep/45" />R</span>
-            {!collapsed ? <span className="min-w-0"><strong className="block truncate text-[13px] font-semibold text-ink">Receiver Registry</strong><small className="block truncate text-[10px] font-medium text-ink-quiet">CKB TESTNET</small></span> : null}
+            {!collapsed ? <span className="min-w-0"><strong className="block truncate text-[13px] font-semibold text-ink">Receiver Registry</strong><small className="block truncate text-[11px] font-medium text-ink-quiet">CKB TESTNET</small></span> : null}
           </Link>
           {!collapsed ? <Tooltip label="Collapse sidebar" side="bottom"><Button variant="ghost" size="icon-sm" aria-label="Collapse sidebar" onClick={() => setCollapsed(true)}><PanelLeftClose className="size-4" /></Button></Tooltip> : null}
         </div>
@@ -232,7 +238,7 @@ export function AppShell({ pageKey, title, description, snapshot, children }: { 
         <div className="border-t border-line p-2">
           <div className={cn('flex items-center gap-2 rounded-md px-2 py-2', collapsed && 'justify-center px-0')}>
               <span aria-hidden="true" className={cn('size-2 shrink-0 rounded-full', summary.tone === 'healthy' ? 'bg-healthy' : summary.tone === 'trust' ? 'bg-trust-cyan' : summary.tone === 'replay' ? 'bg-replay' : summary.tone === 'attention' ? 'bg-attention' : 'bg-failure')} />
-            {!collapsed ? <div className="min-w-0 flex-1"><p className="truncate text-xs font-semibold text-ink-secondary">CKB testnet</p><p className="truncate text-[10px] text-ink-quiet">{summary.environment} · {summary.label}</p></div> : null}
+            {!collapsed ? <div className="min-w-0 flex-1"><p className="truncate text-xs font-semibold text-ink-secondary">CKB testnet</p><p className="truncate text-[11px] text-ink-quiet">{summary.environment} · {summary.label}</p></div> : null}
             {collapsed ? <Tooltip label="Expand sidebar"><Button variant="ghost" size="icon-sm" aria-label="Expand sidebar" onClick={() => setCollapsed(false)}><ChevronRight className="size-4" /></Button></Tooltip> : null}
           </div>
         </div>
@@ -258,11 +264,11 @@ export function AppShell({ pageKey, title, description, snapshot, children }: { 
             <div className="flex min-w-0 items-center gap-3">
               <Button variant="ghost" size="icon" className="lg:hidden" onClick={() => setMobileOpen(true)} aria-label="Open navigation"><Menu className="size-4" /></Button>
               <div className="min-w-0">
-                <div className="mb-1 hidden items-center gap-1.5 text-[11px] text-ink-quiet md:flex">
+                <div className="mb-1 hidden items-center gap-1.5 text-xs text-ink-quiet md:flex">
                   {breadcrumbRoutes.map((item, index) => <div key={`${item.label}-${index}`} className="flex items-center gap-1.5">{index ? <ChevronRight className="size-3 text-ink-quiet/70" /> : null}<Link href={item.href} className="rounded-sm hover:text-ink-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal-blue">{item.label}</Link></div>)}
                 </div>
                 <h1 className="truncate text-base font-semibold leading-tight text-ink sm:text-xl">{title}</h1>
-                <p className="mt-0.5 hidden truncate text-xs text-ink-quiet sm:block">{description}</p>
+                <p className="mt-0.5 hidden truncate text-[13px] text-ink-quiet sm:block">{description}</p>
               </div>
             </div>
             <div className="flex shrink-0 items-center gap-1 sm:gap-2">
@@ -276,7 +282,13 @@ export function AppShell({ pageKey, title, description, snapshot, children }: { 
           </div>
           <ContextBar snapshot={liveSnapshot} selectedAircraftId={selectedAircraftId} selectedReceiverId={selectedReceiverId} pageKey={pageKey} healthAvailable={healthAvailable} />
         </header>
-        <main id="main-content" className="min-w-0 p-3 sm:p-6">{pageKey === 'registry' ? <FirstRunNotice /> : null}{children}</main>
+        <main id="main-content" className="min-w-0 p-3 sm:p-6">
+          {pageKey === 'registry' ? <FirstRunNotice /> : null}
+          <PageOrientation pageKey={pageKey} snapshot={liveSnapshot} cached={!healthAvailable} />
+          <SectionErrorBoundary title={`${title} unavailable`} detail="This workspace encountered an unexpected frontend error. Retry this section or use Diagnostics while the navigation and other console areas remain available." resetKey={pageKey} diagnosticsHref="/app/environment">
+            {children}
+          </SectionErrorBoundary>
+        </main>
       </div>
 
       <Dialog.Root open={rightDockOpen && !wideDock} onOpenChange={setRightDockOpen}>

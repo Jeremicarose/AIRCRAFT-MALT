@@ -1,0 +1,433 @@
+{
+  "auditReportVersion": 2,
+  "vulnerabilities": {
+    "@ckb-ccc/ccc": {
+      "name": "@ckb-ccc/ccc",
+      "severity": "low",
+      "isDirect": false,
+      "via": [
+        "@ckb-ccc/eip6963",
+        "@ckb-ccc/joy-id",
+        "@ckb-ccc/nip07",
+        "@ckb-ccc/okx",
+        "@ckb-ccc/rei",
+        "@ckb-ccc/shell",
+        "@ckb-ccc/uni-sat",
+        "@ckb-ccc/utxo-global",
+        "@ckb-ccc/xverse"
+      ],
+      "effects": [
+        "@ckb-ccc/connector"
+      ],
+      "range": "<=0.0.0-canary-dcaac2eb7549f82887bdeac3ede8b556ba9ba3d2 || 0.0.2-alpha.0 - 0.0.2-alpha.3 || >=0.0.5-alpha.0",
+      "nodes": [
+        "node_modules/@ckb-ccc/ccc"
+      ],
+      "fixAvailable": {
+        "name": "@ckb-ccc/connector-react",
+        "version": "0.0.4",
+        "isSemVerMajor": true
+      }
+    },
+    "@ckb-ccc/connector": {
+      "name": "@ckb-ccc/connector",
+      "severity": "low",
+      "isDirect": false,
+      "via": [
+        "@ckb-ccc/ccc"
+      ],
+      "effects": [
+        "@ckb-ccc/connector-react"
+      ],
+      "range": "<=0.0.0-canary-dcaac2eb7549f82887bdeac3ede8b556ba9ba3d2 || >=0.0.5-alpha.0",
+      "nodes": [
+        "node_modules/@ckb-ccc/connector"
+      ],
+      "fixAvailable": {
+        "name": "@ckb-ccc/connector-react",
+        "version": "0.0.4",
+        "isSemVerMajor": true
+      }
+    },
+    "@ckb-ccc/connector-react": {
+      "name": "@ckb-ccc/connector-react",
+      "severity": "low",
+      "isDirect": true,
+      "via": [
+        "@ckb-ccc/connector"
+      ],
+      "effects": [],
+      "range": "<=0.0.0-canary-dcaac2eb7549f82887bdeac3ede8b556ba9ba3d2 || >=0.0.5-alpha.0",
+      "nodes": [
+        "node_modules/@ckb-ccc/connector-react"
+      ],
+      "fixAvailable": {
+        "name": "@ckb-ccc/connector-react",
+        "version": "0.0.4",
+        "isSemVerMajor": true
+      }
+    },
+    "@ckb-ccc/core": {
+      "name": "@ckb-ccc/core",
+      "severity": "low",
+      "isDirect": false,
+      "via": [
+        "@joyid/ckb"
+      ],
+      "effects": [
+        "@ckb-ccc/did-ckb",
+        "@ckb-ccc/eip6963",
+        "@ckb-ccc/nip07",
+        "@ckb-ccc/okx",
+        "@ckb-ccc/rei",
+        "@ckb-ccc/shell",
+        "@ckb-ccc/spore",
+        "@ckb-ccc/ssri",
+        "@ckb-ccc/type-id",
+        "@ckb-ccc/udt",
+        "@ckb-ccc/uni-sat",
+        "@ckb-ccc/utxo-global",
+        "@ckb-ccc/xverse"
+      ],
+      "range": "<=0.0.2-alpha.3 || >=0.0.5-alpha.0",
+      "nodes": [
+        "node_modules/@ckb-ccc/core"
+      ],
+      "fixAvailable": {
+        "name": "@ckb-ccc/connector-react",
+        "version": "0.0.4",
+        "isSemVerMajor": true
+      }
+    },
+    "@ckb-ccc/did-ckb": {
+      "name": "@ckb-ccc/did-ckb",
+      "severity": "low",
+      "isDirect": false,
+      "via": [
+        "@ckb-ccc/core",
+        "@ckb-ccc/type-id"
+      ],
+      "effects": [],
+      "range": "*",
+      "nodes": [
+        "node_modules/@ckb-ccc/did-ckb"
+      ],
+      "fixAvailable": true
+    },
+    "@ckb-ccc/eip6963": {
+      "name": "@ckb-ccc/eip6963",
+      "severity": "low",
+      "isDirect": false,
+      "via": [
+        "@ckb-ccc/core"
+      ],
+      "effects": [
+        "@ckb-ccc/ccc"
+      ],
+      "range": "<=0.0.2-alpha.3 || >=0.0.5-alpha.0",
+      "nodes": [
+        "node_modules/@ckb-ccc/eip6963"
+      ],
+      "fixAvailable": {
+        "name": "@ckb-ccc/connector-react",
+        "version": "0.0.4",
+        "isSemVerMajor": true
+      }
+    },
+    "@ckb-ccc/joy-id": {
+      "name": "@ckb-ccc/joy-id",
+      "severity": "low",
+      "isDirect": false,
+      "via": [
+        "@ckb-ccc/core",
+        "@joyid/ckb"
+      ],
+      "effects": [
+        "@ckb-ccc/ccc"
+      ],
+      "range": "*",
+      "nodes": [
+        "node_modules/@ckb-ccc/joy-id"
+      ],
+      "fixAvailable": {
+        "name": "@ckb-ccc/connector-react",
+        "version": "0.0.4",
+        "isSemVerMajor": true
+      }
+    },
+    "@ckb-ccc/nip07": {
+      "name": "@ckb-ccc/nip07",
+      "severity": "low",
+      "isDirect": false,
+      "via": [
+        "@ckb-ccc/core"
+      ],
+      "effects": [],
+      "range": "*",
+      "nodes": [
+        "node_modules/@ckb-ccc/nip07"
+      ],
+      "fixAvailable": true
+    },
+    "@ckb-ccc/okx": {
+      "name": "@ckb-ccc/okx",
+      "severity": "low",
+      "isDirect": false,
+      "via": [
+        "@ckb-ccc/core",
+        "@ckb-ccc/nip07",
+        "@ckb-ccc/uni-sat"
+      ],
+      "effects": [],
+      "range": "<=0.0.0-canary-20260713204024 || >=0.0.5-alpha.0",
+      "nodes": [
+        "node_modules/@ckb-ccc/okx"
+      ],
+      "fixAvailable": true
+    },
+    "@ckb-ccc/rei": {
+      "name": "@ckb-ccc/rei",
+      "severity": "low",
+      "isDirect": false,
+      "via": [
+        "@ckb-ccc/core"
+      ],
+      "effects": [],
+      "range": "*",
+      "nodes": [
+        "node_modules/@ckb-ccc/rei"
+      ],
+      "fixAvailable": true
+    },
+    "@ckb-ccc/shell": {
+      "name": "@ckb-ccc/shell",
+      "severity": "low",
+      "isDirect": false,
+      "via": [
+        "@ckb-ccc/core",
+        "@ckb-ccc/did-ckb",
+        "@ckb-ccc/spore",
+        "@ckb-ccc/ssri",
+        "@ckb-ccc/type-id",
+        "@ckb-ccc/udt"
+      ],
+      "effects": [
+        "@ckb-ccc/ccc"
+      ],
+      "range": "*",
+      "nodes": [
+        "node_modules/@ckb-ccc/shell"
+      ],
+      "fixAvailable": {
+        "name": "@ckb-ccc/connector-react",
+        "version": "0.0.4",
+        "isSemVerMajor": true
+      }
+    },
+    "@ckb-ccc/spore": {
+      "name": "@ckb-ccc/spore",
+      "severity": "low",
+      "isDirect": false,
+      "via": [
+        "@ckb-ccc/core"
+      ],
+      "effects": [],
+      "range": "*",
+      "nodes": [
+        "node_modules/@ckb-ccc/spore"
+      ],
+      "fixAvailable": true
+    },
+    "@ckb-ccc/ssri": {
+      "name": "@ckb-ccc/ssri",
+      "severity": "low",
+      "isDirect": false,
+      "via": [
+        "@ckb-ccc/core"
+      ],
+      "effects": [],
+      "range": "*",
+      "nodes": [
+        "node_modules/@ckb-ccc/ssri"
+      ],
+      "fixAvailable": true
+    },
+    "@ckb-ccc/type-id": {
+      "name": "@ckb-ccc/type-id",
+      "severity": "low",
+      "isDirect": false,
+      "via": [
+        "@ckb-ccc/core"
+      ],
+      "effects": [
+        "@ckb-ccc/shell"
+      ],
+      "range": "*",
+      "nodes": [
+        "node_modules/@ckb-ccc/type-id"
+      ],
+      "fixAvailable": {
+        "name": "@ckb-ccc/connector-react",
+        "version": "0.0.4",
+        "isSemVerMajor": true
+      }
+    },
+    "@ckb-ccc/udt": {
+      "name": "@ckb-ccc/udt",
+      "severity": "low",
+      "isDirect": false,
+      "via": [
+        "@ckb-ccc/core",
+        "@ckb-ccc/ssri"
+      ],
+      "effects": [],
+      "range": "*",
+      "nodes": [
+        "node_modules/@ckb-ccc/udt"
+      ],
+      "fixAvailable": true
+    },
+    "@ckb-ccc/uni-sat": {
+      "name": "@ckb-ccc/uni-sat",
+      "severity": "low",
+      "isDirect": false,
+      "via": [
+        "@ckb-ccc/core"
+      ],
+      "effects": [],
+      "range": "<=0.0.0-canary-20260713204024 || >=0.0.5-alpha.0",
+      "nodes": [
+        "node_modules/@ckb-ccc/uni-sat"
+      ],
+      "fixAvailable": true
+    },
+    "@ckb-ccc/utxo-global": {
+      "name": "@ckb-ccc/utxo-global",
+      "severity": "low",
+      "isDirect": false,
+      "via": [
+        "@ckb-ccc/core"
+      ],
+      "effects": [],
+      "range": "*",
+      "nodes": [
+        "node_modules/@ckb-ccc/utxo-global"
+      ],
+      "fixAvailable": true
+    },
+    "@ckb-ccc/xverse": {
+      "name": "@ckb-ccc/xverse",
+      "severity": "low",
+      "isDirect": false,
+      "via": [
+        "@ckb-ccc/core"
+      ],
+      "effects": [
+        "@ckb-ccc/ccc"
+      ],
+      "range": "*",
+      "nodes": [
+        "node_modules/@ckb-ccc/xverse"
+      ],
+      "fixAvailable": {
+        "name": "@ckb-ccc/connector-react",
+        "version": "0.0.4",
+        "isSemVerMajor": true
+      }
+    },
+    "@joyid/ckb": {
+      "name": "@joyid/ckb",
+      "severity": "low",
+      "isDirect": false,
+      "via": [
+        "@nervosnetwork/ckb-sdk-utils"
+      ],
+      "effects": [
+        "@ckb-ccc/core",
+        "@ckb-ccc/joy-id"
+      ],
+      "range": ">=0.0.8",
+      "nodes": [
+        "node_modules/@joyid/ckb"
+      ],
+      "fixAvailable": {
+        "name": "@ckb-ccc/connector-react",
+        "version": "0.0.4",
+        "isSemVerMajor": true
+      }
+    },
+    "@nervosnetwork/ckb-sdk-utils": {
+      "name": "@nervosnetwork/ckb-sdk-utils",
+      "severity": "low",
+      "isDirect": false,
+      "via": [
+        "elliptic"
+      ],
+      "effects": [
+        "@joyid/ckb"
+      ],
+      "range": ">=0.12.0",
+      "nodes": [
+        "node_modules/@nervosnetwork/ckb-sdk-utils"
+      ],
+      "fixAvailable": {
+        "name": "@ckb-ccc/connector-react",
+        "version": "0.0.4",
+        "isSemVerMajor": true
+      }
+    },
+    "elliptic": {
+      "name": "elliptic",
+      "severity": "low",
+      "isDirect": false,
+      "via": [
+        {
+          "source": 1112030,
+          "name": "elliptic",
+          "dependency": "elliptic",
+          "title": "Elliptic Uses a Cryptographic Primitive with a Risky Implementation",
+          "url": "https://github.com/advisories/GHSA-848j-6mx2-7j84",
+          "severity": "low",
+          "cwe": [
+            "CWE-1240"
+          ],
+          "cvss": {
+            "score": 5.6,
+            "vectorString": "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:L/I:L/A:L"
+          },
+          "range": "<=6.6.1"
+        }
+      ],
+      "effects": [
+        "@nervosnetwork/ckb-sdk-utils"
+      ],
+      "range": "*",
+      "nodes": [
+        "node_modules/elliptic"
+      ],
+      "fixAvailable": {
+        "name": "@ckb-ccc/connector-react",
+        "version": "0.0.4",
+        "isSemVerMajor": true
+      }
+    }
+  },
+  "metadata": {
+    "vulnerabilities": {
+      "info": 0,
+      "low": 21,
+      "moderate": 0,
+      "high": 0,
+      "critical": 0,
+      "total": 21
+    },
+    "dependencies": {
+      "prod": 270,
+      "dev": 2,
+      "optional": 58,
+      "peer": 1,
+      "peerOptional": 0,
+      "total": 330
+    }
+  }
+}

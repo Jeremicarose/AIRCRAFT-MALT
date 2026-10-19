@@ -52,6 +52,27 @@ function cell(
   });
 }
 
+test("lifecycle preparation rejects an indexer cell already spent on the node", async () => {
+  const current = cell(
+    { txHash: "0x" + "bb".repeat(32), index: 0 }, ownerLock,
+    ccc.Script.from({ codeHash: contractCodeHash, hashType: "data1", args: receiverIdentity }),
+    encodeRegistryV2CellData(initialRecord),
+  );
+  const client = {
+    addressPrefix: "ckt",
+    async getCellLive(outPoint: ccc.OutPointLike) {
+      return ccc.OutPoint.from(outPoint).eq(contractCellDep.outPoint)
+        ? cell(contractCellDep.outPoint, ownerLock, undefined, contractData) : undefined;
+    },
+    async findCellsPaged(_key: unknown, _order: unknown, _limit: unknown, cursor?: string) {
+      return { cells: cursor === undefined ? [current] : [], lastCursor: "0x1" };
+    },
+  } as unknown as ccc.Client;
+  const sdk = new RegistryV2Sdk(client, { contractCodeHash, scriptHashType: "data1", contractCellDep });
+  const signer = { client } as ccc.Signer;
+  await assert.rejects(sdk.prepareRevoke(signer, receiverIdentity), /node|live/);
+});
+
 test("CCC signer lifecycle prepares create, update, transfer, and revoke transactions", async () => {
   const funding = cell(
     { txHash: "0x" + "aa".repeat(32), index: 1 },
@@ -71,7 +92,8 @@ test("CCC signer lifecycle prepares create, update, transfer, and revoke transac
   );
   const client = {
     addressPrefix: "ckt",
-    async getCellLive() {
+    async getCellLive(outPoint: ccc.OutPointLike) {
+      if (current?.outPoint.eq(outPoint)) return current;
       return cell(contractCellDep.outPoint, ownerLock, undefined, contractData);
     },
     async findCellsPaged(_key: unknown, _order: unknown, _limit: unknown, cursor?: string) {
@@ -186,7 +208,8 @@ test("documented journey creates, discovers, updates, transfers, revokes, and ve
   let submittedCount = 0;
   const client = {
     addressPrefix: "ckt",
-    async getCellLive() {
+    async getCellLive(outPoint: ccc.OutPointLike) {
+      if (current?.outPoint.eq(outPoint)) return current;
       return cell(contractCellDep.outPoint, ownerLock, undefined, contractData);
     },
     async findCellsPaged(

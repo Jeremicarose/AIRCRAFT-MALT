@@ -1,0 +1,116 @@
+{
+  "auditReportVersion": 2,
+  "vulnerabilities": {
+    "@ckb-ccc/core": {
+      "name": "@ckb-ccc/core",
+      "severity": "low",
+      "isDirect": true,
+      "via": [
+        "@joyid/ckb"
+      ],
+      "effects": [],
+      "range": "<=0.0.2-alpha.3 || >=0.0.5-alpha.0",
+      "nodes": [
+        "node_modules/@ckb-ccc/core"
+      ],
+      "fixAvailable": {
+        "name": "@ckb-ccc/core",
+        "version": "0.0.4",
+        "isSemVerMajor": true
+      }
+    },
+    "@joyid/ckb": {
+      "name": "@joyid/ckb",
+      "severity": "low",
+      "isDirect": false,
+      "via": [
+        "@nervosnetwork/ckb-sdk-utils"
+      ],
+      "effects": [
+        "@ckb-ccc/core"
+      ],
+      "range": ">=0.0.8",
+      "nodes": [
+        "node_modules/@joyid/ckb"
+      ],
+      "fixAvailable": {
+        "name": "@ckb-ccc/core",
+        "version": "0.0.4",
+        "isSemVerMajor": true
+      }
+    },
+    "@nervosnetwork/ckb-sdk-utils": {
+      "name": "@nervosnetwork/ckb-sdk-utils",
+      "severity": "low",
+      "isDirect": false,
+      "via": [
+        "elliptic"
+      ],
+      "effects": [
+        "@joyid/ckb"
+      ],
+      "range": ">=0.12.0",
+      "nodes": [
+        "node_modules/@nervosnetwork/ckb-sdk-utils"
+      ],
+      "fixAvailable": {
+        "name": "@ckb-ccc/core",
+        "version": "0.0.4",
+        "isSemVerMajor": true
+      }
+    },
+    "elliptic": {
+      "name": "elliptic",
+      "severity": "low",
+      "isDirect": false,
+      "via": [
+        {
+          "source": 1112030,
+          "name": "elliptic",
+          "dependency": "elliptic",
+          "title": "Elliptic Uses a Cryptographic Primitive with a Risky Implementation",
+          "url": "https://github.com/advisories/GHSA-848j-6mx2-7j84",
+          "severity": "low",
+          "cwe": [
+            "CWE-1240"
+          ],
+          "cvss": {
+            "score": 5.6,
+            "vectorString": "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:L/I:L/A:L"
+          },
+          "range": "<=6.6.1"
+        }
+      ],
+      "effects": [
+        "@nervosnetwork/ckb-sdk-utils"
+      ],
+      "range": "*",
+      "nodes": [
+        "node_modules/elliptic"
+      ],
+      "fixAvailable": {
+        "name": "@ckb-ccc/core",
+        "version": "0.0.4",
+        "isSemVerMajor": true
+      }
+    }
+  },
+  "metadata": {
+    "vulnerabilities": {
+      "info": 0,
+      "low": 4,
+      "moderate": 0,
+      "high": 0,
+      "critical": 0,
+      "total": 4
+    },
+    "dependencies": {
+      "prod": 47,
+      "dev": 2,
+      "optional": 0,
+      "peer": 0,
+      "peerOptional": 0,
+      "total": 48
+    }
+  }
+}

@@ -40,6 +40,23 @@ and clean source-bound CI evidence must be published.
 
 ## Working documents
 
+- [Brand and positioning](BRAND_AND_POSITIONING.md): product promise, audience
+  messages, evidence boundaries, voice, visual language, and public status terms
+- [Programme launch plan](PROGRAMME_LAUNCH_PLAN.md): two-stage recruitment,
+  four-week operating sequence, funnel targets, stop rules, and owner actions
+- [Funding proposal draft](FUNDING_PROPOSAL_DRAFT.md): milestone-based community
+  funding request, budget, payment gates, and smaller sponsorship options
+- [Participant consent](CONSENT_FORM.md): public-chain warning, private-data
+  handling, payment status, recording choices, and withdrawal terms
+- [Participant requirements](PARTICIPANT_REQUIREMENTS.md): exact roles,
+  eligibility, tasks, time, equipment, internet, location, and skill requirements
+- [Public project one-pager](PROJECT_ONE_PAGER.md): applicant-facing pilot summary
+- [Application form](APPLICATION_FORM.md): form-ready screening questions and
+  publication checklist
+- [Visual assets](assets/README.md): editable Registry lifecycle, responsibility
+  boundary, and receiver workflow diagrams with PNG exports
+- [Video storyboard](video/README.md): nine ordered 16:9 frames with suggested
+  timing and narration for a 60-90 second pilot overview
 - [Recruitment](recruitment.md): cohort, status rules, tracker, and outreach copy
 - [Session guide](session-guide.md): 30 to 45 minute moderated session
 - [Test plan](test-plan.md): product, security, and clean-user acceptance tests
@@ -56,6 +73,11 @@ and clean source-bound CI evidence must be published.
 The maintainer-local recruitment tracker is
 `artifacts/receiver-pilot-tracker.csv`. It is intentionally excluded from source
 control because it may contain contact and recruitment status data.
+
+The public pilot page is available at `/pilot`. It remains in `Programme
+preparation` by default. The application link appears only when the deployment
+provides a private HTTPS form URL and an explicit recruitment state. A paid
+application opens only when funding is also explicitly marked as confirmed.
 
 ## Status definitions
 

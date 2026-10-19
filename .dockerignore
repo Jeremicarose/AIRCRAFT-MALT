@@ -1,4 +1,13 @@
 .git
+.venv
+.agents
+.codex
+.aws
+ckb-cli
+job-search
+opportunity-pipeline
+deploy
+docs/pilot/video
 .env
 .env.*
 !.env.example

@@ -80,3 +80,50 @@ def test_correlator_uses_integer_nanoseconds_for_epoch_time_spans():
 
     assert len(groups) == 1
     assert groups[0].time_span == 0.0000015
+
+
+def test_deduplication_expires_with_retained_observations():
+    correlator = SignalCorrelator()
+    for event in range(1000):
+        correlator.add_signals([RawSignal(str(i), event + 1.0, str(event)) for i in range(4)])
+        assert len(correlator.correlate()) == 1
+        assert correlator.correlate() == []
+    assert len(correlator.processed_groups) <= 3
+
+
+def test_exact_duplicate_observation_does_not_poison_valid_group():
+    correlator = SignalCorrelator()
+    signals = [
+        RawSignal(str(i), 100.0, "frame", timestamp_ns=100_000_000_000 + i) for i in range(4)
+    ]
+    correlator.add_signals(signals + [signals[0]])
+    groups = correlator.correlate()
+    assert len(groups) == 1
+    assert len(groups[0].signals) == 4
+
+
+def test_conflicting_timestamps_from_one_receiver_are_not_silently_chosen():
+    correlator = SignalCorrelator()
+    signals = [
+        RawSignal(str(i), 100.0, "frame", timestamp_ns=100_000_000_000 + i) for i in range(4)
+    ]
+    signals.append(RawSignal("0", 100.0, "frame", timestamp_ns=100_000_000_010))
+    correlator.add_signals(signals)
+    assert correlator.correlate() == []
+
+
+def test_buffer_is_bounded_even_when_timestamps_never_advance():
+    correlator = SignalCorrelator(max_buffer_signals=100)
+    for i in range(1000):
+        correlator.add_signal(RawSignal("one-receiver", 1.0, str(i)))
+    assert len(correlator.signal_buffer) == 100
+    assert correlator.dropped_signals == 900
+
+
+def test_expiring_first_receiver_does_not_resolve_same_transmission_twice():
+    correlator = SignalCorrelator(buffer_duration=2)
+    signals = [RawSignal(str(i), 100 + i * 0.0001, "original") for i in range(5)]
+    correlator.add_signals(signals)
+    assert len(correlator.correlate()) == 1
+    correlator.add_signal(RawSignal("other", 102.00005, "new"))
+    assert correlator.correlate() == []

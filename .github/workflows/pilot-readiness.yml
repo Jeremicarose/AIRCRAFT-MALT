@@ -89,22 +89,36 @@ jobs:
             --require-ready
       - name: Verify immutable deployment when supplied
         if: ${{ inputs.registry_code_hash != '' && inputs.registry_contract_tx_hash != '' }}
+        env:
+          PILOT_REGISTRY_CODE_HASH: ${{ inputs.registry_code_hash }}
+          PILOT_REGISTRY_CONTRACT_TX_HASH: ${{ inputs.registry_contract_tx_hash }}
+          PILOT_REGISTRY_CONTRACT_INDEX: ${{ inputs.registry_contract_index }}
+          PILOT_RECEIVER_IDENTITY: ${{ inputs.receiver_identity }}
+          PILOT_RECEIVER_TX_HASH: ${{ inputs.receiver_tx_hash }}
+          PILOT_RECEIVER_OUTPUT_INDEX: ${{ inputs.receiver_output_index }}
         run: |
           python tools/registry/verify_data1_deployment.py \
-            --contract-tx-hash "${{ inputs.registry_contract_tx_hash }}" \
-            --contract-index "${{ inputs.registry_contract_index }}" \
-            --code-hash "${{ inputs.registry_code_hash }}" \
+            --contract-tx-hash "$PILOT_REGISTRY_CONTRACT_TX_HASH" \
+            --contract-index "$PILOT_REGISTRY_CONTRACT_INDEX" \
+            --code-hash "$PILOT_REGISTRY_CODE_HASH" \
             --output "$PILOT_ARTIFACT_DIR/data1-deployment.json"
       - name: Compare the public indexer with direct RPC when supplied
         if: ${{ inputs.registry_code_hash != '' && inputs.receiver_identity != '' && inputs.receiver_tx_hash != '' }}
         continue-on-error: true
+        env:
+          PILOT_REGISTRY_CODE_HASH: ${{ inputs.registry_code_hash }}
+          PILOT_REGISTRY_CONTRACT_TX_HASH: ${{ inputs.registry_contract_tx_hash }}
+          PILOT_REGISTRY_CONTRACT_INDEX: ${{ inputs.registry_contract_index }}
+          PILOT_RECEIVER_IDENTITY: ${{ inputs.receiver_identity }}
+          PILOT_RECEIVER_TX_HASH: ${{ inputs.receiver_tx_hash }}
+          PILOT_RECEIVER_OUTPUT_INDEX: ${{ inputs.receiver_output_index }}
         run: |
           python tools/registry/check_registry_indexer_health.py \
-            --contract-code-hash "${{ inputs.registry_code_hash }}" \
+            --contract-code-hash "$PILOT_REGISTRY_CODE_HASH" \
             --hash-type data1 \
-            --receiver-identity "${{ inputs.receiver_identity }}" \
-            --expected-tx-hash "${{ inputs.receiver_tx_hash }}" \
-            --expected-index "${{ inputs.receiver_output_index }}" \
+            --receiver-identity "$PILOT_RECEIVER_IDENTITY" \
+            --expected-tx-hash "$PILOT_RECEIVER_TX_HASH" \
+            --expected-index "$PILOT_RECEIVER_OUTPUT_INDEX" \
             --output "$PILOT_ARTIFACT_DIR/indexer-health.json"
       - name: Publish pilot evidence
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7

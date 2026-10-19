@@ -1,8 +1,8 @@
 'use client';
 
-import { ArrowUpRight, ShieldCheck } from 'lucide-react';
+import { ArrowUpRight, ChevronDown, ChevronRight, ShieldCheck } from 'lucide-react';
 import Link from 'next/link';
-import type { ReactNode } from 'react';
+import { useId, type ReactNode } from 'react';
 import type { InvestigationAction, InvestigationCard, InvestigationEvent, InvestigationFact, StatusTone } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { StatusChip, StatusIcon } from '@/components/ui/status-chip';
@@ -18,27 +18,68 @@ export function EvidenceCard({ title, state, tone = 'neutral', children, action 
   );
 }
 
-export function Inspector({ title, subtitle, status, actions, children, className }: { title: string; subtitle?: ReactNode; status?: ReactNode; actions?: ReactNode; children: ReactNode; className?: string }) {
+export function Inspector({
+  title,
+  subtitle,
+  status,
+  actions,
+  children,
+  className,
+  collapsible = false,
+  expanded = true,
+  onExpandedChange,
+}: {
+  title: string;
+  subtitle?: ReactNode;
+  status?: ReactNode;
+  actions?: ReactNode;
+  children: ReactNode;
+  className?: string;
+  collapsible?: boolean;
+  expanded?: boolean;
+  onExpandedChange?: (expanded: boolean) => void;
+}) {
+  const contentId = useId();
+  const contentVisible = !collapsible || expanded;
+
   return (
     <aside className={cn('overflow-hidden rounded-lg border border-line bg-graphite', className)}>
-      <div className="border-b border-line p-4">
-        <div className="flex items-start justify-between gap-3"><div className="min-w-0"><h2 className="truncate text-base font-semibold text-ink">{title}</h2>{subtitle ? <div className="mt-1 text-xs text-ink-quiet">{subtitle}</div> : null}</div>{status}</div>
-        {actions ? <div className="mt-3 flex gap-2">{actions}</div> : null}
+      <div className={cn('p-4', contentVisible && 'border-b border-line')}>
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0"><h2 className="truncate text-base font-semibold text-ink">{title}</h2>{subtitle ? <div className="mt-1 text-xs text-ink-quiet">{subtitle}</div> : null}</div>
+          <div className="flex shrink-0 items-center gap-2">
+            {status}
+            {collapsible ? (
+              <button
+                type="button"
+                aria-label={expanded ? `Collapse ${title} details` : `Expand ${title} details`}
+                aria-expanded={expanded}
+                aria-controls={contentId}
+                title={expanded ? 'Collapse receiver details' : 'Expand receiver details'}
+                onClick={() => onExpandedChange?.(!expanded)}
+                className="flex size-8 items-center justify-center rounded-md border border-line text-ink-secondary outline-none transition-colors hover:bg-graphite-hover hover:text-ink focus-visible:ring-2 focus-visible:ring-signal-blue"
+              >
+                <ChevronDown aria-hidden="true" className={cn('size-4 transition-transform', !expanded && '-rotate-90')} />
+              </button>
+            ) : null}
+          </div>
+        </div>
+        {contentVisible && actions ? <div className="mt-3 flex flex-wrap gap-2">{actions}</div> : null}
       </div>
-      {children}
+      <div id={contentId} hidden={!contentVisible}>{children}</div>
     </aside>
   );
 }
 
 export function FactGrid({ items }: { items: Array<{ label: string; value: ReactNode; mono?: boolean }> }) {
-  return <dl className="grid grid-cols-2 gap-px bg-line">{items.map((item) => <div key={item.label} className="min-w-0 bg-graphite px-4 py-3"><dt className="text-[11px] font-medium text-ink-quiet">{item.label}</dt><dd className={cn('mt-1 truncate text-xs font-semibold text-ink-secondary tabular-nums', item.mono && 'font-mono')}>{item.value}</dd></div>)}</dl>;
+  return <dl className="grid grid-cols-1 gap-px bg-line sm:grid-cols-2">{items.map((item) => <div key={item.label} className="min-w-0 bg-graphite px-4 py-3"><dt className="text-xs font-medium text-ink-quiet">{item.label}</dt><dd className={cn('mt-1 break-words text-[13px] font-semibold leading-5 text-ink-secondary tabular-nums', item.mono && 'font-mono')}>{item.value}</dd></div>)}</dl>;
 }
 
 export function Timeline({ items }: { items: Array<{ title: string; detail: ReactNode; tone?: StatusTone; meta?: ReactNode }> }) {
   return <ol className="p-4">{items.map((item, index) => { const tone = item.tone ?? 'neutral'; return <li key={`${item.title}-${index}`} className="relative flex gap-3 pb-4 last:pb-0"><StatusIcon tone={tone} label={`${item.title}: ${tone}`} className="relative z-10 mt-0.5 size-5" />{index < items.length - 1 ? <span aria-hidden="true" className="absolute left-[9px] top-5 h-[calc(100%-14px)] w-px bg-line" /> : null}<div className="min-w-0"><div className="flex items-center gap-2"><p className="text-xs font-semibold text-ink">{item.title}</p>{item.meta ? <span className="text-[11px] text-ink-quiet">{item.meta}</span> : null}</div><p className="mt-0.5 text-xs leading-5 text-ink-quiet">{item.detail}</p></div></li>; })}</ol>;
 }
 
-export function ConfidenceGauge({ value, label = 'Confidence', detail = 'Latest solve quality', color = '#5b9cff' }: { value: number; label?: string; detail?: string; color?: string }) {
+export function ConfidenceGauge({ value, label = 'Solver quality', detail = 'Heuristic score, not calibrated confidence', color = '#5b9cff' }: { value: number; label?: string; detail?: string; color?: string }) {
   const safeValue = Number.isFinite(value) ? Math.max(0, Math.min(1, value)) : 0;
   const degrees = safeValue * 360;
   return <div className="flex items-center gap-3"><div className="relative size-14 rounded-full" style={{ background: `conic-gradient(${color} ${degrees}deg, #242a32 ${degrees}deg)` }} role="img" aria-label={`${label}: ${Math.round(safeValue * 100)} percent`}><div className="absolute inset-[5px] flex items-center justify-center rounded-full bg-graphite text-[11px] font-semibold text-ink tabular-nums" aria-hidden="true">{Math.round(safeValue * 100)}%</div></div><div><p className="text-xs font-semibold text-ink">{label}</p><p className="mt-0.5 text-[11px] text-ink-quiet">{detail}</p></div></div>;
@@ -53,7 +94,7 @@ export function InvestigationFacts({ items }: { items: InvestigationFact[] }) {
     <dl className="grid gap-2 p-4 sm:grid-cols-2">
       {items.map((item) => (
         <div key={item.label} className="rounded-md border border-line bg-graphite-raised/55 px-3 py-2.5">
-          <dt className="text-[10px] font-semibold text-ink-quiet">{item.label}</dt>
+          <dt className="text-[11px] font-semibold text-ink-quiet">{item.label}</dt>
           <dd className={cn('mt-1 text-xs font-semibold text-ink-secondary', item.mono && 'font-mono', item.tone === 'healthy' && 'text-healthy', item.tone === 'attention' && 'text-attention', item.tone === 'failure' && 'text-failure', item.tone === 'trust' && 'text-trust-cyan')}>{item.value}</dd>
         </div>
       ))}
@@ -140,7 +181,7 @@ export function SignalMarquee({ items }: { items: Array<{ label: string; value: 
       <div className="flex w-max min-w-full divide-x divide-line">
         {items.map((item) => (
           <div key={`${item.label}-${item.value}`} className="min-w-[130px] px-3 py-1 first:pl-0">
-            <p className="text-[10px] font-semibold text-ink-quiet">{item.label}</p>
+            <p className="text-[11px] font-semibold text-ink-quiet">{item.label}</p>
             <p className={cn('mt-1 text-sm font-semibold text-ink-secondary', item.tone === 'healthy' && 'text-healthy', item.tone === 'attention' && 'text-attention', item.tone === 'failure' && 'text-failure', item.tone === 'trust' && 'text-trust-cyan', item.tone === 'selection' && 'text-selection')}>{item.value}</p>
           </div>
         ))}
@@ -149,7 +190,18 @@ export function SignalMarquee({ items }: { items: Array<{ label: string; value: 
   );
 }
 
-export function IssueList({ items }: { items: Array<{ title: string; detail: string; tone: StatusTone; href?: string; meta?: string }> }) {
+interface IssueListItem {
+  title: string;
+  detail: string;
+  tone: StatusTone;
+  href?: string;
+  meta?: string;
+  onSelect?: () => void;
+  selected?: boolean;
+  actionLabel?: string;
+}
+
+export function IssueList({ items }: { items: IssueListItem[] }) {
   if (!items.length) {
     return <div className="grid min-h-40 place-items-center px-6 text-center text-xs text-ink-quiet">No current issues are ranked for operator review.</div>;
   }
@@ -163,18 +215,22 @@ export function IssueList({ items }: { items: Array<{ title: string; detail: str
               <div className="min-w-0">
                 <div className="flex items-center gap-2">
                   <p className="text-xs font-semibold text-ink">{item.title}</p>
-                  {item.meta ? <span className="text-[10px] uppercase tracking-[0.14em] text-ink-quiet">{item.meta}</span> : null}
+                  {item.meta ? <span className="text-[11px] uppercase text-ink-quiet">{item.meta}</span> : null}
                 </div>
                 <p className="mt-1 text-xs leading-5 text-ink-quiet">{item.detail}</p>
               </div>
             </div>
-            {item.href ? <ArrowUpRight className="mt-0.5 size-3.5 shrink-0 text-ink-quiet" /> : null}
+            {item.href ? <ArrowUpRight className="mt-0.5 size-3.5 shrink-0 text-ink-quiet" /> : item.onSelect ? <ChevronRight className="mt-0.5 size-3.5 shrink-0 text-ink-quiet" /> : null}
           </>
         );
         return item.href ? (
           <Link key={`${item.title}-${index}`} href={item.href} className="flex items-start justify-between gap-3 px-4 py-3 outline-none transition-colors duration-standard hover:bg-graphite-hover/55 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-signal-blue">
             {content}
           </Link>
+        ) : item.onSelect ? (
+          <button key={`${item.title}-${index}`} type="button" aria-pressed={item.selected} aria-label={item.actionLabel ?? `Inspect ${item.title}`} onClick={item.onSelect} className={cn('flex w-full items-start justify-between gap-3 px-4 py-3 text-left outline-none transition-colors duration-standard hover:bg-graphite-hover/55 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-signal-blue', item.selected && 'bg-graphite-hover/70')}>
+            {content}
+          </button>
         ) : (
           <div key={`${item.title}-${index}`} className="flex items-start justify-between gap-3 px-4 py-3">
             {content}
@@ -187,7 +243,7 @@ export function IssueList({ items }: { items: Array<{ title: string; detail: str
 
 export function ActivityRail({ items }: { items: Array<{ title: string; detail: string; meta?: string; tone?: StatusTone; href?: string }> }) {
   if (!items.length) {
-    return <div className="grid min-h-32 place-items-center px-6 text-center text-xs text-ink-quiet">No live activity is available in this window.</div>;
+    return <div className="grid min-h-32 place-items-center px-6 text-center text-xs text-ink-quiet">No current activity is available in this window.</div>;
   }
   return (
     <div className="space-y-2 p-4">
@@ -198,9 +254,9 @@ export function ActivityRail({ items }: { items: Array<{ title: string; detail: 
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2">
                 <p className="truncate text-xs font-semibold text-ink">{item.title}</p>
-                {item.meta ? <span className="text-[10px] text-ink-quiet">{item.meta}</span> : null}
+                {item.meta ? <span className="text-[11px] text-ink-quiet">{item.meta}</span> : null}
               </div>
-              <p className="mt-0.5 text-[11px] leading-5 text-ink-quiet">{item.detail}</p>
+              <p className="mt-0.5 text-xs leading-5 text-ink-quiet">{item.detail}</p>
             </div>
             {item.href ? <ArrowUpRight className="size-3.5 shrink-0 text-ink-quiet" /> : null}
           </>

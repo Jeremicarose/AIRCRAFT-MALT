@@ -88,6 +88,7 @@ def test_grant_capture_requires_every_live_pipeline_stage():
         "registry",
         "discovery",
         "ingest",
+        "clock",
         "correlation",
         "solve",
         "storage",
@@ -103,9 +104,12 @@ def test_grant_capture_requires_every_live_pipeline_stage():
         "stages": [{"id": stage_id, "status": "pass"} for stage_id in stage_ids],
     }
 
-    assert live_gate_failures(mode, pipeline) == []
+    frontend = {"status": "ok", "service": "receiver-registry-operations"}
+    assert live_gate_failures(mode, pipeline, frontend) == []
     pipeline["stages"][2]["status"] = "waiting"
-    assert "Pipeline stage 'ingest' is 'waiting', not 'pass'." in live_gate_failures(mode, pipeline)
+    assert "Pipeline stage 'ingest' is 'waiting', not 'pass'." in live_gate_failures(
+        mode, pipeline, frontend
+    )
 
 
 def _raw_records():
@@ -160,6 +164,7 @@ def test_raw_observation_clocks_must_match_pinned_config():
 def test_position_export_must_link_to_same_raw_transmission_and_receivers():
     records = _raw_records()
     position = {
+        "data_provenance": "LIVE",
         "aircraft_id": "4840D6",
         "timestamp": records[0]["timestamp_ns"] / 1_000_000_000,
         "receiver_ids": [record["receiver_id"] for record in records],

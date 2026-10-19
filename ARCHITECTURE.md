@@ -125,8 +125,9 @@ Docker Compose runs three explicit services:
 This topology is single-node only. SQLite is shared through a local volume; it
 is not a horizontally scalable coordination mechanism.
 
-The Render blueprint is a replay API/processor deployment. It does not build the
-Next frontend and must not be presented as a complete hosted product.
+The Render blueprint contains a synthetic API/processor service and a separate
+Next.js frontend service. It remains an ephemeral walkthrough, not a validated
+production deployment.
 
 ## Evidence Architecture
 
@@ -165,3 +166,15 @@ kept separately so they cannot be mistaken for live accuracy evidence.
   domain interfaces, not into pass-through modules.
 
 Architectural decisions are recorded in [docs/adr](docs/adr/).
+
+## Provenance and historical validation
+
+Runtime databases are bound to SYNTHETIC, LIVE, or HISTORICAL_REPLAY. Each
+position stores its own provenance; pre-migration rows remain UNKNOWN. Live
+input validation rejects malformed frames/times and quarantines unqualified
+clocks before correlation. Registry state, actual observation freshness and
+clock qualification are separate.
+
+The historical adapter reads checksum-pinned compact data and preserves the
+published grouping and relative timestamps. Missing Mode-S frames, CKB identities
+and clock uncertainty remain explicit. See [historical replay](docs/mlat/HISTORICAL_REPLAY.md).

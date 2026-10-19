@@ -9,6 +9,8 @@ const publicReadPrefixes = [
   'pipeline',
   'positions/recent',
   'readiness',
+  'replay',
+  'diagnostics/bundle',
   'receivers',
   'registry/evidence',
   'system/mode',

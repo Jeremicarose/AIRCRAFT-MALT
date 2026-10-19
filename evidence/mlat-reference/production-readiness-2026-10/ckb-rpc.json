@@ -1,0 +1,37 @@
+{
+  "checked_at": "2026-10-13T12:22:40.054008Z",
+  "checks": [
+    {
+      "name": "cell is live",
+      "observed": "live",
+      "pass": true
+    },
+    {
+      "expected": "0x40ebcd7df892234592a97c987faadce70df6bcfb5f7fa24fa78431cc24f3d6fa",
+      "name": "data1 code hash matches",
+      "observed": "0x40ebcd7df892234592a97c987faadce70df6bcfb5f7fa24fa78431cc24f3d6fa",
+      "pass": true
+    }
+  ],
+  "expected_code_hash": "0x40ebcd7df892234592a97c987faadce70df6bcfb5f7fa24fa78431cc24f3d6fa",
+  "observed_cell": {
+    "capacity": "0x61b15d27e00",
+    "lock": {
+      "args": "0x1eed21522d7c686da5695111d790c4aab8a2c181",
+      "code_hash": "0x9bd7e06f3ecf4be0f2fcd2188b23f1b9fcc88e5d4b65a8637b17723bbda3cce8",
+      "hash_type": "type"
+    },
+    "type": {
+      "args": "0x7c89eb6e4e8c0a9765a6e3d609edb0760639bb32011735baeecdb5eb9d7b7c42",
+      "code_hash": "0x00000000000000000000000000000000000000000000000000545950455f4944",
+      "hash_type": "type"
+    }
+  },
+  "observed_data_hash": "0x40ebcd7df892234592a97c987faadce70df6bcfb5f7fa24fa78431cc24f3d6fa",
+  "pass": true,
+  "queried_out_point": {
+    "index": "0x0",
+    "tx_hash": "0xc2241446c19b61293b0901f801898ebeade7df9f4fd52669fc1eeebebee450bf"
+  },
+  "script_hash_type": "data1"
+}

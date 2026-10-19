@@ -1,0 +1,448 @@
+{
+  "claim_scope": "local_in_process_pipeline",
+  "data_provenance": "SYNTHETIC",
+  "limitations": [
+    "Cooperative feed callbacks, not external TCP or WebSocket load.",
+    "Synthetic receiver geometry and ideal clock metadata, not physical validation.",
+    "Per-event correlation; does not measure the runtime's scheduled 100 ms batching delay.",
+    "Peak memory is process-wide, not incremental memory per scenario.",
+    "No claim beyond the measured rate, event count, and local single-node SQLite deployment."
+  ],
+  "measurements": [
+    {
+      "achieved_observations_per_second": 99.97453571102537,
+      "aircraft": 3,
+      "buffer_size": 0,
+      "correlation": {
+        "maximum_ms": 13.262275999295525,
+        "median_ms": 0.09892100933939219,
+        "p95_ms": 0.2012530021602288,
+        "samples": 100
+      },
+      "cpu_seconds": 1.177337,
+      "dedup_entries": 50,
+      "events": 100,
+      "failed_solves": 0,
+      "ingestion": {
+        "maximum_ms": 1.1703630007104948,
+        "median_ms": 0.18804600404109806,
+        "p95_ms": 0.4063359956489876,
+        "samples": 400
+      },
+      "observations_received": 400,
+      "peak_process_rss_mb": 34.01953125,
+      "pipeline": {
+        "maximum_ms": 103.37947700463701,
+        "median_ms": 12.006791999738198,
+        "p95_ms": 21.308055002009496,
+        "samples": 100
+      },
+      "receivers": 4,
+      "simultaneous_feed_callbacks": 4,
+      "solver": {
+        "maximum_ms": 100.90994834899902,
+        "median_ms": 9.780406951904297,
+        "p95_ms": 17.984867095947266,
+        "samples": 100
+      },
+      "storage": {
+        "maximum_ms": 1.5769004821777344,
+        "median_ms": 0.4494190216064453,
+        "p95_ms": 1.0917186737060547,
+        "samples": 100
+      },
+      "storage_failures": 0,
+      "stored_positions": 100,
+      "successful_solves": 100,
+      "target_observations_per_second": 100,
+      "wall_seconds": 4.0010188309970545
+    },
+    {
+      "achieved_observations_per_second": 495.8339750510068,
+      "aircraft": 3,
+      "buffer_size": 0,
+      "correlation": {
+        "maximum_ms": 0.14685900532640517,
+        "median_ms": 0.05655850691255182,
+        "p95_ms": 0.10624999413266778,
+        "samples": 100
+      },
+      "cpu_seconds": 0.7831120000000003,
+      "dedup_entries": 100,
+      "events": 100,
+      "failed_solves": 0,
+      "ingestion": {
+        "maximum_ms": 0.6247069977689534,
+        "median_ms": 0.09283750114263967,
+        "p95_ms": 0.21101799211464822,
+        "samples": 400
+      },
+      "observations_received": 400,
+      "peak_process_rss_mb": 34.16015625,
+      "pipeline": {
+        "maximum_ms": 10.41701999201905,
+        "median_ms": 7.934939494589344,
+        "p95_ms": 9.446614989428781,
+        "samples": 100
+      },
+      "receivers": 4,
+      "simultaneous_feed_callbacks": 4,
+      "solver": {
+        "maximum_ms": 8.976221084594727,
+        "median_ms": 6.616115570068359,
+        "p95_ms": 7.997989654541016,
+        "samples": 100
+      },
+      "storage": {
+        "maximum_ms": 0.949859619140625,
+        "median_ms": 0.4080533981323242,
+        "p95_ms": 0.6127357482910156,
+        "samples": 100
+      },
+      "storage_failures": 0,
+      "stored_positions": 100,
+      "successful_solves": 100,
+      "target_observations_per_second": 1000,
+      "wall_seconds": 0.806721644999925
+    },
+    {
+      "achieved_observations_per_second": 478.7474704195176,
+      "aircraft": 3,
+      "buffer_size": 0,
+      "correlation": {
+        "maximum_ms": 0.12391099880915135,
+        "median_ms": 0.057261495385318995,
+        "p95_ms": 0.08445000275969505,
+        "samples": 100
+      },
+      "cpu_seconds": 0.8042769999999999,
+      "dedup_entries": 100,
+      "events": 100,
+      "failed_solves": 0,
+      "ingestion": {
+        "maximum_ms": 1.0845770011655986,
+        "median_ms": 0.09318550291936845,
+        "p95_ms": 0.2009820018429309,
+        "samples": 400
+      },
+      "observations_received": 400,
+      "peak_process_rss_mb": 34.33984375,
+      "pipeline": {
+        "maximum_ms": 18.092062004143372,
+        "median_ms": 8.11455599614419,
+        "p95_ms": 9.963938005967066,
+        "samples": 100
+      },
+      "receivers": 4,
+      "simultaneous_feed_callbacks": 4,
+      "solver": {
+        "maximum_ms": 16.277074813842773,
+        "median_ms": 6.747126579284668,
+        "p95_ms": 8.691072463989258,
+        "samples": 100
+      },
+      "storage": {
+        "maximum_ms": 0.8349418640136719,
+        "median_ms": 0.4055500030517578,
+        "p95_ms": 0.5731582641601562,
+        "samples": 100
+      },
+      "storage_failures": 0,
+      "stored_positions": 100,
+      "successful_solves": 100,
+      "target_observations_per_second": 10000,
+      "wall_seconds": 0.8355135530000553
+    },
+    {
+      "achieved_observations_per_second": 99.97727386596794,
+      "aircraft": 3,
+      "buffer_size": 0,
+      "correlation": {
+        "maximum_ms": 0.36001901025883853,
+        "median_ms": 0.10206799925072119,
+        "p95_ms": 0.17401199147570878,
+        "samples": 100
+      },
+      "cpu_seconds": 0.3892039999999999,
+      "dedup_entries": 40,
+      "events": 100,
+      "failed_solves": 0,
+      "ingestion": {
+        "maximum_ms": 1.7134869995061308,
+        "median_ms": 0.19397399591980502,
+        "p95_ms": 0.4231890052324161,
+        "samples": 500
+      },
+      "observations_received": 500,
+      "peak_process_rss_mb": 34.4453125,
+      "pipeline": {
+        "maximum_ms": 18.742529005976394,
+        "median_ms": 3.8665190077153966,
+        "p95_ms": 6.458863994339481,
+        "samples": 100
+      },
+      "receivers": 5,
+      "simultaneous_feed_callbacks": 5,
+      "solver": {
+        "maximum_ms": 2.9120445251464844,
+        "median_ms": 1.2969970703125,
+        "p95_ms": 2.0618438720703125,
+        "samples": 100
+      },
+      "storage": {
+        "maximum_ms": 15.854120254516602,
+        "median_ms": 0.5525350570678711,
+        "p95_ms": 1.834869384765625,
+        "samples": 100
+      },
+      "storage_failures": 0,
+      "stored_positions": 100,
+      "successful_solves": 100,
+      "target_observations_per_second": 100,
+      "wall_seconds": 5.0011365649988875
+    },
+    {
+      "achieved_observations_per_second": 999.7507621284587,
+      "aircraft": 3,
+      "buffer_size": 0,
+      "correlation": {
+        "maximum_ms": 0.24015700910240412,
+        "median_ms": 0.09314400085713714,
+        "p95_ms": 0.20976200175937265,
+        "samples": 100
+      },
+      "cpu_seconds": 0.31970600000000005,
+      "dedup_entries": 100,
+      "events": 100,
+      "failed_solves": 0,
+      "ingestion": {
+        "maximum_ms": 1.4223939942894503,
+        "median_ms": 0.13381350436247885,
+        "p95_ms": 0.3152389981551096,
+        "samples": 500
+      },
+      "observations_received": 500,
+      "peak_process_rss_mb": 34.48046875,
+      "pipeline": {
+        "maximum_ms": 5.347885002265684,
+        "median_ms": 3.1617499989806674,
+        "p95_ms": 4.16490800853353,
+        "samples": 100
+      },
+      "receivers": 5,
+      "simultaneous_feed_callbacks": 5,
+      "solver": {
+        "maximum_ms": 2.3679733276367188,
+        "median_ms": 1.1075735092163086,
+        "p95_ms": 1.6031265258789062,
+        "samples": 100
+      },
+      "storage": {
+        "maximum_ms": 1.087188720703125,
+        "median_ms": 0.5456209182739258,
+        "p95_ms": 0.8900165557861328,
+        "samples": 100
+      },
+      "storage_failures": 0,
+      "stored_positions": 100,
+      "successful_solves": 100,
+      "target_observations_per_second": 1000,
+      "wall_seconds": 0.5001246500032721
+    },
+    {
+      "achieved_observations_per_second": 1562.5287408113393,
+      "aircraft": 3,
+      "buffer_size": 0,
+      "correlation": {
+        "maximum_ms": 0.17816400213632733,
+        "median_ms": 0.0630014983471483,
+        "p95_ms": 0.1265479950234294,
+        "samples": 100
+      },
+      "cpu_seconds": 0.21887999999999996,
+      "dedup_entries": 100,
+      "events": 100,
+      "failed_solves": 0,
+      "ingestion": {
+        "maximum_ms": 7.704333998844959,
+        "median_ms": 0.09448299533687532,
+        "p95_ms": 0.193401996511966,
+        "samples": 500
+      },
+      "observations_received": 500,
+      "peak_process_rss_mb": 34.55859375,
+      "pipeline": {
+        "maximum_ms": 76.20176901400555,
+        "median_ms": 2.1004789959988557,
+        "p95_ms": 3.3091890072682872,
+        "samples": 100
+      },
+      "receivers": 5,
+      "simultaneous_feed_callbacks": 5,
+      "solver": {
+        "maximum_ms": 74.36704635620117,
+        "median_ms": 0.7653236389160156,
+        "p95_ms": 1.3189315795898438,
+        "samples": 100
+      },
+      "storage": {
+        "maximum_ms": 1.2090206146240234,
+        "median_ms": 0.3955364227294922,
+        "p95_ms": 0.6692409515380859,
+        "samples": 100
+      },
+      "storage_failures": 0,
+      "stored_positions": 100,
+      "successful_solves": 100,
+      "target_observations_per_second": 10000,
+      "wall_seconds": 0.3199941139901057
+    },
+    {
+      "achieved_observations_per_second": 99.99011496715104,
+      "aircraft": 3,
+      "buffer_size": 0,
+      "correlation": {
+        "maximum_ms": 0.4906350077362731,
+        "median_ms": 0.1322679963777773,
+        "p95_ms": 0.25109499983955175,
+        "samples": 100
+      },
+      "cpu_seconds": 0.6122309999999995,
+      "dedup_entries": 21,
+      "events": 100,
+      "failed_solves": 0,
+      "ingestion": {
+        "maximum_ms": 2.0514450006885454,
+        "median_ms": 0.1597299924469553,
+        "p95_ms": 0.4398890014272183,
+        "samples": 1000
+      },
+      "observations_received": 1000,
+      "peak_process_rss_mb": 34.72265625,
+      "pipeline": {
+        "maximum_ms": 78.54574099474121,
+        "median_ms": 6.301414490735624,
+        "p95_ms": 9.462080997764133,
+        "samples": 100
+      },
+      "receivers": 10,
+      "simultaneous_feed_callbacks": 10,
+      "solver": {
+        "maximum_ms": 5.726099014282227,
+        "median_ms": 2.6236772537231445,
+        "p95_ms": 4.287958145141602,
+        "samples": 100
+      },
+      "storage": {
+        "maximum_ms": 1.821279525756836,
+        "median_ms": 0.6253719329833984,
+        "p95_ms": 1.2578964233398438,
+        "samples": 100
+      },
+      "storage_failures": 0,
+      "stored_positions": 100,
+      "successful_solves": 100,
+      "target_observations_per_second": 100,
+      "wall_seconds": 10.00098860100843
+    },
+    {
+      "achieved_observations_per_second": 999.7265947781015,
+      "aircraft": 3,
+      "buffer_size": 0,
+      "correlation": {
+        "maximum_ms": 0.4787340003531426,
+        "median_ms": 0.12962550681550056,
+        "p95_ms": 0.2392919996054843,
+        "samples": 100
+      },
+      "cpu_seconds": 0.5153740000000004,
+      "dedup_entries": 100,
+      "events": 100,
+      "failed_solves": 0,
+      "ingestion": {
+        "maximum_ms": 0.9360479889437556,
+        "median_ms": 0.13491149729816243,
+        "p95_ms": 0.36304298555478454,
+        "samples": 1000
+      },
+      "observations_received": 1000,
+      "peak_process_rss_mb": 34.78515625,
+      "pipeline": {
+        "maximum_ms": 9.325749997515231,
+        "median_ms": 4.9832869990495965,
+        "p95_ms": 7.783034001477063,
+        "samples": 100
+      },
+      "receivers": 10,
+      "simultaneous_feed_callbacks": 10,
+      "solver": {
+        "maximum_ms": 4.905939102172852,
+        "median_ms": 1.986384391784668,
+        "p95_ms": 4.397153854370117,
+        "samples": 100
+      },
+      "storage": {
+        "maximum_ms": 1.363992691040039,
+        "median_ms": 0.5660057067871094,
+        "p95_ms": 1.0569095611572266,
+        "samples": 100
+      },
+      "storage_failures": 0,
+      "stored_positions": 100,
+      "successful_solves": 100,
+      "target_observations_per_second": 1000,
+      "wall_seconds": 1.0002734799927566
+    },
+    {
+      "achieved_observations_per_second": 2657.7868942597615,
+      "aircraft": 3,
+      "buffer_size": 0,
+      "correlation": {
+        "maximum_ms": 0.7115179905667901,
+        "median_ms": 0.08515849913237616,
+        "p95_ms": 0.19972500740550458,
+        "samples": 100
+      },
+      "cpu_seconds": 0.3561420000000002,
+      "dedup_entries": 100,
+      "events": 100,
+      "failed_solves": 0,
+      "ingestion": {
+        "maximum_ms": 0.7726859912509099,
+        "median_ms": 0.08811099542072043,
+        "p95_ms": 0.21034799283370376,
+        "samples": 1000
+      },
+      "observations_received": 1000,
+      "peak_process_rss_mb": 34.8203125,
+      "pipeline": {
+        "maximum_ms": 8.695180003996938,
+        "median_ms": 3.4214869956485927,
+        "p95_ms": 5.501817999174818,
+        "samples": 100
+      },
+      "receivers": 10,
+      "simultaneous_feed_callbacks": 10,
+      "solver": {
+        "maximum_ms": 3.206968307495117,
+        "median_ms": 1.4770030975341797,
+        "p95_ms": 2.7430057525634766,
+        "samples": 100
+      },
+      "storage": {
+        "maximum_ms": 1.5149116516113281,
+        "median_ms": 0.4254579544067383,
+        "p95_ms": 0.8771419525146484,
+        "samples": 100
+      },
+      "storage_failures": 0,
+      "stored_positions": 100,
+      "successful_solves": 100,
+      "target_observations_per_second": 10000,
+      "wall_seconds": 0.3762528900115285
+    }
+  ],
+  "platform": "macOS-15.7.9-x86_64-i386-64bit",
+  "python": "3.12.11",
+  "schema_version": 1
+}

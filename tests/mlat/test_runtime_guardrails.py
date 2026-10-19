@@ -219,4 +219,4 @@ def test_failed_registry_refresh_removes_unverifiable_registry_receivers(monkeyp
 
     assert client.active_receivers == {}
     assert client.registry_discovery_live is False
-    assert client.registry_refresh_error == "CKB indexer unavailable"
+    assert "Verify RPC/indexer connectivity" in client.registry_refresh_error

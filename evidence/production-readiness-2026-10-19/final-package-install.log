@@ -1,0 +1,8 @@
+Using Python 3.12.11 environment at: artifacts/readiness-2026-10-19/venv
+Resolved 1 package in 25ms
+   Building ckb-registry-v2 @ file:///Users/jeremicarose/Downloads/mlat-system%202
+      Built ckb-registry-v2 @ file:///Users/jeremicarose/Downloads/mlat-system%202
+Prepared 1 package in 756ms
+Uninstalled 1 package in 11ms
+Installed 1 package in 10ms
+ ~ ckb-registry-v2==0.2.0 (from file:///Users/jeremicarose/Downloads/mlat-system%202)

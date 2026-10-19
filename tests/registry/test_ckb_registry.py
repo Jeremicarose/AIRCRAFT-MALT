@@ -16,7 +16,60 @@ from ckb_registry.record import (
 
 IDENTITY_A = "0x" + "11" * 32
 IDENTITY_B = "0x" + "22" * 32
+
+
+def test_indexer_missing_objects_is_not_an_empty_successful_discovery():
+    discovery = CKBPeerDiscovery(CKBConfig())
+
+    async def malformed(*args, **kwargs):
+        return {"last_cursor": "0x"}
+
+    discovery._rpc_call = malformed
+    with pytest.raises(RuntimeError, match="objects"):
+        asyncio.run(discovery.discover_peers())
+
+
+@pytest.mark.parametrize(
+    "body",
+    [
+        '{"jsonrpc":"2.0","id":1,"result":[],"result":{}}',
+        '{"jsonrpc":"2.0","id":2,"result":{}}',
+    ],
+)
+def test_rpc_rejects_ambiguous_or_mismatched_response(monkeypatch, body):
+    import io
+
+    monkeypatch.setattr("urllib.request.urlopen", lambda *args, **kwargs: io.BytesIO(body.encode()))
+    discovery = CKBPeerDiscovery(CKBConfig())
+    with pytest.raises(RuntimeError):
+        asyncio.run(discovery._rpc_call("get_cells", []))
+
+
 CONFORMANCE_CORPUS = Path(__file__).parent / "fixtures" / "registry_v2_conformance.json"
+
+
+def test_indexer_rejects_nonconsecutive_cursor_cycle():
+    discovery = CKBPeerDiscovery(CKBConfig(registry_max_pages=100))
+    calls = []
+
+    async def rpc(*args, **kwargs):
+        calls.append(args)
+        return {"objects": [{}], "last_cursor": "A" if len(calls) % 2 else "B"}
+
+    discovery._rpc_call = rpc
+    with pytest.raises(RuntimeError, match="repeated last_cursor"):
+        asyncio.run(discovery._search_receiver_cells())
+    assert len(calls) == 3
+
+
+def test_rpc_response_size_is_bounded_before_json_decode(monkeypatch):
+    import io
+
+    discovery = CKBPeerDiscovery(CKBConfig(max_rpc_response_bytes=100))
+    response = io.BytesIO(b" " * 101)
+    monkeypatch.setattr("urllib.request.urlopen", lambda *args, **kwargs: response)
+    with pytest.raises(RuntimeError, match="byte limit"):
+        asyncio.run(discovery._rpc_call("get_cells", []))
 
 
 def receiver_record(**overrides):
@@ -67,6 +120,24 @@ def receiver_cell(
         },
         "block_number": "0x10",
     }
+
+
+def install_snapshot(discovery, cells):
+    """Model matching indexer/node snapshots for protocol conformance tests."""
+
+    async def search():
+        return cells
+
+    async def rpc(method, params, url=None):
+        assert method == "get_live_cell"
+        candidate = next(cell for cell in cells if cell["out_point"] == params[0])
+        return {
+            "status": "live",
+            "cell": {"output": candidate["output"], "data": {"content": candidate["output_data"]}},
+        }
+
+    discovery._search_receiver_cells = search
+    discovery._rpc_call = rpc
 
 
 def test_receiver_registry_record_roundtrip_and_validation():
@@ -249,17 +320,14 @@ def test_registry_v2_record_conformance_corpus():
                 )
             )
 
-        async def fake_search():
-            return cells
-
         active_discovery = CKBPeerDiscovery(CKBConfig())
-        active_discovery._search_receiver_cells = fake_search  # type: ignore[method-assign]
+        install_snapshot(active_discovery, cells)
         active = asyncio.run(active_discovery.discover_peers())
         assert [item.receiver_identity for item in active] == case["expected_active_identities"]
         assert active_discovery.quarantined_identities == case["quarantined_identities"]
 
         historical_discovery = CKBPeerDiscovery(CKBConfig())
-        historical_discovery._search_receiver_cells = fake_search  # type: ignore[method-assign]
+        install_snapshot(historical_discovery, cells)
         historical = asyncio.run(
             historical_discovery.discover_peers(include_inactive=True, include_revoked=True)
         )
@@ -316,13 +384,11 @@ def test_ckb_peer_discovery_keeps_duplicate_labels_as_distinct_identities():
             receiver_record(updated_at=int(now), latitude=40.8),
             IDENTITY_B,
             lock_arg="0xowner-b",
+            tx_hash="0x" + "66" * 32,
         ),
     ]
 
-    async def fake_search():
-        return cells
-
-    discovery._search_receiver_cells = fake_search  # type: ignore[method-assign]
+    install_snapshot(discovery, cells)
     receivers = asyncio.run(discovery.discover_peers())
 
     assert len(receivers) == 2
@@ -342,10 +408,7 @@ def test_ckb_peer_discovery_quarantines_duplicate_live_identity():
         ),
     ]
 
-    async def fake_search():
-        return cells
-
-    discovery._search_receiver_cells = fake_search  # type: ignore[method-assign]
+    install_snapshot(discovery, cells)
     assert asyncio.run(discovery.discover_peers()) == []
 
 
@@ -361,10 +424,7 @@ def test_ckb_peer_discovery_quarantines_identity_even_when_duplicate_is_revoked(
         ),
     ]
 
-    async def fake_search():
-        return cells
-
-    discovery._search_receiver_cells = fake_search  # type: ignore[method-assign]
+    install_snapshot(discovery, cells)
     assert asyncio.run(discovery.discover_peers()) == []
     assert discovery.cached_peers == {}
 

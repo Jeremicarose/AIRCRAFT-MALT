@@ -1,19 +1,24 @@
 'use client';
 
 import * as Dialog from '@radix-ui/react-dialog';
+import { ccc } from '@ckb-ccc/connector-react';
+import { useQuery } from '@tanstack/react-query';
 import { Command } from 'cmdk';
 import { Activity, Crosshair, Database, Gauge, Heart, History, Layers3, Map, Plane, RadioTower, Search, Settings, SlidersHorizontal, Star, Workflow, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { consoleRoutes } from '@/lib/routes';
 import type { ShellSnapshot } from '@/lib/types';
 import { useOperatorStore } from '@/lib/operator-store';
+import { createRegistrySdk, withRegistryTimeout } from '@/lib/registry';
 import { Button } from '@/components/ui/button';
 
-const icons = { registry: Database, overview: Gauge, localization: Map, aircraft: Plane, receivers: RadioTower, pipeline: Workflow, metrics: Activity, environment: Database, settings: Settings };
+const icons = { registry: Database, overview: Gauge, localization: Map, aircraft: Plane, receivers: RadioTower, pipeline: Workflow, metrics: Activity, benchmark: Crosshair, environment: Database, settings: Settings };
 
 export function CommandPalette({ snapshot }: { snapshot: ShellSnapshot }) {
   const router = useRouter();
+  const { client } = ccc.useCcc();
+  const registrySdk = useMemo(() => createRegistrySdk(client), [client]);
   const open = useOperatorStore((state) => state.commandOpen);
   const setOpen = useOperatorStore((state) => state.setCommandOpen);
   const selectedAircraftId = useOperatorStore((state) => state.selectedAircraftId);
@@ -29,6 +34,17 @@ export function CommandPalette({ snapshot }: { snapshot: ShellSnapshot }) {
   const starredRoutes = useOperatorStore((state) => state.starredRoutes);
   const recentInvestigations = useOperatorStore((state) => state.recentInvestigations);
   const toggleStarredRoute = useOperatorStore((state) => state.toggleStarredRoute);
+  const registryDirectoryQuery = useQuery({
+    queryKey: ['registry-v2-directory', registrySdk.discovery.contractCodeHash],
+    queryFn: () => withRegistryTimeout(
+      registrySdk.discovery.discover({ includeInactive: true, includeRevoked: true }),
+      'CKB testnet registry discovery',
+    ),
+    enabled: open,
+    staleTime: 30_000,
+    retry: false,
+  });
+  const registryReceivers = registryDirectoryQuery.data?.receivers ?? [];
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -184,6 +200,22 @@ export function CommandPalette({ snapshot }: { snapshot: ShellSnapshot }) {
                   {snapshot.receiverData.receivers.slice(0, 12).map((receiver) => (
                     <Command.Item key={receiver.receiver_id} value={`receiver ${receiver.receiver_id}`} onSelect={() => select(`/app/localization?receiver=${encodeURIComponent(receiver.receiver_id)}`)} className="flex cursor-default items-center gap-3 rounded-md px-3 py-2.5 text-sm text-ink-secondary outline-none data-[selected=true]:bg-graphite-hover data-[selected=true]:text-ink">
                       <RadioTower className="size-4 text-ink-quiet" /><span>{receiver.receiver_id}</span>
+                    </Command.Item>
+                  ))}
+                </Command.Group>
+              ) : null}
+              {registryReceivers.length ? (
+                <Command.Group heading="Registry identities">
+                  {registryReceivers.slice(0, 24).map((receiver) => (
+                    <Command.Item
+                      key={receiver.receiver_identity}
+                      value={`registry receiver ${receiver.record.receiver_id} ${receiver.receiver_identity} ${receiver.record.status}`}
+                      onSelect={() => select(`/app/registry?receiver=${encodeURIComponent(receiver.receiver_identity)}`)}
+                      className="flex cursor-default items-center gap-3 rounded-md px-3 py-2.5 text-sm text-ink-secondary outline-none data-[selected=true]:bg-graphite-hover data-[selected=true]:text-ink"
+                    >
+                      <Database className="size-4 shrink-0 text-trust-cyan" />
+                      <span className="min-w-0 flex-1 truncate">{receiver.record.receiver_id}</span>
+                      <span className="shrink-0 text-xs text-ink-quiet">Registry {receiver.record.status}</span>
                     </Command.Item>
                   ))}
                 </Command.Group>

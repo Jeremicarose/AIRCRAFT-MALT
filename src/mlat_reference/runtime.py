@@ -13,17 +13,17 @@ Integrates all components:
 import asyncio
 from collections import deque
 import json
+import hashlib
 import logging
 import signal
 import os
 import resource
 import sys
 import time
+import numpy as np
+from typing import Any
 
-try:
-    from dotenv import load_dotenv
-except ImportError:
-    load_dotenv = None
+from dotenv import load_dotenv
 
 if load_dotenv is not None:
     env_file = os.getenv("MLAT_ENV_FILE", os.path.join(os.getcwd(), ".env"))
@@ -36,6 +36,8 @@ from mlat_reference.database.database import MLATDatabase
 from mlat_reference.demo import get_demo_scenario
 from mlat_reference.base import BaseMLATRuntime
 from mlat_reference.config import DemoSettings, RuntimeSettings, load_runtime_settings
+from mlat_reference.ingest.validation import clock_qualified
+from mlat_reference.diagnostics import event
 
 # Setup logging
 logging.basicConfig(
@@ -94,17 +96,20 @@ class ProductionMLATSystem(BaseMLATRuntime[ReceiverPosition, SignalObservation])
         self.stats_interval_seconds = max(5, stats_interval_seconds)
         self.require_live_benchmarkable_output = require_live_benchmarkable_output
         self.strict_production_mode = config.strict_production_mode
-        self.solve_latencies_ms = deque(maxlen=1000)
-        self.store_latencies_ms = deque(maxlen=1000)
-        self.api_latencies_ms = deque(maxlen=1000)
+        self.solve_latencies_ms: deque[float] = deque(maxlen=1000)
+        self.store_latencies_ms: deque[float] = deque(maxlen=1000)
+        self.api_latencies_ms: deque[float] = deque(maxlen=1000)
         self.rejected_groups = 0
         self.clock_rejected_groups = 0
-        self.receiver_clock_status = {}
+        self.receiver_clock_status: dict[str, bool] = {}
+        self.receiver_observation_state: dict[str, dict[str, Any]] = {}
+        self.storage_failures = 0
+        self.last_storage_error: str | None = None
         self.max_clock_uncertainty_ns = max(0.0, max_clock_uncertainty_ns)
         self._stopped = False
         self.last_successful_solve_at = 0.0
         self.last_store_at = 0.0
-        self.receiver_heartbeat_persisted_at = {}
+        self.receiver_heartbeat_persisted_at: dict[str, float] = {}
 
         # Statistics
         self.stats = {
@@ -128,6 +133,10 @@ class ProductionMLATSystem(BaseMLATRuntime[ReceiverPosition, SignalObservation])
             config.simulate_if_unavailable and not config.receiver_registry_type_hash
         )
         self.synthetic_feed_mode = self.network_client._determine_transport() == "simulation"
+        self.data_provenance = "SYNTHETIC" if self.synthetic_feed_mode else "LIVE"
+        self.source_id = (
+            f"synthetic:{self.demo_scenario.slug}" if self.synthetic_feed_mode else "receiver-feeds"
+        )
         self.simulation_retention_hours = max(1, simulation_retention_hours)
         self.statistics_retention_days = max(1, statistics_retention_days)
 
@@ -138,6 +147,14 @@ class ProductionMLATSystem(BaseMLATRuntime[ReceiverPosition, SignalObservation])
         uptime_s = max(0.0, now - self.stats["start_time"])
         total_positions = self.stats["total_positions"]
         return {
+            "data_provenance": self.data_provenance,
+            "source_id": self.source_id,
+            "observation_counts": dict(self.observation_counts),
+            "transport_rejections": self.network_client.get_transport_rejections(),
+            "correlation_dropped_signals": self.correlator.dropped_signals,
+            "observation_diagnostics": list(self.observation_diagnostics),
+            "storage_failures": self.storage_failures,
+            "last_storage_error": self.last_storage_error,
             "is_running": self.is_running,
             "synthetic_feed_mode": self.synthetic_feed_mode,
             "strict_production_mode": self.strict_production_mode,
@@ -198,11 +215,16 @@ class ProductionMLATSystem(BaseMLATRuntime[ReceiverPosition, SignalObservation])
                 self.network_client.peer_discovery.quarantined_identities
             ),
             "process_rss_mb": get_process_rss_mb(),
+            "process_cpu_seconds": time.process_time(),
             "failed_solves": self.stats["failed_solves"],
             "rejected_groups": self.rejected_groups,
             "clock_rejected_groups": self.clock_rejected_groups,
             "clock_synchronized_receivers": sum(
-                1 for synchronized in self.receiver_clock_status.values() if synchronized
+                1
+                for receiver_id, synchronized in self.receiver_clock_status.items()
+                if synchronized
+                and now - self.receiver_observation_state.get(receiver_id, {}).get("received_at", 0)
+                <= self.health_stale_signal_seconds
             ),
             "max_clock_uncertainty_ns": self.max_clock_uncertainty_ns,
             "active_receivers": len(self.receiver_positions),
@@ -210,7 +232,8 @@ class ProductionMLATSystem(BaseMLATRuntime[ReceiverPosition, SignalObservation])
             "stale_signal_threshold_s": self.health_stale_signal_seconds,
             "signal_fresh": (
                 instrumentation.get("last_signal_age_s") is not None
-                and instrumentation.get("last_signal_age_s") <= self.health_stale_signal_seconds
+                and float(instrumentation.get("last_signal_age_s") or 0)
+                <= self.health_stale_signal_seconds
             ),
         }
 
@@ -224,6 +247,7 @@ class ProductionMLATSystem(BaseMLATRuntime[ReceiverPosition, SignalObservation])
 
         # Connect to database
         self.database.connect()
+        self.database.bind_runtime_provenance(self.data_provenance, self.source_id)
         CURRENT_RUNTIME = self
         logger.info("✅ Database connected")
         if self.synthetic_feed_mode:
@@ -299,11 +323,25 @@ class ProductionMLATSystem(BaseMLATRuntime[ReceiverPosition, SignalObservation])
         removed = self.database.delete_receivers(receiver_ids)
         for receiver_id in receiver_ids:
             self.receiver_clock_status.pop(receiver_id, None)
+            self.receiver_observation_state.pop(receiver_id, None)
             self.receiver_heartbeat_persisted_at.pop(receiver_id, None)
         logger.warning(
             "Removed %d receiver(s) from MLAT after Registry discovery excluded: %s",
             removed,
             ", ".join(sorted(receiver_ids)),
+        )
+
+    def on_receiver_context_changed(self, receiver_id: str):
+        super().on_receiver_context_changed(receiver_id)
+        self.receiver_clock_status.pop(receiver_id, None)
+        self.receiver_observation_state.pop(receiver_id, None)
+        self.database.store_receiver_qualification(
+            receiver_id,
+            {
+                "state": "UNQUALIFIED",
+                "reason": "registry_record_changed",
+                "action": "Receive fresh clock-qualified observations after this Registry update.",
+            },
         )
 
     def on_receiver_cache_synchronized(self, receiver_ids: set[str]):
@@ -321,16 +359,49 @@ class ProductionMLATSystem(BaseMLATRuntime[ReceiverPosition, SignalObservation])
 
     def on_signal_received(self, signal: RawSignal):
         self.stats["total_signals"] += 1
+        previous = self.receiver_clock_status.get(signal.receiver_id)
         self.receiver_clock_status[signal.receiver_id] = self._signal_clock_is_qualified(signal)
         now = time.time()
+        qualified = self.receiver_clock_status[signal.receiver_id]
+        reason = "clock_qualified" if qualified else "clock_not_qualified"
+        if (
+            signal.clock_uncertainty_ns is not None
+            and signal.clock_uncertainty_ns > self.max_clock_uncertainty_ns
+        ):
+            reason = "clock_uncertainty_exceeds_threshold"
+        self.receiver_observation_state[signal.receiver_id] = {
+            "state": "QUALIFIED" if qualified else "UNQUALIFIED",
+            "received_at": now,
+            "source_timestamp_ns": str(signal.timestamp_ns) if signal.timestamp_ns else None,
+            "clock_source": signal.clock_source,
+            "clock_uncertainty_ns": signal.clock_uncertainty_ns,
+            "maximum_clock_uncertainty_ns": self.max_clock_uncertainty_ns,
+            "reason": reason,
+            "action": (
+                "Continue receiving observations."
+                if qualified
+                else "Verify receiver timing source and synchronization."
+            ),
+            "data_provenance": self.data_provenance,
+        }
         receiver = self.network_client.active_receivers.get(signal.receiver_id)
         if receiver is not None:
             receiver.last_seen = now
 
         last_persisted = self.receiver_heartbeat_persisted_at.get(signal.receiver_id, 0.0)
-        if now - last_persisted >= 5.0:
+        if now - last_persisted >= 5.0 or previous != qualified:
             self.database.touch_receiver(signal.receiver_id, last_seen=now)
+            self.database.store_receiver_qualification(
+                signal.receiver_id, self.receiver_observation_state[signal.receiver_id]
+            )
             self.receiver_heartbeat_persisted_at[signal.receiver_id] = now
+        if qualified and previous is not True:
+            event(
+                logger,
+                "receiver_qualified",
+                receiver_id=signal.receiver_id,
+                data_provenance=self.data_provenance,
+            )
 
     def build_observation(
         self,
@@ -346,12 +417,21 @@ class ProductionMLATSystem(BaseMLATRuntime[ReceiverPosition, SignalObservation])
         )
 
     def _signal_clock_is_qualified(self, signal: RawSignal) -> bool:
-        return bool(
-            signal.clock_synchronized
-            and signal.timestamp_ns is not None
-            and signal.clock_source.strip().lower() not in {"", "unknown", "network-arrival"}
-            and signal.clock_uncertainty_ns is not None
-            and signal.clock_uncertainty_ns <= self.max_clock_uncertainty_ns
+        if (
+            self.data_provenance == "LIVE"
+            and isinstance(signal.clock_source, str)
+            and any(
+                word in signal.clock_source.lower()
+                for word in ("synthetic", "simulation", "replay")
+            )
+        ):
+            return False
+        return clock_qualified(
+            signal.clock_synchronized,
+            signal.timestamp_ns,
+            signal.clock_source,
+            signal.clock_uncertainty_ns,
+            self.max_clock_uncertainty_ns,
         )
 
     async def start(self):
@@ -407,8 +487,6 @@ class ProductionMLATSystem(BaseMLATRuntime[ReceiverPosition, SignalObservation])
                 self._cache_receiver_positions()
                 if set(self.network_client.active_receivers) != previous_receiver_ids:
                     await self.network_client.restart_streaming()
-                if self.config.strict_production_mode:
-                    raise
                 logger.warning(
                     "Registry refresh failed; Registry-backed receivers were removed until discovery recovers",
                     exc_info=True,
@@ -436,10 +514,39 @@ class ProductionMLATSystem(BaseMLATRuntime[ReceiverPosition, SignalObservation])
 
     async def _process_signal_group(self, group):
         """Process a correlated signal group"""
+        correlation_id = hashlib.sha256(
+            f"{group.message}:{group.signals[0].timestamp_ns}".encode()
+        ).hexdigest()[:24]
+        event(
+            logger,
+            "observation_correlated",
+            correlation_id=correlation_id,
+            receiver_count=len(group.signals),
+            data_provenance=self.data_provenance,
+        )
+        self.observation_counts["correlated"] += len(group.signals)
         observations = self.build_observations_from_group(group)
 
         if len(observations) < 4:
             self.rejected_groups += 1
+            return
+
+        geometry = np.array(
+            [observation.receiver_position.to_ecef() for observation in observations]
+        )
+        if (
+            not np.all(np.isfinite(geometry))
+            or len({tuple(point) for point in geometry}) < 4
+            or np.linalg.matrix_rank(geometry - geometry[0]) < 2
+        ):
+            self.rejected_groups += 1
+            self.observation_counts["geometry_rejected"] += 1
+            event(
+                logger,
+                "solver_failed",
+                correlation_id=correlation_id,
+                reason="insufficient_distinct_receiver_geometry",
+            )
             return
 
         if not all(self._signal_clock_is_qualified(signal) for signal in group.signals):
@@ -452,6 +559,13 @@ class ProductionMLATSystem(BaseMLATRuntime[ReceiverPosition, SignalObservation])
             return
 
         # Solve position
+        self.observation_counts["solver_qualified"] += len(observations)
+        event(
+            logger,
+            "solver_started",
+            correlation_id=correlation_id,
+            receiver_count=len(observations),
+        )
         self.stats["total_positions"] += 1
         solve_started_at = time.time()
         position = self.solver.solve_position(observations)
@@ -463,29 +577,50 @@ class ProductionMLATSystem(BaseMLATRuntime[ReceiverPosition, SignalObservation])
             self.last_successful_solve_at = self.stats["last_position_time"]
 
             # Store in database
-            await self._store_position(group.message, position, group=group)
+            stored_id = await self._store_position(group.message, position, group=group)
+            event(
+                logger,
+                "solver_completed",
+                correlation_id=correlation_id,
+                residual_m=position.residual,
+                iterations=position.iterations,
+            )
+            if stored_id is None:
+                return
+            self.observation_counts["contributing"] += len(observations)
 
             # Log success
             logger.info(
                 f"✈️  Aircraft {group.message[:8]}: "
                 f"{position.latitude:.4f}°, {position.longitude:.4f}°, "
                 f"{position.altitude:.0f}m "
-                f"(±{position.uncertainty:.0f}m, {position.num_receivers} rcv)"
+                f"(residual {position.residual:.1f}m, {position.num_receivers} receivers; {self.data_provenance})"
             )
         else:
             self.stats["failed_solves"] += 1
+            event(
+                logger,
+                "solver_failed",
+                correlation_id=correlation_id,
+                reason="solver_rejected_group",
+            )
 
     async def _store_position(self, message: str, position, group=None):
         """Store position in database"""
         # Extract aircraft ID from message
-        aircraft_id = message[2:8] if len(message) >= 8 else message
+        df = int(message[:2], 16) >> 3
+        aircraft_id = (
+            message[2:8]
+            if df in {17, 18}
+            else f"FRAME-{hashlib.sha256(message.encode()).hexdigest()[:12]}"
+        )
         correlation_time_span_s = getattr(position, "correlation_time_span_s", 0.0)
         if group is not None:
             correlation_time_span_s = group.time_span
 
         try:
             store_started_at = time.time()
-            self.database.store_position(
+            position_id = self.database.store_position(
                 aircraft_id=aircraft_id,
                 timestamp=position.timestamp,
                 latitude=position.latitude,
@@ -508,11 +643,45 @@ class ProductionMLATSystem(BaseMLATRuntime[ReceiverPosition, SignalObservation])
                 ),
                 correlation_time_span_s=correlation_time_span_s,
                 receiver_count=getattr(position, "receiver_count", position.num_receivers),
+                data_provenance=self.data_provenance,
+                source_id=self.source_id,
+                timestamp_ns=getattr(position, "timestamp_ns", None),
+                source_timestamp_ns=getattr(position, "timestamp_ns", None),
+                receiver_geometry=[
+                    {
+                        "receiver_id": receiver_id,
+                        "latitude": self.receiver_positions[receiver_id].latitude,
+                        "longitude": self.receiver_positions[receiver_id].longitude,
+                        "altitude_m": self.receiver_positions[receiver_id].altitude,
+                    }
+                    for receiver_id in position.receiver_ids
+                    if receiver_id in self.receiver_positions
+                ],
+                correlation_id=hashlib.sha256(
+                    f"{message}:{getattr(position, 'timestamp_ns', None)}".encode()
+                ).hexdigest()[:24],
+                observation_evidence={
+                    "raw_mode_s_frame_available": True,
+                    "frame": message,
+                    "clock_attestation": "receiver_reported",
+                    "physical_truth_verified": False,
+                },
             )
             self.store_latencies_ms.append((time.time() - store_started_at) * 1000)
             self.last_store_at = time.time()
+            self.last_storage_error = None
+            event(
+                logger,
+                "aircraft_solution_created",
+                position_id=position_id,
+                data_provenance=self.data_provenance,
+            )
+            return position_id
         except Exception as e:
-            logger.error(f"Failed to store position: {e}")
+            self.storage_failures += 1
+            self.last_storage_error = "Position could not be stored. Check database permissions, free space, and lock contention."
+            event(logger, "storage_failed", level=logging.ERROR, exception_type=type(e).__name__)
+            return None
 
     async def _statistics_loop(self):
         """Periodic statistics reporting and storage"""
@@ -546,6 +715,7 @@ class ProductionMLATSystem(BaseMLATRuntime[ReceiverPosition, SignalObservation])
             )
             max_latency_ms = max(self.solve_latencies_ms) if self.solve_latencies_ms else 0
             runtime_state = self.get_runtime_state()
+            self.database.store_runtime_snapshot(runtime_state)
 
             # Store statistics
             self.database.store_statistics(
@@ -614,6 +784,8 @@ class ProductionMLATSystem(BaseMLATRuntime[ReceiverPosition, SignalObservation])
         logger.info("🛑 Stopping MLAT system...")
 
         self.is_running = False
+        if self.database.connected:
+            self.database.store_runtime_snapshot(self.get_runtime_state())
 
         # Stop network
         await self.network_client.shutdown()

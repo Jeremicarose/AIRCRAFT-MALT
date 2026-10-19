@@ -1,7 +1,7 @@
 """Precision-aware TDOA multilateration solver."""
 
 import numpy as np
-from typing import List, Optional, Tuple
+from typing import List, Optional, Tuple, cast
 from dataclasses import dataclass
 import logging
 
@@ -170,13 +170,13 @@ class RobustMLATSolver:
             return None
 
         if precise_count == len(observations):
-            ordered = sorted(observations, key=lambda obs: int(obs.timestamp_ns))
-            reference_ns = int(ordered[0].timestamp_ns)
+            ordered = sorted(observations, key=lambda obs: int(cast(int, obs.timestamp_ns)))
+            reference_ns = int(cast(int, ordered[0].timestamp_ns))
             deltas_ns = np.array(
-                [int(obs.timestamp_ns) - reference_ns for obs in ordered[1:]],
+                [int(cast(int, obs.timestamp_ns)) - reference_ns for obs in ordered[1:]],
                 dtype=np.float64,
             )
-            span_ns = int(ordered[-1].timestamp_ns) - reference_ns
+            span_ns = int(cast(int, ordered[-1].timestamp_ns)) - reference_ns
             return ordered, deltas_ns / 1_000_000_000.0, span_ns / 1_000_000_000.0
 
         # Small relative values remain useful for isolated algorithm tests and
@@ -273,7 +273,7 @@ class RobustMLATSolver:
 
         for iteration in range(self.max_iterations):
             # Compute residuals and Jacobian
-            residuals = []
+            residuals: list[float] | np.ndarray = []
             jacobian_rows = []
 
             for pos, r_diff in zip(positions, range_diffs):
@@ -286,7 +286,7 @@ class RobustMLATSolver:
                 # Residual
                 predicted = r_i - r_ref
                 residual = r_diff - predicted
-                residuals.append(residual)
+                cast(list[float], residuals).append(residual)
 
                 # Jacobian
                 dr_i = -(x - pos) / r_i
@@ -328,12 +328,12 @@ class RobustMLATSolver:
             x_new = x + delta
 
             # Compute new residuals
-            residuals_new = []
+            residuals_new: list[float] | np.ndarray = []
             for pos, r_diff in zip(positions, range_diffs):
                 r_i = np.linalg.norm(x_new - pos)
                 r_ref = np.linalg.norm(x_new - ref_pos)
                 predicted = r_i - r_ref
-                residuals_new.append(r_diff - predicted)
+                cast(list[float], residuals_new).append(r_diff - predicted)
 
             residuals_new = np.array(residuals_new)
             cost_new = 0.5 * np.sum(residuals_new**2)

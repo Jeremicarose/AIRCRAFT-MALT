@@ -1,0 +1,485 @@
+
+> @aircraft-malt/registry-v2@0.1.0 test
+> npm run build && node --test dist/test/*.test.js
+
+
+> @aircraft-malt/registry-v2@0.1.0 build
+> tsc -p tsconfig.json
+
+TAP version 13
+# Subtest: node liveness excludes stale indexer cells from enumeration and identity lookup
+ok 1 - node liveness excludes stale indexer cells from enumeration and identity lookup
+  ---
+  duration_ms: 10.004698
+  type: 'test'
+  ...
+# Subtest: node RPC failure cannot return an indexer-only receiver
+ok 2 - node RPC failure cannot return an indexer-only receiver
+  ---
+  duration_ms: 1.570827
+  type: 'test'
+  ...
+# Subtest: indexer owner lock must match the trusted node
+ok 3 - indexer owner lock must match the trusted node
+  ---
+  duration_ms: 3.029588
+  type: 'test'
+  ...
+# Subtest: all languages consume conformance corpus version 2
+ok 4 - all languages consume conformance corpus version 2
+  ---
+  duration_ms: 0.211699
+  type: 'test'
+  ...
+# Subtest: record: valid_creation_with_stream
+ok 5 - record: valid_creation_with_stream
+  ---
+  duration_ms: 2.828465
+  type: 'test'
+  ...
+# Subtest: record: valid_u64_minimums
+ok 6 - record: valid_u64_minimums
+  ---
+  duration_ms: 0.713627
+  type: 'test'
+  ...
+# Subtest: record: valid_integer_coordinates
+ok 7 - record: valid_integer_coordinates
+  ---
+  duration_ms: 0.939883
+  type: 'test'
+  ...
+# Subtest: record: valid_negative_zero_coordinate
+ok 8 - record: valid_negative_zero_coordinate
+  ---
+  duration_ms: 0.338181
+  type: 'test'
+  ...
+# Subtest: record: valid_revoked_tombstone
+ok 9 - record: valid_revoked_tombstone
+  ---
+  duration_ms: 0.853385
+  type: 'test'
+  ...
+# Subtest: record: reject_v1_record
+ok 10 - record: reject_v1_record
+  ---
+  duration_ms: 0.643573
+  type: 'test'
+  ...
+# Subtest: record: reject_unknown_field
+ok 11 - record: reject_unknown_field
+  ---
+  duration_ms: 0.261362
+  type: 'test'
+  ...
+# Subtest: record: reject_numeric_string
+ok 12 - record: reject_numeric_string
+  ---
+  duration_ms: 0.156478
+  type: 'test'
+  ...
+# Subtest: record: reject_boolean_coordinate
+ok 13 - record: reject_boolean_coordinate
+  ---
+  duration_ms: 0.141169
+  type: 'test'
+  ...
+# Subtest: record: reject_revoked_stream
+ok 14 - record: reject_revoked_stream
+  ---
+  duration_ms: 0.198175
+  type: 'test'
+  ...
+# Subtest: record: reject_negative_sequence
+ok 15 - record: reject_negative_sequence
+  ---
+  duration_ms: 0.131655
+  type: 'test'
+  ...
+# Subtest: record: reject_negative_zero_sequence
+ok 16 - record: reject_negative_zero_sequence
+  ---
+  duration_ms: 0.116645
+  type: 'test'
+  ...
+# Subtest: record: reject_zero_updated_at
+ok 17 - record: reject_zero_updated_at
+  ---
+  duration_ms: 0.124199
+  type: 'test'
+  ...
+# Subtest: record: valid_u64_maximums
+ok 18 - record: valid_u64_maximums
+  ---
+  duration_ms: 0.237932
+  type: 'test'
+  ...
+# Subtest: record: reject_sequence_above_u64
+ok 19 - record: reject_sequence_above_u64
+  ---
+  duration_ms: 0.388815
+  type: 'test'
+  ...
+# Subtest: record: reject_updated_at_above_u64
+ok 20 - record: reject_updated_at_above_u64
+  ---
+  duration_ms: 0.153194
+  type: 'test'
+  ...
+# Subtest: record: reject_boolean_sequence
+ok 21 - record: reject_boolean_sequence
+  ---
+  duration_ms: 0.138233
+  type: 'test'
+  ...
+# Subtest: record: reject_float_sequence
+ok 22 - record: reject_float_sequence
+  ---
+  duration_ms: 0.128657
+  type: 'test'
+  ...
+# Subtest: record: reject_v2_schema_mismatch
+ok 23 - record: reject_v2_schema_mismatch
+  ---
+  duration_ms: 0.110619
+  type: 'test'
+  ...
+# Subtest: record: reject_invalid_status
+ok 24 - record: reject_invalid_status
+  ---
+  duration_ms: 0.137973
+  type: 'test'
+  ...
+# Subtest: record: reject_invalid_coordinates
+ok 25 - record: reject_invalid_coordinates
+  ---
+  duration_ms: 0.11424
+  type: 'test'
+  ...
+# Subtest: record: reject_malformed_metadata_hash
+ok 26 - record: reject_malformed_metadata_hash
+  ---
+  duration_ms: 0.410664
+  type: 'test'
+  ...
+# Subtest: record: reject_malformed_metadata_type
+ok 27 - record: reject_malformed_metadata_type
+  ---
+  duration_ms: 0.192402
+  type: 'test'
+  ...
+# Subtest: record: reject_missing_required_field
+ok 28 - record: reject_missing_required_field
+  ---
+  duration_ms: 0.132166
+  type: 'test'
+  ...
+# Subtest: record: reject_empty_stream_endpoint
+ok 29 - record: reject_empty_stream_endpoint
+  ---
+  duration_ms: 0.224018
+  type: 'test'
+  ...
+# Subtest: record: reject_escaped_stream_endpoint
+ok 30 - record: reject_escaped_stream_endpoint
+  ---
+  duration_ms: 0.167401
+  type: 'test'
+  ...
+# Subtest: record: reject_leading_plus_coordinate
+ok 31 - record: reject_leading_plus_coordinate
+  ---
+  duration_ms: 0.146935
+  type: 'test'
+  ...
+# Subtest: record: reject_leading_zero_coordinate
+ok 32 - record: reject_leading_zero_coordinate
+  ---
+  duration_ms: 0.289124
+  type: 'test'
+  ...
+# Subtest: record: reject_duplicate_json_field
+ok 33 - record: reject_duplicate_json_field
+  ---
+  duration_ms: 0.789496
+  type: 'test'
+  ...
+# Subtest: identity: valid_32_byte_identity
+ok 34 - identity: valid_32_byte_identity
+  ---
+  duration_ms: 0.126827
+  type: 'test'
+  ...
+# Subtest: identity: valid_uppercase_identity
+ok 35 - identity: valid_uppercase_identity
+  ---
+  duration_ms: 0.064328
+  type: 'test'
+  ...
+# Subtest: identity: reject_31_byte_identity
+ok 36 - identity: reject_31_byte_identity
+  ---
+  duration_ms: 0.076974
+  type: 'test'
+  ...
+# Subtest: identity: reject_non_hex_identity
+ok 37 - identity: reject_non_hex_identity
+  ---
+  duration_ms: 0.070544
+  type: 'test'
+  ...
+# Subtest: identity: reject_trailing_newline_identity
+ok 38 - identity: reject_trailing_newline_identity
+  ---
+  duration_ms: 0.062983
+  type: 'test'
+  ...
+# Subtest: type id: first_input_index_one_output_zero
+ok 39 - type id: first_input_index_one_output_zero
+  ---
+  duration_ms: 2.903349
+  type: 'test'
+  ...
+# Subtest: creation: valid_create_with_canonical_type_id
+ok 40 - creation: valid_create_with_canonical_type_id
+  ---
+  duration_ms: 1.095795
+  type: 'test'
+  ...
+# Subtest: creation: reject_wrong_canonical_type_id_args
+ok 41 - creation: reject_wrong_canonical_type_id_args
+  ---
+  duration_ms: 2.307965
+  type: 'test'
+  ...
+# Subtest: creation: reject_v1_empty_type_id_args
+ok 42 - creation: reject_v1_empty_type_id_args
+  ---
+  duration_ms: 0.316004
+  type: 'test'
+  ...
+# Subtest: transition: normal_successor
+ok 43 - transition: normal_successor
+  ---
+  duration_ms: 0.346405
+  type: 'test'
+  ...
+# Subtest: transition: ownership_transfer_record
+ok 44 - transition: ownership_transfer_record
+  ---
+  duration_ms: 0.143021
+  type: 'test'
+  ...
+# Subtest: transition: permanent_revocation
+ok 45 - transition: permanent_revocation
+  ---
+  duration_ms: 0.133536
+  type: 'test'
+  ...
+# Subtest: transition: reject_sequence_reuse
+ok 46 - transition: reject_sequence_reuse
+  ---
+  duration_ms: 0.134129
+  type: 'test'
+  ...
+# Subtest: transition: reject_sequence_jump
+ok 47 - transition: reject_sequence_jump
+  ---
+  duration_ms: 0.13461
+  type: 'test'
+  ...
+# Subtest: transition: reject_label_mutation
+ok 48 - transition: reject_label_mutation
+  ---
+  duration_ms: 0.124877
+  type: 'test'
+  ...
+# Subtest: transition: reject_updated_at_rollback
+ok 49 - transition: reject_updated_at_rollback
+  ---
+  duration_ms: 0.132453
+  type: 'test'
+  ...
+# Subtest: transition: reject_resurrection
+ok 50 - transition: reject_resurrection
+  ---
+  duration_ms: 0.125587
+  type: 'test'
+  ...
+# Subtest: transition: reject_sequence_overflow
+ok 51 - transition: reject_sequence_overflow
+  ---
+  duration_ms: 0.222839
+  type: 'test'
+  ...
+# Subtest: transition: reject_changed_canonical_type_id
+ok 52 - transition: reject_changed_canonical_type_id
+  ---
+  duration_ms: 0.285385
+  type: 'test'
+  ...
+# Subtest: script: valid_registry_v2_script
+ok 53 - script: valid_registry_v2_script
+  ---
+  duration_ms: 0.90967
+  type: 'test'
+  ...
+# Subtest: script: reject_wrong_registry_script_identity
+ok 54 - script: reject_wrong_registry_script_identity
+  ---
+  duration_ms: 0.579019
+  type: 'test'
+  ...
+# Subtest: script: reject_wrong_hash_type
+ok 55 - script: reject_wrong_hash_type
+  ---
+  duration_ms: 0.575454
+  type: 'test'
+  ...
+# Subtest: script: reject_malformed_type_id_args
+ok 56 - script: reject_malformed_type_id_args
+  ---
+  duration_ms: 0.436467
+  type: 'test'
+  ...
+# Subtest: discovery: same_label_different_identities
+ok 57 - discovery: same_label_different_identities
+  ---
+  duration_ms: 19.76313
+  type: 'test'
+  ...
+# Subtest: discovery: duplicate_live_identity_fails_closed
+ok 58 - discovery: duplicate_live_identity_fails_closed
+  ---
+  duration_ms: 3.364491
+  type: 'test'
+  ...
+# Subtest: discovery: malformed_duplicate_identity_fails_closed
+ok 59 - discovery: malformed_duplicate_identity_fails_closed
+  ---
+  duration_ms: 3.755759
+  type: 'test'
+  ...
+# Subtest: discovery: revoked_tombstone_is_historical_only
+ok 60 - discovery: revoked_tombstone_is_historical_only
+  ---
+  duration_ms: 1.041889
+  type: 'test'
+  ...
+# Subtest: discovery: future_updated_at_is_rejected
+ok 61 - discovery: future_updated_at_is_rejected
+  ---
+  duration_ms: 0.706862
+  type: 'test'
+  ...
+# Subtest: discovery follows a changing cursor after short pages
+ok 62 - discovery follows a changing cursor after short pages
+  ---
+  duration_ms: 1.667898
+  type: 'test'
+  ...
+# Subtest: discovery fails closed when pagination does not finish
+ok 63 - discovery fails closed when pagination does not finish
+  ---
+  duration_ms: 0.688294
+  type: 'test'
+  ...
+# Subtest: discovery stops a nonconsecutive cursor cycle without selecting partial state
+not ok 64 - discovery stops a nonconsecutive cursor cycle without selecting partial state
+  ---
+  duration_ms: 0.490164
+  type: 'test'
+  location: '/Users/jeremicarose/Downloads/mlat-system 2/sdk/typescript/dist/test/conformance.test.js:221:1'
+  failureType: 'testCodeFailure'
+  error: 'this.client.getCellLive is not a function'
+  code: 'ERR_TEST_FAILURE'
+  name: 'TypeError'
+  stack: |-
+    RegistryV2Discovery.nodeConfirmsCell (file:///Users/jeremicarose/Downloads/mlat-system%202/sdk/typescript/dist/src/discovery.js:210:44)
+    RegistryV2Discovery.discover (file:///Users/jeremicarose/Downloads/mlat-system%202/sdk/typescript/dist/src/discovery.js:57:34)
+    async TestContext.<anonymous> (file:///Users/jeremicarose/Downloads/mlat-system%202/sdk/typescript/dist/test/conformance.test.js:233:20)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: historical Pudge deployment matches the signed evidence manifest
+ok 65 - historical Pudge deployment matches the signed evidence manifest
+  ---
+  duration_ms: 2.002424
+  type: 'test'
+  ...
+# Subtest: immutable Pudge deployment matches the current signed evidence manifest
+ok 66 - immutable Pudge deployment matches the current signed evidence manifest
+  ---
+  duration_ms: 6.232827
+  type: 'test'
+  ...
+# Subtest: testnet factory rejects a mainnet client and uses the immutable Pudge deployment
+ok 67 - testnet factory rejects a mainnet client and uses the immutable Pudge deployment
+  ---
+  duration_ms: 1.142405
+  type: 'test'
+  ...
+# Subtest: writable testnet factory derives an immutable data1 deployment
+ok 68 - writable testnet factory derives an immutable data1 deployment
+  ---
+  duration_ms: 1.536511
+  type: 'test'
+  ...
+# Subtest: lifecycle writes reject every mutable type-hash deployment
+ok 69 - lifecycle writes reject every mutable type-hash deployment
+  ---
+  duration_ms: 0.7103
+  type: 'test'
+  ...
+# Subtest: deployment verification detects a mismatched contract binary
+ok 70 - deployment verification detects a mismatched contract binary
+  ---
+  duration_ms: 4.661477
+  type: 'test'
+  ...
+# Subtest: CCC signer lifecycle prepares create, update, transfer, and revoke transactions
+ok 71 - CCC signer lifecycle prepares create, update, transfer, and revoke transactions
+  ---
+  duration_ms: 17.281268
+  type: 'test'
+  ...
+# Subtest: documented journey creates, discovers, updates, transfers, revokes, and verifies
+ok 72 - documented journey creates, discovers, updates, transfers, revokes, and verifies
+  ---
+  duration_ms: 12.288976
+  type: 'test'
+  ...
+# Subtest: history reads and validates the real create, update, transfer, and revoke chain
+ok 73 - history reads and validates the real create, update, transfer, and revoke chain
+  ---
+  duration_ms: 2.732061
+  type: 'test'
+  ...
+# Subtest: history fails closed when a non-empty page omits its cursor
+ok 74 - history fails closed when a non-empty page omits its cursor
+  ---
+  duration_ms: 0.673739
+  type: 'test'
+  ...
+# Subtest: history fails closed when a non-empty page repeats its cursor
+ok 75 - history fails closed when a non-empty page repeats its cursor
+  ---
+  duration_ms: 0.755189
+  type: 'test'
+  ...
+# Subtest: package manifest remains ready for a public provenance-backed release
+ok 76 - package manifest remains ready for a public provenance-backed release
+  ---
+  duration_ms: 17.72241
+  type: 'test'
+  ...
+1..76
+# tests 76
+# suites 0
+# pass 75
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 899.556649

@@ -3,8 +3,9 @@
 This is the authoritative environment-variable reference. Copy `.env.example`
 for local use. Never commit `.env`, wallet keys, API keys, or feed credentials.
 
-Boolean values accept `1`, `true`, `yes`, or `on` as true. Other values are
-false. Relative paths are resolved from the process working directory unless a
+Runtime boolean values accept `1`, `true`, `yes`, or `on` as true and `0`,
+`false`, `no`, or `off` as false. Invalid runtime booleans fail startup.
+Relative paths are resolved from the process working directory unless a
 specific command says otherwise.
 
 ## Registry And CKB
@@ -20,7 +21,7 @@ specific command says otherwise.
 | `RECEIVER_REGISTRY_HASH_TYPE` | `data1` | Immutable contract-code binding used by the current deployment. Historical `type` discovery requires explicit `ALLOW_MUTABLE_REGISTRY_CODE=true`; strict production still rejects it. |
 | `ALLOW_MUTABLE_REGISTRY_CODE` | `false` | Allows historical reads from a mutable code binding. Strict production still rejects it. |
 | `CKB_SSL_VERIFY` | `true` | Verifies RPC and indexer TLS certificates. Strict production rejects `false`. |
-| `CKB_MAX_RECORD_AGE_SECONDS` | `86400` | Maximum age accepted for an active Registry record. |
+| `CKB_MAX_RECORD_AGE_SECONDS` | unset | Optional maximum record age. Registry update time is lifecycle metadata, not operational freshness. |
 | `CKB_REGISTRY_REFRESH_SECONDS` | `30` | Registry refresh interval, clamped to at least five seconds. |
 | `CKB_HYBRID_SIMULATION_MIN_RECEIVERS` | `4` | Minimum real receivers before hybrid simulation is unnecessary. |
 | `NEXT_PUBLIC_REGISTRY_CODE_HASH` | empty | Browser-visible immutable Registry code hash. |
@@ -36,6 +37,9 @@ immutable deployment. Never use the historical mutable hash for writes.
 |---|---|---|
 | `FOURDSKY_API_KEY` | empty | Canonical feed credential. `FOURDSKYAPIKEY` is a deprecated compatibility alias. |
 | `FOURDSKY_ENDPOINT` | empty | Canonical feed endpoint. `FOURDSKYENDPOINT` is a deprecated compatibility alias. |
+| `FOURDSKY_ALLOWED_ENDPOINTS` | empty | Comma-separated exact operator-approved WebSocket URLs from Registry metadata. The configured `FOURDSKY_ENDPOINT` is also allowed. No redirects. Credentials and subscription data go only to the exact `FOURDSKY_ENDPOINT`. Approve private destinations only deliberately. |
+| `MAX_OBSERVATION_AGE_SECONDS` | `120` | Oldest live observation accepted. Out-of-window observations are rejected before freshness or correlation state changes. |
+| `MAX_OBSERVATION_FUTURE_SECONDS` | `5` | Maximum future skew relative to backend wall time. Finite non-negative seconds. |
 | `FOURDSKY_TRANSPORT` | `auto` | `command-jsonl`, `websocket-json`, or demo-only `simulation`. Strict mode rejects `auto` and `simulation`. |
 | `FOURDSKY_AUTH_HEADER` | `X-API-Key` | Feed authentication header name. |
 | `FOURDSKY_AUTH_SCHEME` | empty | Optional authorization scheme such as `Bearer`. |
@@ -57,14 +61,15 @@ immutable deployment. Never use the historical mutable hash for writes.
 | `DATABASE_PATH` | `data/mlat_data.db` | SQLite database path shared by the processor and API. |
 | `LOG_LEVEL` | `INFO` | Python logging level. |
 | `STRICT_PRODUCTION_MODE` | `false` | Enables fail-closed live configuration checks. |
-| `SIMULATE_IF_UNAVAILABLE` | `true` | Allows demo fallback. Strict mode rejects true. |
-| `SIMULATION_RETENTION_HOURS` | `24` | Replay observation retention. |
+| `SIMULATE_IF_UNAVAILABLE` | `false` | Explicit legacy permission for auto mode to select synthetic demo inputs. Broken explicit live transports never fall back to simulation. Strict mode rejects true. |
+| `SIMULATION_RETENTION_HOURS` | `24` | Retention for rows explicitly marked SYNTHETIC; live, historical and UNKNOWN positions are preserved. |
 | `STATISTICS_RETENTION_DAYS` | `7` | Stored statistics retention. |
 | `HEALTH_STALE_SIGNAL_SECONDS` | `120` | Health threshold for stale input. |
 | `STATS_INTERVAL_SECONDS` | `60` | Runtime statistics publication interval. |
 | `REQUIRE_LIVE_BENCHMARKABLE_OUTPUT` | `false` | Fails evidence publication unless live readiness gates pass. |
 | `REGISTRY_EVIDENCE_BUNDLE` | historical bundle | Saved lifecycle evidence exposed by the API. |
 | `BENCHMARK_REPORT_PATH` | live evidence path | Accuracy/evidence report consumed by the API. |
+| `SOLVER_BENCHMARK_REPORT_PATH` | compact public solver report | Historical solver-only benchmark shown in the Accuracy benchmark workspace. It must never be interpreted as live or full-pipeline evidence. |
 | `BENCHMARK_MAX_REPORT_BYTES` | `5242880` | Maximum report or evidence payload read by the API. |
 | `PERFORMANCE_REPORT_PATH` | experimental path | Local performance report consumed by the API. |
 | `RELIABILITY_REPORT_PATH` | experimental path | Local reliability report consumed by the API. |
@@ -75,11 +80,11 @@ immutable deployment. Never use the historical mutable hash for writes.
 
 | Variable | Default | Meaning |
 |---|---|---|
-| `DEMO_MODE` | `false` | Enables deterministic replay. Strict mode rejects true. |
-| `DEMO_SCENARIO` | `default` | Replay scenario identifier. |
+| `DEMO_MODE` | `false` | Labels synthetic demonstration operation. The continuously generated demo has random timing jitter; it is not a historical recording or the deterministic benchmark. Strict mode rejects true. |
+| `DEMO_SCENARIO` | `default` | Synthetic scenario identifier. |
 | `DEMO_READ_ONLY` | follows demo mode | Disables state-changing demo operations. |
-| `DEMO_LABEL` | scenario label | Visible replay label. It must not imply live data. |
-| `DEMO_AUTO_CONNECT` | follows demo mode | Starts replay processing automatically. |
+| `DEMO_LABEL` | scenario label | Visible synthetic demo label. It must not imply live data. |
+| `DEMO_AUTO_CONNECT` | follows demo mode | Starts synthetic demonstration processing automatically. |
 
 ## API And Frontend
 
@@ -104,13 +109,19 @@ immutable deployment. Never use the historical mutable hash for writes.
 | `API_STARTUP_TIMEOUT_SECONDS` | `45` | Seconds the process supervisor waits for `/healthz`. |
 | `MLAT_API_INTERNAL_URL` | `http://127.0.0.1:5057` | Server-only API origin used by Next.js. |
 | `NEXT_PUBLIC_API_BASE_URL` | same origin | Optional browser-visible API origin. Never put a credential here. |
+| `NEXT_PUBLIC_PILOT_APPLICATION_STATUS` | `preparing` | Public pilot state: `preparing`, `interest`, `open`, or `closed`. Applications are accepted only when this is `open`, funding is ready, and a valid HTTPS URL is configured. |
+| `NEXT_PUBLIC_PILOT_FUNDING_STATUS` | `seeking` | Public pilot funding state: `seeking` or `funded`. Any other value fails closed to `seeking`. |
+| `NEXT_PUBLIC_PILOT_APPLICATION_URL` | empty | Public HTTPS link to the pilot application form. Non-HTTPS and invalid URLs are rejected. Never place private participant data or credentials here. |
 | `NEXT_DIST_DIR` | unset | Optional Next.js build-directory override. Development defaults to `.next`; production defaults to `.next-production`. |
 | `NODE_ENV` | framework-managed | Selects development or production behavior and the default Next build directory. |
 | `GITHUB_REF_NAME` | GitHub-managed | Supplies the pushed tag to the stable-release checker in GitHub Actions. |
 | `PLAYWRIGHT_EXECUTABLE_PATH` | Playwright-managed | Optional local path to an installed Chromium browser. CI installs Playwright's pinned Chromium instead. |
+| `PLAYWRIGHT_DATA_MODE` | unset | `historical` runs the isolated historical replay browser tests; otherwise the synthetic demo suite runs. |
+| `PLAYWRIGHT_PYTHON_DIR` | repository `.venv` | Optional virtual-environment directory for browser QA. Allows a separate clean, pinned installation without replacing an existing developer environment. |
 | `PLAYWRIGHT_API_PORT` | `4312` | Dedicated local demo API port used by browser QA. |
 | `PLAYWRIGHT_FRONTEND_PORT` | `4311` | Dedicated local production frontend port used by browser QA. |
 | `PLAYWRIGHT_DIST_DIR` | `.next-production` | Existing production build directory staged into an isolated runtime for browser QA. |
+| `PLAYWRIGHT_REUSE_EXISTING_SERVERS` | `false` | Set to `true` only for local QA against API and frontend servers that are already running on the configured Playwright ports. CI starts fresh servers. |
 | `PATH` | inherited | System executable search path. Browser QA prepends the repository `.venv/bin` directory when it starts the local API. |
 | `GITHUB_SHA` | GitHub-managed | Binds browser QA evidence to the checked-out source commit. Local runs derive the commit from Git. |
 | `CI` | CI-managed | Enables Playwright retries. Browser checks always start fresh repository servers. |

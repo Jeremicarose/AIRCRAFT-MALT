@@ -1,0 +1,72 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900" role="img" aria-labelledby="title desc">
+  <title id="title">Scope of the Registry V2 product pilot</title>
+  <desc id="desc">The pilot tests owner workflows, coordinator discovery, wallet burden, and follow-up behavior. It does not test live MLAT accuracy, physical hardware truth, private feeds, mainnet, or aviation safety use.</desc>
+  <defs>
+    <style>
+      .eyebrow { font: 600 15px Inter, "IBM Plex Sans", Arial, sans-serif; fill: #68d5e8; }
+      .title { font: 650 42px Inter, "IBM Plex Sans", Arial, sans-serif; fill: #f1f4f8; }
+      .subtitle { font: 400 20px Inter, "IBM Plex Sans", Arial, sans-serif; fill: #aab2bd; }
+      .column-title { font: 650 26px Inter, "IBM Plex Sans", Arial, sans-serif; fill: #f1f4f8; }
+      .item { font: 600 18px Inter, "IBM Plex Sans", Arial, sans-serif; fill: #f1f4f8; }
+      .body { font: 400 15px Inter, "IBM Plex Sans", Arial, sans-serif; fill: #aab2bd; }
+      .question { font: 600 21px Inter, "IBM Plex Sans", Arial, sans-serif; fill: #f1f4f8; }
+      .small { font: 500 13px Inter, "IBM Plex Sans", Arial, sans-serif; fill: #8f99a6; }
+    </style>
+  </defs>
+  <rect width="1600" height="900" fill="#080a0d"/>
+  <text x="64" y="70" class="eyebrow">HONEST VALIDATION SCOPE</text>
+  <text x="64" y="126" class="title">The pilot tests product value, not aviation safety.</text>
+  <text x="64" y="164" class="subtitle">A narrow test produces clearer evidence than broad technical claims.</text>
+
+  <g transform="translate(64 216)">
+    <rect width="704" height="460" rx="8" fill="#0d1014" stroke="#2a3039"/>
+    <rect width="704" height="5" rx="2" fill="#4fd18b"/>
+    <circle cx="42" cy="52" r="18" fill="#4fd18b"/>
+    <path d="M34 52l6 6 11-13" fill="none" stroke="#080a0d" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+    <text x="76" y="60" class="column-title">The pilot tests</text>
+
+    <circle cx="42" cy="130" r="6" fill="#4fd18b"/>
+    <text x="66" y="126" class="item">Owner lifecycle workflow</text>
+    <text x="66" y="152" class="body">Create, discover, update, and inspect a testnet record.</text>
+
+    <circle cx="42" cy="214" r="6" fill="#4fd18b"/>
+    <text x="66" y="210" class="item">Coordinator discovery and export</text>
+    <text x="66" y="236" class="body">Find records, read provenance, and consume documented JSON.</text>
+
+    <circle cx="42" cy="298" r="6" fill="#4fd18b"/>
+    <text x="66" y="294" class="item">Wallet and terminology burden</text>
+    <text x="66" y="320" class="body">Observe where testnet signing or CKB concepts block use.</text>
+
+    <circle cx="42" cy="382" r="6" fill="#4fd18b"/>
+    <text x="66" y="378" class="item">Behavior after the session</text>
+    <text x="66" y="404" class="body">Measure a real seven-day return or integration follow-up.</text>
+  </g>
+
+  <g transform="translate(832 216)">
+    <rect width="704" height="460" rx="8" fill="#0d1014" stroke="#2a3039"/>
+    <rect width="704" height="5" rx="2" fill="#8f99a6"/>
+    <circle cx="42" cy="52" r="18" fill="#14181e" stroke="#8f99a6"/>
+    <path d="M34 44l16 16M50 44L34 60" fill="none" stroke="#8f99a6" stroke-width="3" stroke-linecap="round"/>
+    <text x="76" y="60" class="column-title">The pilot does not test</text>
+
+    <circle cx="42" cy="130" r="6" fill="#8f99a6"/>
+    <text x="66" y="126" class="item">Live MLAT accuracy</text>
+    <text x="66" y="152" class="body">No physical synchronized receiver field trial is claimed.</text>
+
+    <circle cx="42" cy="214" r="6" fill="#8f99a6"/>
+    <text x="66" y="210" class="item">Physical receiver truth</text>
+    <text x="66" y="236" class="body">CKB does not attest hardware, coordinates, clocks, or feeds.</text>
+
+    <circle cx="42" cy="298" r="6" fill="#8f99a6"/>
+    <text x="66" y="294" class="item">Private feeds or precise locations</text>
+    <text x="66" y="320" class="body">The study requests neither credentials nor exact location data.</text>
+
+    <circle cx="42" cy="382" r="6" fill="#8f99a6"/>
+    <text x="66" y="378" class="item">Mainnet or operational safety use</text>
+    <text x="66" y="404" class="body">The contract is testnet-only, experimental, and unaudited.</text>
+  </g>
+
+  <rect x="64" y="730" width="1472" height="104" rx="8" fill="#14181e" stroke="#2a3039"/>
+  <text x="96" y="770" class="small">THE DECISION QUESTION</text>
+  <text x="96" y="804" class="question">Is shared, owner-controlled receiver identity useful enough to justify the added wallet and blockchain workflow?</text>
+</svg>

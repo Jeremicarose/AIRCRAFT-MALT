@@ -34,7 +34,7 @@ from receiver_config import load_receiver_config
 
 
 def read_env_file() -> dict[str, str]:
-    env_path = ROOT / ".env"
+    env_path = Path(os.getenv("MLAT_ENV_FILE", str(ROOT / ".env"))).expanduser()
     values: dict[str, str] = {}
     if not env_path.exists():
         return values

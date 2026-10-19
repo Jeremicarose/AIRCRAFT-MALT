@@ -37,7 +37,7 @@ const baseStyle: StyleSpecification = {
       tiles: [OSM_TILE_URL],
       tileSize: 256,
       maxzoom: 19,
-      attribution: '&copy; OpenStreetMap contributors',
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a> contributors',
     },
   },
   layers: [
@@ -63,9 +63,9 @@ function isBaseMapError(message: string, sourceId?: string): boolean {
 }
 
 function validReceiverCoordinates(receiver: Receiver): Coordinates | null {
-  const latitude = Number(receiver.latitude);
-  const longitude = Number(receiver.longitude);
-  return Number.isFinite(latitude) && Number.isFinite(longitude) ? [longitude, latitude] : null;
+  const latitude = receiver.latitude;
+  const longitude = receiver.longitude;
+  return typeof latitude === 'number' && Number.isFinite(latitude) && Math.abs(latitude) <= 90 && typeof longitude === 'number' && Number.isFinite(longitude) && Math.abs(longitude) <= 180 ? [longitude, latitude] : null;
 }
 
 function circlePolygon(center: Coordinates, radiusMeters: number, steps = 64): Coordinates[] {
@@ -239,7 +239,7 @@ export default function AirspaceMap({ aircraft, receivers, selectedAircraftId, s
       element.setAttribute('aria-label', `Select aircraft ${item.aircraft_id}`);
       element.onclick = () => onSelectAircraft?.(item.aircraft_id);
       const popup = existingMarker?.getPopup() ?? new maplibregl.Popup({ offset: 12, closeButton: false });
-      popup.setDOMContent(popupContent(item.aircraft_id, [`${percent(item.quality?.score, 0)} confidence`, `${item.correlation?.receiver_count ?? item.num_receivers ?? 0} receivers`]));
+      popup.setDOMContent(popupContent(item.aircraft_id, [`${percent(item.quality?.score, 0)} heuristic quality`, `${item.correlation?.receiver_count ?? item.num_receivers ?? 0} receivers`]));
       const marker = existingMarker
         ? existingMarker.setLngLat(coordinates)
         : new maplibregl.Marker({ element, anchor: 'center' })
@@ -270,7 +270,7 @@ export default function AirspaceMap({ aircraft, receivers, selectedAircraftId, s
     upsertGeoJson(map, 'receiver-links', { type: 'FeatureCollection', features: lineFeatures }, { id: 'receiver-links', type: 'line', source: 'receiver-links', paint: { 'line-color': '#5b9cff', 'line-width': 1.25, 'line-opacity': 0.52, 'line-dasharray': [2, 2] } });
 
     const uncertainty = Number(selectedAircraft?.quality?.uncertainty_m ?? selectedAircraft?.uncertainty ?? 0);
-    const uncertaintyFeatures: GeoJSON.Feature<GeoJSON.Polygon>[] = showUncertainty && selectedCoordinates && uncertainty > 0 ? [{ type: 'Feature', properties: {}, geometry: { type: 'Polygon', coordinates: [circlePolygon(selectedCoordinates, uncertainty)] } }] : [];
+    const uncertaintyFeatures: GeoJSON.Feature<GeoJSON.Polygon>[] = showUncertainty && selectedAircraft?.quality?.confidence_calibrated === true && selectedCoordinates && uncertainty > 0 ? [{ type: 'Feature', properties: {}, geometry: { type: 'Polygon', coordinates: [circlePolygon(selectedCoordinates, uncertainty)] } }] : [];
     upsertGeoJson(map, 'uncertainty', { type: 'FeatureCollection', features: uncertaintyFeatures }, { id: 'uncertainty-fill', type: 'fill', source: 'uncertainty', paint: { 'fill-color': '#5b9cff', 'fill-opacity': 0.12, 'fill-outline-color': '#78adff' } });
 
     const trackCoordinates = track.map(positionCoordinates).filter(Boolean) as Coordinates[];

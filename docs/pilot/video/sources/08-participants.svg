@@ -1,0 +1,83 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900" role="img" aria-labelledby="title desc">
+  <title id="title">Participants needed for the Registry V2 pilot</title>
+  <desc id="desc">The pilot needs four receiver owners or operators and two network coordinators or developers, with role-specific tasks and a remote time commitment.</desc>
+  <defs>
+    <style>
+      .eyebrow { font: 600 15px Inter, "IBM Plex Sans", Arial, sans-serif; fill: #68d5e8; }
+      .title { font: 650 42px Inter, "IBM Plex Sans", Arial, sans-serif; fill: #f1f4f8; }
+      .subtitle { font: 400 20px Inter, "IBM Plex Sans", Arial, sans-serif; fill: #aab2bd; }
+      .count { font: 650 72px Inter, "IBM Plex Sans", Arial, sans-serif; fill: #080a0d; text-anchor: middle; dominant-baseline: central; }
+      .role { font: 650 27px Inter, "IBM Plex Sans", Arial, sans-serif; fill: #f1f4f8; }
+      .item { font: 600 17px Inter, "IBM Plex Sans", Arial, sans-serif; fill: #f1f4f8; }
+      .body { font: 400 15px Inter, "IBM Plex Sans", Arial, sans-serif; fill: #aab2bd; }
+      .metric { font: 650 20px Inter, "IBM Plex Sans", Arial, sans-serif; fill: #f1f4f8; }
+      .small { font: 500 13px Inter, "IBM Plex Sans", Arial, sans-serif; fill: #8f99a6; }
+      .icon { fill: none; stroke-linecap: round; stroke-linejoin: round; stroke-width: 2.3; }
+    </style>
+  </defs>
+  <rect width="1600" height="900" fill="#080a0d"/>
+  <text x="64" y="70" class="eyebrow">PILOT COHORT</text>
+  <text x="64" y="126" class="title">Six participants. Two real operating roles.</text>
+  <text x="64" y="164" class="subtitle">Blockchain experience is not required. Practical receiver or network experience is.</text>
+
+  <g transform="translate(64 220)">
+    <rect width="724" height="414" rx="8" fill="#0d1014" stroke="#2a3039"/>
+    <rect width="5" height="414" rx="2" fill="#68d5e8"/>
+    <circle cx="102" cy="104" r="62" fill="#68d5e8"/>
+    <text x="102" y="104" class="count">4</text>
+    <text x="192" y="88" class="role">Receiver owners or operators</text>
+    <text x="192" y="120" class="body">Operating now or within the last 12 months</text>
+
+    <g transform="translate(38 182)" class="icon" stroke="#68d5e8">
+      <circle cx="20" cy="20" r="4" fill="#68d5e8" stroke="none"/>
+      <path d="M10 20a10 10 0 0 1 20 0M4 20a16 16 0 0 1 32 0M20 24v24M10 48h20"/>
+    </g>
+    <text x="102" y="206" class="item">Create and update a test record</text>
+    <text x="102" y="232" class="body">Use a supported wallet on CKB Pudge testnet.</text>
+
+    <circle cx="58" cy="282" r="6" fill="#68d5e8"/>
+    <text x="82" y="278" class="item">Inspect identity, owner, and history</text>
+    <text x="82" y="304" class="body">Explain what the Registry proves and what it does not.</text>
+
+    <circle cx="58" cy="354" r="6" fill="#68d5e8"/>
+    <text x="82" y="350" class="item">Return within seven days</text>
+    <text x="82" y="376" class="body">Find the record again without a live maintainer call.</text>
+  </g>
+
+  <g transform="translate(812 220)">
+    <rect width="724" height="414" rx="8" fill="#0d1014" stroke="#2a3039"/>
+    <rect width="5" height="414" rx="2" fill="#5b9cff"/>
+    <circle cx="102" cy="104" r="62" fill="#5b9cff"/>
+    <text x="102" y="104" class="count">2</text>
+    <text x="192" y="88" class="role">Coordinators or developers</text>
+    <text x="192" y="120" class="body">Responsible for multiple receiver records or integrations</text>
+
+    <g transform="translate(38 182)" class="icon" stroke="#5b9cff">
+      <rect x="2" y="5" width="38" height="30" rx="3"/>
+      <path d="M10 43h22M16 35v8M27 35v8M9 13h24M9 21h18M9 29h12"/>
+    </g>
+    <text x="102" y="206" class="item">Discover and interpret assigned records</text>
+    <text x="102" y="232" class="body">No wallet is required for directory and export tasks.</text>
+
+    <circle cx="58" cy="282" r="6" fill="#5b9cff"/>
+    <text x="82" y="278" class="item">Export documented JSON</text>
+    <text x="82" y="304" class="body">Compare the shared format with the current inventory process.</text>
+
+    <circle cx="58" cy="354" r="6" fill="#5b9cff"/>
+    <text x="82" y="350" class="item">Complete one integration follow-up</text>
+    <text x="82" y="376" class="body">Test an import, estimate work, or record a decision.</text>
+  </g>
+
+  <rect x="64" y="686" width="1472" height="128" rx="8" fill="#14181e" stroke="#2a3039"/>
+  <line x1="380" y1="710" x2="380" y2="790" stroke="#2a3039"/>
+  <line x1="720" y1="710" x2="720" y2="790" stroke="#2a3039"/>
+  <line x1="1088" y1="710" x2="1088" y2="790" stroke="#2a3039"/>
+  <text x="96" y="738" class="small">OWNER COMMITMENT</text>
+  <text x="96" y="772" class="metric">85–95 minutes total</text>
+  <text x="412" y="738" class="small">COORDINATOR COMMITMENT</text>
+  <text x="412" y="772" class="metric">90–120 minutes total</text>
+  <text x="752" y="738" class="small">EQUIPMENT</text>
+  <text x="752" y="772" class="metric">Desktop browser + microphone</text>
+  <text x="1120" y="738" class="small">NOT REQUIRED DURING SESSION</text>
+  <text x="1120" y="772" class="metric">Physical receiver hardware</text>
+</svg>

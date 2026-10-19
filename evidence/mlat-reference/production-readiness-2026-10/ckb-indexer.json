@@ -1,0 +1,67 @@
+{
+  "checked_at": "2026-10-13T12:22:41.542759Z",
+  "deployment": {
+    "code_hash": "0x40ebcd7df892234592a97c987faadce70df6bcfb5f7fa24fa78431cc24f3d6fa",
+    "hash_type": "data1"
+  },
+  "direct_rpc": {
+    "cell": null,
+    "status": "not_checked",
+    "url": "https://testnet.ckb.dev/rpc"
+  },
+  "expected_outpoint": null,
+  "indexer": {
+    "object_count": 2,
+    "objects": [
+      {
+        "block_number": "0x1557b0b",
+        "out_point": {
+          "index": "0x0",
+          "tx_hash": "0x9a34483db911e9238f022dd84a7eb0fafb224a2424d7e646ba29cde10e625626"
+        },
+        "output": {
+          "capacity": "0xba43b7400",
+          "lock": {
+            "args": "0x37c206d5a2f4939319db9c4078db78333899a3fb",
+            "code_hash": "0x9bd7e06f3ecf4be0f2fcd2188b23f1b9fcc88e5d4b65a8637b17723bbda3cce8",
+            "hash_type": "type"
+          },
+          "type": {
+            "args": "0x1d6855f20486a023c92df0c613a3141e385f3766c4c844d2935fe18cfcf220ce",
+            "code_hash": "0x40ebcd7df892234592a97c987faadce70df6bcfb5f7fa24fa78431cc24f3d6fa",
+            "hash_type": "data1"
+          }
+        },
+        "output_data": "0x7b22616c746974756465223a313739352e302c226361706162696c6974696573223a5b226d6f64652d73222c226d6c6174225d2c226c61746974756465223a2d312e3238363338392c226c6f6e676974756465223a33362e3831373232332c2272656365697665725f6964223a22524543565f52454749535452595f56325f45564944454e4345222c22736368656d615f76657273696f6e223a322c2273657175656e6365223a332c22737461747573223a227265766f6b6564222c22757064617465645f6174223a313738393039383831347d",
+        "tx_index": "0x1"
+      },
+      {
+        "block_number": "0x1569696",
+        "out_point": {
+          "index": "0x0",
+          "tx_hash": "0x0b18060c3b132ec30ee1928b6045d8e6b143dee881bd85d475762f518829b991"
+        },
+        "output": {
+          "capacity": "0x7f67a9600",
+          "lock": {
+            "args": "0x0001199691ad711f5c40445c140de93d0b3da4debcd0",
+            "code_hash": "0xd23761b364210735c19c60561d213fb3beae2fd6172743719eff6920e020baac",
+            "hash_type": "type"
+          },
+          "type": {
+            "args": "0x74b25d0f23d0fb20fa3016bccd00f58358fb546cd14ecd368a69eafbaf2c7b78",
+            "code_hash": "0x40ebcd7df892234592a97c987faadce70df6bcfb5f7fa24fa78431cc24f3d6fa",
+            "hash_type": "data1"
+          }
+        },
+        "output_data": "0x7b22736368656d615f76657273696f6e223a322c2272656365697665725f6964223a22524543565f4e4149524f42495f303031222c226c61746974756465223a2d312e32383736342c226c6f6e676974756465223a33352e383137323333342c22616c746974756465223a313837302c22737461747573223a226f66666c696e65222c226361706162696c6974696573223a5b226d6f64652d73222c2261647362222c226d6c6174222c22726177225d2c2273657175656e6365223a312c22757064617465645f6174223a313738393637393235377d",
+        "tx_index": "0x1"
+      }
+    ],
+    "pages_scanned": 2,
+    "url": "https://testnet.ckb.dev/indexer"
+  },
+  "pass": true,
+  "receiver_identity": null,
+  "status": "ok"
+}

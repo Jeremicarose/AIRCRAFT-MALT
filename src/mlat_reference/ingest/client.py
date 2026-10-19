@@ -7,6 +7,7 @@ with 4DSky for Mode-S data streaming.
 
 from typing import Dict, List, Optional
 from dataclasses import dataclass
+from collections import Counter
 import asyncio
 import logging
 import time
@@ -44,10 +45,13 @@ class NetworkConfig:
     fourdsky_auth_token: Optional[str] = None
     fourdsky_subscribe_message: Optional[str] = None
     fourdsky_bridge_command: Optional[str] = None
+    fourdsky_allowed_endpoints: tuple[str, ...] = ()
+    max_observation_age_seconds: float = 120.0
+    max_observation_future_seconds: float = 5.0
 
     # System Configuration
     max_receivers: int = 20
-    simulate_if_unavailable: bool = True
+    simulate_if_unavailable: bool = False
     strict_production_mode: bool = False
     ssl_verify: bool = True
     max_record_age_seconds: Optional[int] = None
@@ -83,6 +87,7 @@ class CKBReceiverNetworkClient:
         self.active_receivers: Dict[str, ReceiverInfo] = {}
         self._stream_tasks: List[asyncio.Task] = []
         self._feed_transport: Optional[BaseFeedTransport] = None
+        self._past_transport_rejections: Counter[str] = Counter()
         self._message_callback = None
         self.discovery_latency_ms = 0.0
         self.registry_discovery_live = False
@@ -97,10 +102,13 @@ class CKBReceiverNetworkClient:
 
         discovery_started_at = time.perf_counter()
         try:
-            await self.peer_discovery.initialize()
-            receivers = await self.peer_discovery.discover_peers()
-            self.registry_discovery_live = True
-            logger.info("CKB Registry V2 discovery connected")
+            if self._determine_transport() == "simulation":
+                receivers = []
+            else:
+                await self.peer_discovery.initialize()
+                receivers = await self.peer_discovery.discover_peers()
+                self.registry_discovery_live = True
+                logger.info("CKB Registry V2 discovery connected")
         except Exception:
             if self.config.strict_production_mode or not self.config.simulate_if_unavailable:
                 raise
@@ -165,7 +173,7 @@ class CKBReceiverNetworkClient:
             selected = self._select_receivers(discovered)
         except Exception as exc:
             self.registry_discovery_live = False
-            self.registry_refresh_error = str(exc)
+            self.registry_refresh_error = f"Registry discovery failed ({type(exc).__name__}). Verify RPC/indexer connectivity and deployment configuration."
             self.discovery_latency_ms = (time.perf_counter() - refresh_started_at) * 1000
             self.active_receivers = {
                 receiver_id: receiver
@@ -237,11 +245,17 @@ class CKBReceiverNetworkClient:
             return
 
         if transport == "websocket-json":
+            if not self.active_receivers:
+                logger.warning(
+                    "No verified receivers are available. Waiting for Registry discovery to recover."
+                )
+                return
             self._feed_transport = WebSocketJsonFeedTransport(
                 self.active_receivers,
                 endpoint=self.config.fourdskyendpoint,
                 auth_headers=self._build_auth_headers(),
                 subscribe_message=self.config.fourdsky_subscribe_message,
+                allowed_endpoints=self.config.fourdsky_allowed_endpoints,
             )
             websocket_tasks = self._feed_transport.create_tasks(message_callback)
             if websocket_tasks:
@@ -250,14 +264,11 @@ class CKBReceiverNetworkClient:
                     f"✅ Streaming from {len(self.active_receivers)} receivers via WebSocket JSON feed"
                 )
                 return
-            if self.config.strict_production_mode:
-                raise RuntimeError(
-                    "STRICT_PRODUCTION_MODE forbids falling back to simulation when live WebSocket streaming is unavailable"
-                )
+            raise RuntimeError("No allowlisted WebSocket feed is configured for the receiver pool")
 
-        if self.config.strict_production_mode:
+        if self.config.strict_production_mode or transport != "simulation":
             raise RuntimeError(
-                f"STRICT_PRODUCTION_MODE forbids selecting {transport!r} synthetic feed transport"
+                f"Transport {transport!r} cannot start. Configure its endpoint or command; synthetic fallback is forbidden."
             )
 
         self._feed_transport = SimulationFeedTransport(
@@ -299,7 +310,15 @@ class CKBReceiverNetworkClient:
             task.cancel()
         if tasks:
             await asyncio.gather(*tasks, return_exceptions=True)
+        self._past_transport_rejections.update(
+            getattr(self._feed_transport, "rejection_counts", {})
+        )
         self._feed_transport = None
+
+    def get_transport_rejections(self) -> dict[str, int]:
+        counters = self._past_transport_rejections.copy()
+        counters.update(getattr(self._feed_transport, "rejection_counts", {}))
+        return dict(counters)
 
     def _determine_transport(self) -> str:
         """Resolve the active 4DSky transport."""
@@ -324,7 +343,11 @@ class CKBReceiverNetworkClient:
                 "STRICT_PRODUCTION_MODE forbids FOURDSKY_TRANSPORT=auto from resolving to simulation"
             )
 
-        return "simulation"
+        if self.config.simulate_if_unavailable:
+            return "simulation"
+        raise RuntimeError(
+            "No observation transport is configured. Select simulation explicitly for a synthetic demo, or configure a live feed."
+        )
 
     def _build_auth_headers(self) -> Dict[str, str]:
         """Build auth headers for WebSocket-based 4DSky connections."""
@@ -416,30 +439,3 @@ class CKBReceiverNetworkClient:
             receiver_id: (info.latitude, info.longitude, info.altitude)
             for receiver_id, info in self.active_receivers.items()
         }
-
-
-async def main():
-    """Example of using the CKB network client"""
-    config = NetworkConfig(
-        ckb_network="testnet",
-        ckb_rpc_url="https://testnet.ckb.dev/rpc",
-        receiver_registry_type_hash="0x...",
-        max_receivers=5,
-    )
-
-    client = CKBReceiverNetworkClient(config)
-
-    try:
-        await client.initialize()
-
-        async def handle_message(receiver_id: str, timestamp: float, message: str):
-            print(f"📨 {receiver_id} @ {timestamp:.6f}: {message}")
-
-        await client.start_streaming(handle_message)
-        await asyncio.sleep(10)
-    finally:
-        await client.shutdown()
-
-
-if __name__ == "__main__":
-    asyncio.run(main())

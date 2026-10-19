@@ -6,7 +6,8 @@ aircraft transmission. This is crucial because the same signal arrives
 at different receivers at different times.
 """
 
-from typing import List, Dict, Optional, Set
+from typing import List, Dict, Optional
+import math
 from dataclasses import dataclass
 from collections import defaultdict
 
@@ -91,6 +92,7 @@ class SignalCorrelator:
         time_window: float = 0.001,  # 1 millisecond window
         min_receivers: int = 4,
         buffer_duration: float = 2.0,  # Keep signals for 2 seconds
+        max_buffer_signals: int = 20_000,
     ):
         """
         Initialize correlator.
@@ -103,33 +105,52 @@ class SignalCorrelator:
         self.time_window = time_window
         self.min_receivers = min_receivers
         self.buffer_duration = buffer_duration
+        self.max_buffer_signals = max_buffer_signals
+        if max_buffer_signals < min_receivers:
+            raise ValueError("max_buffer_signals must accommodate one complete group")
+        self.dropped_signals = 0
+        self._newest_timestamp = float("-inf")
+        self._last_cleanup_timestamp = float("-inf")
 
         # Buffer to store incoming signals
         self.signal_buffer: List[RawSignal] = []
 
         # Track which messages we've already processed
-        self.processed_groups: Set[str] = set()
+        self.processed_groups: Dict[str, float] = {}
 
     def add_signal(self, signal: RawSignal) -> None:
         """Add a new signal to the buffer"""
+        if (
+            not math.isfinite(signal.timestamp)
+            or signal.timestamp < self._newest_timestamp - self.buffer_duration
+        ):
+            self.dropped_signals += 1
+            return
+        self._newest_timestamp = max(self._newest_timestamp, signal.timestamp)
+        if self._newest_timestamp - self._last_cleanup_timestamp >= 0.05:
+            self._cleanup_old_signals()
+        if len(self.signal_buffer) >= self.max_buffer_signals:
+            self.dropped_signals += 1
+            return
         self.signal_buffer.append(signal)
-        self._cleanup_old_signals()
 
     def add_signals(self, signals: List[RawSignal]) -> None:
         """Add multiple signals at once"""
-        self.signal_buffer.extend(signals)
-        self._cleanup_old_signals()
+        for signal in signals:
+            self.add_signal(signal)
 
     def _cleanup_old_signals(self) -> None:
         """Remove signals older than buffer_duration using buffered signal time."""
-        if not self.signal_buffer:
-            return
-
-        newest_timestamp = max(sig.timestamp for sig in self.signal_buffer)
-        cutoff_timestamp = newest_timestamp - self.buffer_duration
+        cutoff_timestamp = self._newest_timestamp - self.buffer_duration
         self.signal_buffer = [
             sig for sig in self.signal_buffer if sig.timestamp >= cutoff_timestamp
         ]
+        self.processed_groups = {
+            key: timestamp
+            for key, timestamp in self.processed_groups.items()
+            if timestamp >= cutoff_timestamp
+        }
+        self._last_cleanup_timestamp = self._newest_timestamp
 
     def correlate(self) -> List[CorrelatedSignalGroup]:
         """
@@ -138,6 +159,7 @@ class SignalCorrelator:
         Returns:
             List of signal groups that can be used for MLAT
         """
+        self._cleanup_old_signals()
         if len(self.signal_buffer) < self.min_receivers:
             return []
 
@@ -147,6 +169,7 @@ class SignalCorrelator:
             message_groups[signal.message].append(signal)
 
         correlated_groups = []
+        consumed: set[int] = set()
 
         # For each unique message, find temporal clusters
         for message, signals in message_groups.items():
@@ -161,6 +184,21 @@ class SignalCorrelator:
 
             # Create correlated groups from valid clusters
             for cluster in clusters:
+                # Identical retransmissions are harmless duplicates. Different
+                # arrival claims by the same receiver are ambiguous and rejected.
+                unique = {}
+                for signal in cluster:
+                    unique[
+                        (
+                            signal.receiver_id,
+                            (
+                                signal.timestamp_ns
+                                if signal.timestamp_ns is not None
+                                else signal.timestamp
+                            ),
+                        )
+                    ] = signal
+                cluster = list(unique.values())
                 if self._is_valid_cluster(cluster):
                     group = CorrelatedSignalGroup(
                         message=message,
@@ -180,10 +218,20 @@ class SignalCorrelator:
                     group_id = f"{message}_{timing_id}"
 
                     # Only add if not already processed
-                    if group_id not in self.processed_groups:
+                    if (
+                        group_id not in self.processed_groups
+                        and len(self.processed_groups) < self.max_buffer_signals
+                    ):
                         correlated_groups.append(group)
-                        self.processed_groups.add(group_id)
+                        self.processed_groups[group_id] = max(
+                            signal.timestamp for signal in cluster
+                        )
+                        consumed.update(id(signal) for signal in signals if signal in cluster)
 
+        if consumed:
+            self.signal_buffer = [
+                signal for signal in self.signal_buffer if id(signal) not in consumed
+            ]
         return correlated_groups
 
     def _cluster_by_time(self, signals: List[RawSignal]) -> List[List[RawSignal]]:
@@ -230,7 +278,7 @@ class SignalCorrelator:
 
         # Check for unique receivers
         receiver_ids = set(sig.receiver_id for sig in signals)
-        if len(receiver_ids) < self.min_receivers:
+        if len(receiver_ids) < self.min_receivers or len(receiver_ids) != len(signals):
             return False  # Duplicates from same receiver
 
         # Check time span is reasonable (signals should arrive within ~10ms max)
@@ -293,7 +341,7 @@ class SignalCorrelator:
 
     def get_statistics(self) -> Dict:
         """Get statistics about the correlation process"""
-        message_counts = defaultdict(int)
+        message_counts: dict[str, int] = defaultdict(int)
         for signal in self.signal_buffer:
             message_counts[signal.message] += 1
 
@@ -311,6 +359,8 @@ class SignalCorrelator:
 
         return {
             "buffer_size": len(self.signal_buffer),
+            "buffer_limit": self.max_buffer_signals,
+            "dropped_signals": self.dropped_signals,
             "unique_messages": len(message_counts),
             "processed_groups": len(self.processed_groups),
             "avg_signals_per_message": (

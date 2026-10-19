@@ -4,11 +4,13 @@ import { type DiscoveredReceiver, type RegistryHistoryEvent } from '@aircraft-ma
 import { ccc } from '@ckb-ccc/connector-react';
 import { createColumnHelper, type ColumnDef } from '@tanstack/react-table';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowUpRight, Check, CircleAlert, Download, RadioTower, RefreshCw, UserRound } from 'lucide-react';
+import { ArrowUpRight, Download, RadioTower, RefreshCw, UserRound } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ReceiverInspector } from '@/components/receiver-inspector';
+import { RegistryContractVerification } from '@/components/registry-contract-verification';
+import { SectionErrorBoundary } from '@/components/section-error-boundary';
 import { SignalMarquee, Timeline, WorkspaceHeader, WorkspacePanel, WorkspaceSplit } from '@/components/operations-ui';
 import { RegistryActionPanel } from '@/components/registry-action-panel';
 import { SystemFlow } from '@/components/system-flow';
@@ -20,16 +22,18 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { StatusChip } from '@/components/ui/status-chip';
 import { WalletControl } from '@/components/wallet-control';
 import { apiQueryKeys, fetchJson, presentApiError, PUBLIC_POSITIONS_PATH } from '@/lib/api';
+import { dataSourceState } from '@/lib/data-source';
 import { formatDateTime, number, titleCase, truncateMiddle, u64 } from '@/lib/format';
 import { useOperatorStore } from '@/lib/operator-store';
 import { createRegistrySdk, discoveredReceiverToUi, downloadJson, explorerTransactionUrl, registryDirectoryExport, receiverExport, withRegistryTimeout } from '@/lib/registry';
-import { mlatStatusPresentation, receiverDockState, reconcileReceivers, registryStatusPresentation, summarizeReceiverDirectory, type UnifiedReceiver } from '@/lib/receiver-state';
+import { mlatStatusPresentation, operationalStatusPresentation, receiverDockState, reconcileReceivers, registryStatusPresentation, summarizeReceiverDirectory, type UnifiedReceiver } from '@/lib/receiver-state';
 import type { ModeData, PositionsResponse, ReceiversResponse, RegistryEvidenceData, StatusTone } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
 type DirectoryView = 'all' | 'mine' | 'active' | 'revoked';
 
 const columnHelper = createColumnHelper<UnifiedReceiver>();
+const EMPTY_RECEIVERS: DiscoveredReceiver[] = [];
 
 function ownerAddress(receiver: DiscoveredReceiver, client: ccc.Client): string {
   return ccc.Address.fromScript(receiver.provenance.ownerLock, client).toString();
@@ -100,12 +104,12 @@ export function ReceiversPage({
   const queryClient = useQueryClient();
   const { client, signerInfo, open } = ccc.useCcc();
   const sdk = useMemo(() => createRegistrySdk(client), [client]);
-  const storedSelectedId = useOperatorStore((state) => state.selectedReceiverId);
   const storeHydrated = useOperatorStore((state) => state.hasHydrated);
   const setStoreSelectedReceiverId = useOperatorStore((state) => state.setSelectedReceiverId);
   const setDock = useOperatorStore((state) => state.setDock);
   const setInvestigationContext = useOperatorStore((state) => state.setInvestigationContext);
   const [selectedId, setSelectedId] = useState<string | null>(selectedReceiverId ?? null);
+  const [receiverDetailsExpanded, setReceiverDetailsExpanded] = useState(Boolean(selectedReceiverId));
   const [search, setSearch] = useState('');
   const [view, setView] = useState<DirectoryView>(perspective === 'registry' && !selectedReceiverId ? 'active' : 'all');
   const [walletLocks, setWalletLocks] = useState<ccc.Script[]>([]);
@@ -125,20 +129,18 @@ export function ReceiversPage({
     retry: false,
     refetchInterval: (query) => query.state.status === 'success' ? 30_000 : false,
   });
-  const discovered = directoryQuery.data?.receivers ?? [];
+  const discovered = directoryQuery.data?.receivers ?? EMPTY_RECEIVERS;
   const registryReceivers = useMemo(() => discovered.map(discoveredReceiverToUi), [discovered]);
   const positionsQuery = useQuery({
     queryKey: apiQueryKeys.positions,
     queryFn: () => fetchJson<PositionsResponse>(PUBLIC_POSITIONS_PATH),
     initialData: positionsData,
-    enabled: perspective !== 'registry',
     refetchInterval: 15_000,
   });
   const runtimeReceiversQuery = useQuery({
     queryKey: apiQueryKeys.receivers,
     queryFn: () => fetchJson<ReceiversResponse>('/api/receivers'),
     initialData: receiverData ?? undefined,
-    enabled: perspective !== 'registry',
     refetchInterval: 15_000,
   });
   const runtimeInventoryAvailable = Boolean(runtimeReceiversQuery.data) && !runtimeReceiversQuery.error;
@@ -171,22 +173,15 @@ export function ReceiversPage({
   }, [signerInfo]);
 
   useEffect(() => {
-    if (!selectedReceiverId || selectedReceiverId === selectedId) return;
-    setSelectedId(selectedReceiverId);
+    if (!selectedReceiverId) return;
+    setSelectedId((current) => current === selectedReceiverId ? current : selectedReceiverId);
+    setReceiverDetailsExpanded(true);
     if (perspective === 'registry') setView('all');
-  }, [perspective, selectedId, selectedReceiverId]);
-
-  useEffect(() => {
-    if (!directoryReceivers.length || selectedId) return;
-    const candidate = selectedReceiverId
-      ?? (storeHydrated ? storedSelectedId : null)
-      ?? directoryReceivers[0]?.key
-      ?? null;
-    if (candidate && directoryReceivers.some((receiver) => receiver.key === candidate)) setSelectedId(candidate);
-  }, [directoryReceivers, selectedId, selectedReceiverId, storeHydrated, storedSelectedId]);
+  }, [perspective, selectedReceiverId]);
 
   const selectReceiver = useCallback((receiverIdentity: string) => {
     setSelectedId(receiverIdentity);
+    setReceiverDetailsExpanded(true);
     setStoreSelectedReceiverId(receiverIdentity);
     const query = new URLSearchParams({ receiver: receiverIdentity });
     if (sourceAircraftId) query.set('fromAircraft', sourceAircraftId);
@@ -203,14 +198,9 @@ export function ReceiversPage({
       return `${receiver.label} ${receiver.identity ?? ''} ${receiver.capabilities.join(' ')}`.toLowerCase().includes(query);
     });
   }, [directoryReceivers, ownedIdentities, search, view]);
-  const selectedUi = filtered.find((receiver) => receiver.key === selectedId) ?? filtered[0] ?? null;
+  const selectedUi = directoryReceivers.find((receiver) => receiver.key === selectedId) ?? null;
   const selected = discovered.find((receiver) => receiver.receiver_identity === selectedUi?.identity);
   const selectedOwned = Boolean(selected && ownsReceiver(selected, walletLocks));
-
-  useEffect(() => {
-    if (!filtered.length || filtered.some((receiver) => receiver.key === selectedId)) return;
-    selectReceiver(filtered[0]!.key);
-  }, [filtered, selectReceiver, selectedId]);
 
   const historyQuery = useQuery({
     queryKey: ['registry-v2-history', selected?.receiver_identity],
@@ -224,12 +214,12 @@ export function ReceiversPage({
   });
 
   const columns = useMemo<ColumnDef<UnifiedReceiver, any>[]>(() => {
-    const receiverColumn = columnHelper.display({ id: 'receiver', header: 'Receiver', size: 220, cell: ({ row }) => <div className="min-w-0"><span className="block truncate font-semibold text-ink">{row.original.label}</span><span className="block truncate font-mono text-[10px] text-ink-quiet">{row.original.identity ? truncateMiddle(row.original.identity, 10, 8) : 'No Registry identity'}</span></div> });
-    const ownerColumn = columnHelper.display({ id: 'owner', header: 'Owner', size: 130, cell: ({ row }) => ownedIdentities.has(row.original.identity ?? '') ? <span className="inline-flex items-center gap-1.5 font-semibold text-trust-cyan"><UserRound className="size-3.5" />You</span> : <span className="font-mono text-[11px] text-ink-secondary">{row.original.ownerLockArgs ? truncateMiddle(row.original.ownerLockArgs, 7, 5) : 'Not available'}</span> });
+    const receiverColumn = columnHelper.display({ id: 'receiver', header: 'Receiver', size: 220, cell: ({ row }) => <div className="min-w-0"><span className="block truncate font-semibold text-ink">{row.original.label}</span><span className="block truncate font-mono text-[11px] text-ink-quiet">{row.original.identity ? truncateMiddle(row.original.identity, 10, 8) : 'No Registry identity'}</span></div> });
+    const ownerColumn = columnHelper.display({ id: 'owner', header: 'Owner', size: 130, cell: ({ row }) => ownedIdentities.has(row.original.identity ?? '') ? <span className="inline-flex items-center gap-1.5 font-semibold text-trust-cyan"><UserRound className="size-3.5" />You</span> : <span className="font-mono text-xs text-ink-secondary">{row.original.ownerLockArgs ? truncateMiddle(row.original.ownerLockArgs, 7, 5) : 'Not available'}</span> });
     if (perspective === 'registry') {
       return [
         receiverColumn,
-        columnHelper.display({ id: 'state', header: 'Current state', size: 120, cell: ({ row }) => <StatusChip label={titleCase(row.original.registryRecordStatus ?? 'unknown')} tone={recordStatusTone(row.original.registryRecordStatus)} /> }),
+        columnHelper.display({ id: 'state', header: 'Registry-declared status', size: 150, cell: ({ row }) => <StatusChip label={titleCase(row.original.registryRecordStatus ?? 'unknown')} tone={recordStatusTone(row.original.registryRecordStatus)} /> }),
         ownerColumn,
         columnHelper.display({ id: 'sequence', header: 'Sequence', size: 90, cell: ({ row }) => u64(row.original.registry?.registry?.sequence) }),
         columnHelper.display({ id: 'updated', header: 'Registry updated', size: 170, cell: ({ row }) => row.original.lastRegistryUpdateAt ? formatDateTime(row.original.lastRegistryUpdateAt) : 'Not available' }),
@@ -238,7 +228,8 @@ export function ReceiversPage({
     return [
       receiverColumn,
       columnHelper.display({ id: 'registry', header: 'Registry', size: 125, cell: ({ row }) => <StatusChip {...registryStatusPresentation(row.original.registryStatus)} /> }),
-      columnHelper.display({ id: 'mlat', header: 'MLAT', size: 115, cell: ({ row }) => <StatusChip {...mlatStatusPresentation(row.original.mlatStatus)} /> }),
+      columnHelper.display({ id: 'operational', header: 'Operational', size: 125, cell: ({ row }) => <StatusChip {...operationalStatusPresentation(row.original.operationalStatus)} /> }),
+      columnHelper.display({ id: 'mlat', header: 'MLAT', size: 140, cell: ({ row }) => <StatusChip {...mlatStatusPresentation(row.original.mlatStatus)} /> }),
       ownerColumn,
       columnHelper.display({ id: 'activity', header: 'Last observation', size: 170, cell: ({ row }) => row.original.lastObservationAt ? formatDateTime(row.original.lastObservationAt) : 'Not available' }),
     ];
@@ -287,7 +278,8 @@ export function ReceiversPage({
   };
 
   const discoveryFailures = directoryQuery.data?.failures ?? [];
-  const replayMode = Boolean(modeData?.demo_mode || modeData?.simulation_mode || modeData?.synthetic_feed_mode);
+  const runtimeSource = dataSourceState(modeData, { cached: Boolean(runtimeReceiversQuery.error || positionsQuery.error) });
+  const replayMode = runtimeSource.kind === 'replay' || runtimeSource.kind === 'simulation';
   const summary = summarizeReceiverDirectory(unifiedReceivers);
   const registryDirectoryEmpty = directoryQuery.isSuccess && discovered.length === 0;
   const registryConnected = directoryQuery.isSuccess && !registryDirectoryEmpty;
@@ -339,10 +331,14 @@ export function ReceiversPage({
   const receiverInspectorPanel = (
     <ReceiverInspector
       receiver={selectedInspector}
+      operationalSource={runtimeSource}
       perspective={perspective}
       lifecycle={perspective === 'registry' && selected ? <RegistryHistory history={historyQuery.data} loading={historyQuery.isLoading} error={historyQuery.error} /> : undefined}
-      actions={selected ? <>{returnToAircraft}<Button size="sm" variant="secondary" onClick={exportSelected}><Download className="size-3.5" />Export record</Button><a href={explorerTransactionUrl(selected.provenance.outPoint.txHash)} target="_blank" rel="noreferrer" className={buttonVariants({ variant: 'secondary', size: 'sm' })}>Verify transaction<ArrowUpRight className="size-3.5" /></a></> : selectedUi ? <><Link href={`/app/localization?receiver=${encodeURIComponent(selectedUi.key)}`} className={buttonVariants({ variant: 'secondary', size: 'sm' })}>Open live map<ArrowUpRight className="size-3.5" /></Link>{returnToAircraft}</> : returnToAircraft}
+      actions={selected ? <>{returnToAircraft}<Button size="sm" variant="secondary" onClick={exportSelected}><Download className="size-3.5" />Export record</Button><a href={explorerTransactionUrl(selected.provenance.outPoint.txHash)} target="_blank" rel="noreferrer" className={buttonVariants({ variant: 'secondary', size: 'sm' })}>Verify transaction<ArrowUpRight className="size-3.5" /></a></> : selectedUi ? <><Link href={`/app/localization?receiver=${encodeURIComponent(selectedUi.key)}`} className={buttonVariants({ variant: 'secondary', size: 'sm' })}>Open airspace map<ArrowUpRight className="size-3.5" /></Link>{returnToAircraft}</> : returnToAircraft}
       className="self-start xl:sticky xl:top-20"
+      collapsible
+      expanded={receiverDetailsExpanded}
+      onExpandedChange={setReceiverDetailsExpanded}
     />
   );
 
@@ -389,28 +385,28 @@ export function ReceiversPage({
       </WorkspacePanel> : null}
 
       {directoryQuery.error ? <DataNotice title={perspective === 'registry' ? 'The Registry directory could not be refreshed' : 'Registry refresh failed; Registry receivers are unavailable'} detail={perspective === 'registry' ? 'The CKB testnet indexer did not return a fresh directory. No replay or MLAT receiver is substituted for an on-chain identity.' : 'The CKB testnet indexer did not return a complete directory. Registry-backed receivers are removed from the active MLAT pool until discovery succeeds again. Earlier aircraft evidence remains visible.'} onRetry={() => void directoryQuery.refetch()} /> : null}
-      {runtimeError && perspective !== 'registry' ? <DataNotice title="Receiver operational state could not be refreshed" detail={runtimeError.detail} technicalDetail={runtimeError.technicalDetail} onRetry={() => void runtimeReceiversQuery.refetch()} /> : null}
-      {positionsError && perspective !== 'registry' ? <DataNotice title="Recent aircraft links could not be refreshed" detail={positionsError.detail} technicalDetail={positionsError.technicalDetail} tone="attention" onRetry={() => void positionsQuery.refetch()} /> : null}
+      {runtimeError ? <DataNotice title="Receiver operational state could not be refreshed" detail={runtimeError.detail} technicalDetail={runtimeError.technicalDetail} onRetry={() => void runtimeReceiversQuery.refetch()} /> : null}
+      {positionsError ? <DataNotice title="Recent aircraft links could not be refreshed" detail={positionsError.detail} technicalDetail={positionsError.technicalDetail} tone="attention" onRetry={() => void positionsQuery.refetch()} /> : null}
       {registryDirectoryEmpty ? <DataNotice title="No Registry V2 cells were returned" detail="The indexer answered successfully but returned no Registry records. This may be an empty registry or indexer lag; do not treat it as proof that a receiver does not exist." tone="attention" onRetry={() => void directoryQuery.refetch()} /> : null}
       {discoveryFailures.length ? <DataNotice title={`${discoveryFailures.length} registry ${discoveryFailures.length === 1 ? 'cell was' : 'cells were'} quarantined`} detail="The SDK rejected malformed, duplicate, or incomplete data instead of presenting it as a valid receiver." tone="attention" /> : null}
 
       {perspective === 'registry' ? (
-        <div className="grid min-w-0 gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(320px,390px)]" data-registry-workflow>
-          <div className="min-w-0 xl:col-start-1 xl:row-start-1" data-registry-workflow-item="directory">{directoryPanel}</div>
-          <div className="min-w-0 xl:col-start-2 xl:row-span-2 xl:row-start-1" data-registry-workflow-item="receiver-context">{receiverInspectorPanel}</div>
+        <div className={cn('grid min-w-0 gap-4', selectedInspector && 'xl:grid-cols-[minmax(0,1fr)_minmax(320px,390px)]')} data-registry-workflow>
+          <div className="min-w-0 xl:col-start-1 xl:row-start-1" data-registry-workflow-item="directory"><SectionErrorBoundary title="Registry data unavailable" detail="The receiver directory failed to render. Transaction controls and the rest of the console remain available." resetKey={perspective} diagnosticsHref="/app/environment">{directoryPanel}</SectionErrorBoundary></div>
+          {selectedInspector ? <div className="min-w-0 xl:col-start-2 xl:row-span-2 xl:row-start-1" data-registry-workflow-item="receiver-context"><SectionErrorBoundary title="Receiver details unavailable" detail="The selected receiver details failed to render. The directory remains available." resetKey={selectedUi?.key ?? 'none'} diagnosticsHref="/app/environment">{receiverInspectorPanel}</SectionErrorBoundary></div> : null}
           <div className="min-w-0 xl:col-start-1 xl:row-start-2" data-registry-workflow-item="owner-actions">
-            <RegistryActionPanel sdk={sdk} signer={signerInfo?.signer} selected={selected} ownsSelected={selectedOwned} onCommitted={refreshAfterTransaction} />
+            <SectionErrorBoundary title="Registry transaction controls unavailable" detail="The wallet action area failed to render. No transaction was submitted by this error." resetKey={selectedUi?.key ?? 'none'} diagnosticsHref="/app/environment"><RegistryActionPanel sdk={sdk} signer={signerInfo?.signer} selected={selected} ownsSelected={selectedOwned} onCommitted={refreshAfterTransaction} /></SectionErrorBoundary>
           </div>
         </div>
       ) : (
-        <WorkspaceSplit
+        selectedInspector ? <WorkspaceSplit
           secondaryWidth="390px"
-          primary={<div className="space-y-4">{directoryPanel}{registryEventsPanel}</div>}
-          secondary={receiverInspectorPanel}
-        />
+          primary={<div className="space-y-4"><SectionErrorBoundary title="Receiver inventory unavailable" detail="The receiver list failed to render. The selected receiver and the rest of the console remain available." resetKey={perspective} diagnosticsHref="/app/environment">{directoryPanel}</SectionErrorBoundary>{registryEventsPanel}</div>}
+          secondary={<SectionErrorBoundary title="Receiver details unavailable" detail="The selected receiver details failed to render. The inventory remains available." resetKey={selectedUi?.key ?? 'none'} diagnosticsHref="/app/environment">{receiverInspectorPanel}</SectionErrorBoundary>}
+        /> : <div className="space-y-4"><SectionErrorBoundary title="Receiver inventory unavailable" detail="The receiver list failed to render. The rest of the console remains available." resetKey={perspective} diagnosticsHref="/app/environment">{directoryPanel}</SectionErrorBoundary>{registryEventsPanel}</div>
       )}
 
-      {perspective === 'registry' ? (registryEvidence ? <WorkspacePanel title="Verified testnet lifecycle" detail="Saved evidence anchors the Registry V2 contract deployment used by this directory." tone="trust"><div className="flex flex-col gap-3 p-4 text-xs sm:flex-row sm:items-center"><Check className="size-4 shrink-0 text-healthy" /><p className="flex-1 leading-5 text-ink-secondary">The saved testnet lifecycle completed create, update, transfer, and permanent revoke on {registryEvidence.network}. It is technical evidence, not evidence that an external operator completed a pilot.</p><a href={explorerTransactionUrl(registryEvidence.contract.deployment_transaction)} target="_blank" rel="noreferrer" className={buttonVariants({ variant: 'secondary', size: 'sm' })}>Verify contract deployment<ArrowUpRight className="size-3.5" /></a></div></WorkspacePanel> : <div className="flex items-start gap-3 rounded-md border border-attention/35 bg-attention/[0.06] p-4 text-xs leading-5 text-ink-secondary"><CircleAlert className="mt-0.5 size-4 shrink-0 text-attention" />Saved testnet lifecycle evidence is unavailable. Registry discovery remains independent, but this deployment should not be published without its checksum-verifiable evidence bundle.</div>) : null}
+      {perspective === 'registry' ? <RegistryContractVerification evidence={registryEvidence} mode={modeData} /> : null}
     </div>
   );
 }

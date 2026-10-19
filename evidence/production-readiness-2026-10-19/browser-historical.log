@@ -1,0 +1,28 @@
+
+> mlat-airspace-console@0.1.0 test:e2e:replay
+> PLAYWRIGHT_DATA_MODE=historical playwright test
+
+[WebServer] [2026-10-19 09:58:50 +0300] [20850] [INFO] Starting gunicorn 26.0.0
+
+[WebServer] [2026-10-19 09:58:50 +0300] [20850] [INFO] Listening at: http://127.0.0.1:4312 (20850)
+[WebServer] [2026-10-19 09:58:50 +0300] [20850] [INFO] Using worker: gthread
+
+[WebServer] [2026-10-19 09:58:50 +0300] [20859] [INFO] Booting worker with pid: 20859
+
+[WebServer] [2026-10-19 09:58:50 +0300] [20850] [INFO] Control socket listening at /Users/jeremicarose/.gunicorn/gunicorn.ctl
+
+[WebServer] 2026-10-19 09:58:51,446 - mlat_reference.database.database - INFO - Database tables created/verified for /tmp/ckb-registry-playwright-20845.db
+
+[WebServer] (node:20904) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+
+Running 2 tests using 1 worker
+
+(node:20907) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[1/2] [chromium] › test/e2e/historical-replay.spec.mjs:4:1 › historical observations reach stored solutions and the replay debugger
+[2/2] [chromium] › test/e2e/historical-replay.spec.mjs:24:1 › historical replay retains rejected events and supports mobile keyboard use
+  2 passed (24.3s)

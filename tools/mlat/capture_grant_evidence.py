@@ -153,6 +153,10 @@ def raw_position_link_failures(
 ) -> list[str]:
     if not positions:
         return ["The MLAT position export is empty."]
+    if any(position.get("data_provenance") != "LIVE" for position in positions):
+        return [
+            "Position provenance is not explicitly LIVE; runtime mode cannot relabel stored observations."
+        ]
 
     raw_by_aircraft: dict[str, dict[str, list[dict[str, Any]]]] = {}
     for record in records:
@@ -196,7 +200,9 @@ def raw_position_link_failures(
     )
 
 
-def live_gate_failures(mode: dict[str, Any], pipeline: dict[str, Any]) -> list[str]:
+def live_gate_failures(
+    mode: dict[str, Any], pipeline: dict[str, Any], frontend_health: dict[str, Any] | None = None
+) -> list[str]:
     failures: list[str] = []
     if mode.get("mode") != "live" or mode.get("runtime_status") != "active":
         failures.append("Runtime is not actively processing live observations.")
@@ -219,11 +225,11 @@ def live_gate_failures(mode: dict[str, Any], pipeline: dict[str, Any]) -> list[s
         "registry",
         "discovery",
         "ingest",
+        "clock",
         "correlation",
         "solve",
         "storage",
         "api",
-        "dashboard",
     }
     statuses = {stage.get("id"): stage.get("status") for stage in pipeline.get("stages", [])}
     for stage_id in sorted(required_stages):
@@ -231,6 +237,14 @@ def live_gate_failures(mode: dict[str, Any], pipeline: dict[str, Any]) -> list[s
             failures.append(
                 f"Pipeline stage {stage_id!r} is {statuses.get(stage_id, 'missing')!r}, not 'pass'."
             )
+    if (
+        not frontend_health
+        or frontend_health.get("status") != "ok"
+        or frontend_health.get("service") != "receiver-registry-operations"
+    ):
+        failures.append(
+            "Frontend process health was not independently verified; check its /healthz endpoint and inspect rendering separately."
+        )
     return failures
 
 
@@ -270,6 +284,11 @@ def git_state() -> dict[str, Any]:
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--api-base", default="http://127.0.0.1:5057")
+    parser.add_argument(
+        "--frontend-base",
+        default="http://127.0.0.1:3000",
+        help="Separate frontend origin whose /healthz endpoint is checked",
+    )
     parser.add_argument("--db", default="data/mlat_live.db")
     parser.add_argument("--reference", required=True, help="Aligned trusted-reference JSONL file")
     parser.add_argument(
@@ -358,12 +377,17 @@ def main() -> int:
     pipeline = fetch_json(f"{api_base}/api/pipeline")
     readiness = fetch_json(f"{api_base}/api/readiness")
     receivers_snapshot = fetch_json(f"{api_base}/api/receivers")
-    failures = preflight_failures + live_gate_failures(mode, pipeline)
+    try:
+        frontend_health = fetch_json(f"{args.frontend_base.rstrip('/')}/healthz")
+    except (OSError, ValueError):
+        frontend_health = {}
+    failures = preflight_failures + live_gate_failures(mode, pipeline, frontend_health)
     if failures and not args.allow_non_live:
-        shutil.rmtree(bundle)
+        write_json(bundle / "rejection.json", {"status": "FAIL", "failures": failures})
         raise SystemExit("Live evidence gates failed:\n- " + "\n- ".join(failures))
 
     write_json(bundle / "mode.json", mode)
+    write_json(bundle / "frontend-health.json", frontend_health)
     write_json(bundle / "pipeline.json", pipeline)
     write_json(bundle / "readiness.json", readiness)
     write_json(bundle / "receivers.json", receivers_snapshot)
@@ -431,7 +455,7 @@ def main() -> int:
     failures.extend(raw_clock_config_failures(raw_records, configured_receivers))
     failures.extend(raw_position_link_failures(raw_records, positions))
     if failures and not args.allow_non_live:
-        shutil.rmtree(bundle)
+        write_json(bundle / "rejection.json", {"status": "FAIL", "failures": failures})
         raise SystemExit("Live evidence gates failed:\n- " + "\n- ".join(failures))
     live_capture = not failures
 
@@ -489,7 +513,7 @@ def main() -> int:
 
     artifact_paths = sorted(path for path in bundle.rglob("*") if path.is_file())
     manifest = {
-        "schema_version": 2,
+        "schema_version": 3,
         "generated_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
         "evidence_status": "publishable" if publishable else "validation_only",
         "software": software,

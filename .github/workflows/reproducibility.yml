@@ -37,6 +37,13 @@ jobs:
           python -m flake8 src/ckb_registry src/mlat_reference tools tests
       - name: Run complete Python suite
         run: python -m pytest -q
+      - name: Type-check Python source
+        run: python -m mypy src --ignore-missing-imports
+      - name: Reproduce the complete compact historical benchmark
+        run: |
+          python tools/mlat/run_compact_solver_benchmark.py --output "${RUNNER_TEMP}/compact-a/report.json"
+          python tools/mlat/run_compact_solver_benchmark.py --output "${RUNNER_TEMP}/compact-b/report.json"
+          diff -ru "${RUNNER_TEMP}/compact-a" "${RUNNER_TEMP}/compact-b"
       - name: Verify documentation links
         run: |
           python tools/check_documentation.py
@@ -60,7 +67,7 @@ jobs:
       - name: Verify hashes and claim scope
         run: python tools/mlat/run_reproducible_benchmark.py --output-dir "${RUNNER_TEMP}/benchmark-a" --verify-only
       - name: Require committed artifact to be current
-        run: diff -ru evidence/mlat-reference/reproducible-benchmark-v2 "${RUNNER_TEMP}/benchmark-a"
+        run: diff -ru evidence/mlat-reference/reproducible-benchmark-v4 "${RUNNER_TEMP}/benchmark-a"
       - name: Capture CI environment
         run: |
           mkdir -p ci-artifact
@@ -144,6 +151,10 @@ jobs:
         run: npm run test:e2e:prepared
         env:
           BROWSER_QA_REPORT: test-results/browser-qa-report.json
+      - name: Run historical replay browser and accessibility suite
+        run: npm run test:e2e:replay
+        env:
+          BROWSER_QA_REPORT: test-results/historical-browser-qa-report.json
       - name: Upload browser QA evidence
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
@@ -175,13 +186,24 @@ jobs:
 
   container-build:
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
       - name: Build pinned application image
         run: docker build --tag mlat-system:ci .
+      - name: Build the production frontend image
+        run: docker build --file reference/mlat/frontend/Dockerfile --tag mlat-frontend:ci .
       - name: Smoke-test installed package and entrypoints
         run: >-
           docker run --rm --entrypoint sh mlat-system:ci -c
           'command -v mlat-processor && command -v mlat-api &&
           python -c "import mlat_reference.api.rest_api, mlat_reference.runtime; print(\"container imports: pass\")"'
+      - name: Verify non-root startup, public assets, proxy, persistence and shutdown
+        run: python3 tools/check_container_runtime.py --output artifacts/container-smoke.json
+      - name: Retain container validation evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: container-smoke-${{ github.sha }}
+          path: artifacts/container-smoke.json
+          if-no-files-found: warn
