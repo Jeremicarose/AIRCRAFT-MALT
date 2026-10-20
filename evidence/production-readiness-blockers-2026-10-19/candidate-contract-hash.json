@@ -1,0 +1,6 @@
+{
+  "candidate_commit": "ad3051abb3f95c18bfcd158f513474c3400128e5",
+  "contract_binary_sha256": "087a8b19ca99170d8d1e8c018b749259ce067ad3cb1cc8cef3b4a490ccae0465",
+  "expected_deployed_sha256": "087a8b19ca99170d8d1e8c018b749259ce067ad3cb1cc8cef3b4a490ccae0465",
+  "matches_deployed": true
+}

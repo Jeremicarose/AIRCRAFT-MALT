@@ -55,8 +55,7 @@ services:
     dockerfilePath: ./reference/mlat/frontend/Dockerfile
     healthCheckPath: /healthz
     envVars:
+      # Free web services cannot receive private-network requests. Set this
+      # server-only value to the reference API's actual public HTTPS origin.
       - key: MLAT_API_INTERNAL_URL
-        fromService:
-          type: web
-          name: registry-v2-mlat-reference
-          property: hostport
+        sync: false

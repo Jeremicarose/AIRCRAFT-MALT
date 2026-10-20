@@ -102,9 +102,10 @@ Services:
 The processor and API share local `data/` and `logs/` bind mounts. This is a
 single-host topology. Do not place them on different hosts with SQLite.
 The Python image runs as UID/GID 10001. Prepare writable host directories for
-that identity, or use locally managed volumes. This audit did not execute Docker
-because no Docker engine was installed in its environment; CI retains the image
-build and installed-entrypoint smoke test.
+that identity, or use locally managed volumes. The follow-up local Linux VM run verified both images, non-root startup, the
+synthetic pipeline, restart, backup/restore and shutdown. See the
+[container evidence](evidence/console-experience-2026-10-20/README.md).
+Target-host operations remain a separate acceptance requirement.
 
 ## Strict Live Configuration
 
@@ -145,8 +146,12 @@ timing and clock provenance accepted by the runtime.
 
 `render.yaml` defines two ephemeral Render web services: a Python service for
 the replay processor/API and a Docker service for the Next.js frontend. The
-Python service uses `/tmp` SQLite, and the frontend reaches it through the
-internal `MLAT_API_INTERNAL_URL` service binding.
+Python service uses `/tmp` SQLite. Set the frontend's server-only
+`MLAT_API_INTERNAL_URL` to that API service's actual public HTTPS origin.
+Render free web services cannot receive private-network requests, so a
+`fromService: hostport` binding will not work for this free blueprint.
+See [Render private networking](https://render.com/docs/private-network).
+The blueprint prompts for this value instead of inventing a service URL.
 
 This blueprint is a hosted walkthrough, not a production deployment template
 and not evidence of live field operation. A public deployment URL and

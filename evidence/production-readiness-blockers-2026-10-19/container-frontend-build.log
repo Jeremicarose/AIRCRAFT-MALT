@@ -1,0 +1,208 @@
+#0 building with "rootless" instance using docker driver
+
+#1 [internal] load build definition from Dockerfile
+#1 transferring dockerfile: 1.60kB done
+#1 DONE 0.0s
+
+#2 [internal] load metadata for docker.io/library/node:22.23.1-alpine3.24@sha256:16e22a550f3863206a3f701448c45f7912c6896a62de43add43bb9c86130c3e2
+#2 DONE 4.7s
+
+#3 [internal] load .dockerignore
+#3 transferring context: 293B done
+#3 DONE 0.0s
+
+#4 [builder  1/11] FROM docker.io/library/node:22.23.1-alpine3.24@sha256:16e22a550f3863206a3f701448c45f7912c6896a62de43add43bb9c86130c3e2
+#4 resolve docker.io/library/node:22.23.1-alpine3.24@sha256:16e22a550f3863206a3f701448c45f7912c6896a62de43add43bb9c86130c3e2 0.0s done
+#4 ...
+
+#5 [internal] load build context
+#5 transferring context: 1.25MB 0.1s done
+#5 DONE 0.1s
+
+#4 [builder  1/11] FROM docker.io/library/node:22.23.1-alpine3.24@sha256:16e22a550f3863206a3f701448c45f7912c6896a62de43add43bb9c86130c3e2
+#4 sha256:d10ff586f6bdbdd6000a70a914e56bf05bedc78de3311d08a953643982d84e23 0B / 446B 0.2s
+#4 sha256:1d4d101ceaad39fb56dcac0bb6cc291e6cdec3b711786f0c82b050b5b5b85690 0B / 1.26MB 0.2s
+#4 sha256:3f4c164634d251a8b256151a9e1c1d3e5c5b21f1974f00a213875e66e3fa0801 0B / 52.31MB 0.2s
+#4 sha256:55afa1ecc21d2bb5e5045f32dafee56272ffd89860bac26f6c32123439af26a4 0B / 3.85MB 0.2s
+#4 sha256:d10ff586f6bdbdd6000a70a914e56bf05bedc78de3311d08a953643982d84e23 446B / 446B 0.4s done
+#4 sha256:1d4d101ceaad39fb56dcac0bb6cc291e6cdec3b711786f0c82b050b5b5b85690 1.05MB / 1.26MB 1.5s
+#4 sha256:1d4d101ceaad39fb56dcac0bb6cc291e6cdec3b711786f0c82b050b5b5b85690 1.26MB / 1.26MB 1.6s done
+#4 sha256:55afa1ecc21d2bb5e5045f32dafee56272ffd89860bac26f6c32123439af26a4 1.05MB / 3.85MB 2.3s
+#4 sha256:55afa1ecc21d2bb5e5045f32dafee56272ffd89860bac26f6c32123439af26a4 3.85MB / 3.85MB 2.5s done
+#4 extracting sha256:55afa1ecc21d2bb5e5045f32dafee56272ffd89860bac26f6c32123439af26a4
+#4 sha256:3f4c164634d251a8b256151a9e1c1d3e5c5b21f1974f00a213875e66e3fa0801 5.24MB / 52.31MB 2.7s
+#4 extracting sha256:55afa1ecc21d2bb5e5045f32dafee56272ffd89860bac26f6c32123439af26a4 0.2s done
+#4 sha256:3f4c164634d251a8b256151a9e1c1d3e5c5b21f1974f00a213875e66e3fa0801 9.44MB / 52.31MB 3.3s
+#4 sha256:3f4c164634d251a8b256151a9e1c1d3e5c5b21f1974f00a213875e66e3fa0801 12.58MB / 52.31MB 3.5s
+#4 sha256:3f4c164634d251a8b256151a9e1c1d3e5c5b21f1974f00a213875e66e3fa0801 16.78MB / 52.31MB 3.8s
+#4 sha256:3f4c164634d251a8b256151a9e1c1d3e5c5b21f1974f00a213875e66e3fa0801 23.07MB / 52.31MB 4.7s
+#4 sha256:3f4c164634d251a8b256151a9e1c1d3e5c5b21f1974f00a213875e66e3fa0801 26.21MB / 52.31MB 5.0s
+#4 sha256:3f4c164634d251a8b256151a9e1c1d3e5c5b21f1974f00a213875e66e3fa0801 31.46MB / 52.31MB 5.6s
+#4 sha256:3f4c164634d251a8b256151a9e1c1d3e5c5b21f1974f00a213875e66e3fa0801 34.60MB / 52.31MB 5.9s
+#4 sha256:3f4c164634d251a8b256151a9e1c1d3e5c5b21f1974f00a213875e66e3fa0801 40.89MB / 52.31MB 6.6s
+#4 sha256:3f4c164634d251a8b256151a9e1c1d3e5c5b21f1974f00a213875e66e3fa0801 46.14MB / 52.31MB 7.4s
+#4 sha256:3f4c164634d251a8b256151a9e1c1d3e5c5b21f1974f00a213875e66e3fa0801 50.33MB / 52.31MB 7.7s
+#4 sha256:3f4c164634d251a8b256151a9e1c1d3e5c5b21f1974f00a213875e66e3fa0801 52.31MB / 52.31MB 7.9s done
+#4 extracting sha256:3f4c164634d251a8b256151a9e1c1d3e5c5b21f1974f00a213875e66e3fa0801
+#4 extracting sha256:3f4c164634d251a8b256151a9e1c1d3e5c5b21f1974f00a213875e66e3fa0801 2.9s done
+#4 DONE 11.0s
+
+#4 [builder  1/11] FROM docker.io/library/node:22.23.1-alpine3.24@sha256:16e22a550f3863206a3f701448c45f7912c6896a62de43add43bb9c86130c3e2
+#4 extracting sha256:1d4d101ceaad39fb56dcac0bb6cc291e6cdec3b711786f0c82b050b5b5b85690
+#4 extracting sha256:1d4d101ceaad39fb56dcac0bb6cc291e6cdec3b711786f0c82b050b5b5b85690 0.2s done
+#4 DONE 11.1s
+
+#4 [builder  1/11] FROM docker.io/library/node:22.23.1-alpine3.24@sha256:16e22a550f3863206a3f701448c45f7912c6896a62de43add43bb9c86130c3e2
+#4 extracting sha256:d10ff586f6bdbdd6000a70a914e56bf05bedc78de3311d08a953643982d84e23 0.0s done
+#4 DONE 11.1s
+
+#6 [builder  2/11] WORKDIR /workspace/sdk/typescript
+#6 DONE 0.0s
+
+#7 [builder  3/11] COPY sdk/typescript/package.json sdk/typescript/package-lock.json ./
+#7 DONE 0.0s
+
+#8 [builder  4/11] COPY sdk/typescript/ ./
+#8 DONE 0.1s
+
+#9 [builder  5/11] RUN npm ci
+#9 ...
+
+#10 [runner 2/6] RUN addgroup --system --gid 1001 nodejs && adduser --system --uid 1001 nextjs
+#10 DONE 0.4s
+
+#11 [runner 3/6] WORKDIR /app
+#11 DONE 0.1s
+
+#9 [builder  5/11] RUN npm ci
+#9 5.672 
+#9 5.672 > @aircraft-malt/registry-v2@0.1.0 prepare
+#9 5.672 > npm run build
+#9 5.672 
+#9 5.956 
+#9 5.956 > @aircraft-malt/registry-v2@0.1.0 build
+#9 5.956 > tsc -p tsconfig.json
+#9 5.956 
+#9 10.38 
+#9 10.38 added 48 packages, and audited 49 packages in 10s
+#9 10.38 
+#9 10.38 11 packages are looking for funding
+#9 10.38   run `npm fund` for details
+#9 10.39 
+#9 10.39 4 low severity vulnerabilities
+#9 10.39 
+#9 10.39 To address all issues (including breaking changes), run:
+#9 10.39   npm audit fix --force
+#9 10.39 
+#9 10.39 Run `npm audit` for details.
+#9 10.39 npm notice
+#9 10.39 npm notice New major version of npm available! 10.9.8 -> 12.2.0
+#9 10.39 npm notice Changelog: https://github.com/npm/cli/releases/tag/v12.2.0
+#9 10.39 npm notice To update run: npm install -g npm@12.2.0
+#9 10.39 npm notice
+#9 DONE 10.6s
+
+#12 [builder  6/11] WORKDIR /workspace/reference/mlat/frontend
+#12 DONE 0.1s
+
+#13 [builder  7/11] COPY reference/mlat/frontend/package.json reference/mlat/frontend/package-lock.json ./
+#13 DONE 0.1s
+
+#14 [builder  8/11] RUN npm ci
+#14 53.63 
+#14 53.63 added 283 packages, and audited 285 packages in 53s
+#14 53.63 
+#14 53.63 42 packages are looking for funding
+#14 53.63   run `npm fund` for details
+#14 53.71 
+#14 53.71 21 low severity vulnerabilities
+#14 53.71 
+#14 53.71 To address issues that do not require attention, run:
+#14 53.71   npm audit fix
+#14 53.71 
+#14 53.71 To address all issues (including breaking changes), run:
+#14 53.71   npm audit fix --force
+#14 53.71 
+#14 53.71 Run `npm audit` for details.
+#14 DONE 54.5s
+
+#15 [builder  9/11] COPY reference/mlat/frontend/ ./
+#15 DONE 0.3s
+
+#16 [builder 10/11] COPY docs/pilot/assets/ /workspace/docs/pilot/assets/
+#16 DONE 0.0s
+
+#17 [builder 11/11] RUN npm run build
+#17 0.419 
+#17 0.419 > mlat-airspace-console@0.1.0 build
+#17 0.419 > next build --webpack
+#17 0.419 
+#17 1.298 ▲ Next.js 16.3.8 (webpack)
+#17 1.329 ✓ Running next.config.mjs took 30ms
+#17 1.353 Attention: Next.js now collects completely anonymous telemetry regarding usage.
+#17 1.353 This information is used to shape Next.js' roadmap and prioritize features.
+#17 1.353 You can learn more, including how to opt-out if you'd not like to participate in this anonymous program, by visiting the following URL:
+#17 1.353 https://nextjs.org/telemetry
+#17 1.353 
+#17 1.402 
+#17 1.516   Creating an optimized production build ...
+#17 254.7 ✓ Compiled successfully in 4.1min
+#17 254.7   Running TypeScript ...
+#17 271.4   Finished TypeScript in 16.7s ...
+#17 271.4   Collecting page data using 1 worker ...
+#17 273.4   Generating static pages using 1 worker (0/20) ...
+#17 275.6   Generating static pages using 1 worker (5/20) 
+#17 275.6   Generating static pages using 1 worker (10/20) 
+#17 275.6   Generating static pages using 1 worker (15/20) 
+#17 277.9 ✓ Generating static pages using 1 worker (20/20) in 4.5s
+#17 278.8   Finalizing page optimization ...
+#17 278.8   Collecting build traces ...
+#17 315.4 
+#17 315.4 Route (app)
+#17 315.4 ┌ ○ /
+#17 315.4 ├ ○ /_not-found
+#17 315.4 ├ ƒ /api/[...path]
+#17 315.4 ├ ○ /app
+#17 315.4 ├ ƒ /app/aircraft
+#17 315.4 ├ ○ /app/analytics
+#17 315.4 ├ ƒ /app/benchmark
+#17 315.4 ├ ƒ /app/environment
+#17 315.4 ├ ƒ /app/localization
+#17 315.4 ├ ƒ /app/metrics
+#17 315.4 ├ ƒ /app/overview
+#17 315.4 ├ ƒ /app/pipeline
+#17 315.4 ├ ƒ /app/receivers
+#17 315.4 ├ ƒ /app/registry
+#17 315.4 ├ ƒ /app/replay
+#17 315.4 ├ ƒ /app/settings
+#17 315.4 ├ ○ /dashboard
+#17 315.4 ├ ƒ /healthz
+#17 315.4 ├ ○ /icon.svg
+#17 315.4 └ ○ /pilot
+#17 315.4 
+#17 315.4 
+#17 315.4 ○  (Static)   prerendered as static content
+#17 315.4 ƒ  (Dynamic)  server-rendered on demand
+#17 315.4 
+#17 DONE 315.6s
+
+#18 [runner 4/6] COPY --from=builder --chown=nextjs:nodejs /workspace/reference/mlat/frontend/.next-production/standalone ./
+#18 DONE 0.7s
+
+#19 [runner 5/6] COPY --from=builder --chown=nextjs:nodejs /workspace/reference/mlat/frontend/.next-production/static ./reference/mlat/frontend/.next-production/static
+#19 DONE 0.1s
+
+#20 [runner 6/6] WORKDIR /app/reference/mlat/frontend
+#20 DONE 0.0s
+
+#21 exporting to image
+#21 exporting layers
+#21 exporting layers 4.0s done
+#21 exporting manifest sha256:c95f354127b22c9b48e2495c82070bdbb9481326f40a4b4289da512ef0d1ae3a done
+#21 exporting config sha256:d57a9d52ff0aca4fd97f378ac3a33d4a6988f40ee481cdde6afe63b59b8d4881 done
+#21 exporting attestation manifest sha256:a11644ebb8a2b503e1dc3190a9105b739097d8a668efd1b616d8fcd008460933 0.0s done
+#21 exporting manifest list sha256:eaeaf73f7c8ca6551fb744392f004386a98ccb8ff54290324e9c562f67e6c090 done
+#21 naming to docker.io/library/mlat-frontend:readiness-ad3051a done
+#21 unpacking to docker.io/library/mlat-frontend:readiness-ad3051a
+#21 unpacking to docker.io/library/mlat-frontend:readiness-ad3051a 4.1s done
+#21 DONE 8.2s

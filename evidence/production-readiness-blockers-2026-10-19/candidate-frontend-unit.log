@@ -1,0 +1,401 @@
+
+> mlat-airspace-console@0.1.0 test
+> node --experimental-transform-types --test test/*.test.mjs
+
+TAP version 13
+# (node:31640) ExperimentalWarning: Transform Types is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: keeps low-level API failures behind technical details
+ok 1 - keeps low-level API failures behind technical details
+  ---
+  duration_ms: 1.94361
+  type: 'test'
+  ...
+# Subtest: explains timeouts and rate limits with a recovery action
+ok 2 - explains timeouts and rate limits with a recovery action
+  ---
+  duration_ms: 0.977115
+  type: 'test'
+  ...
+# Subtest: uses the caller explanation for an unexpected error
+ok 3 - uses the caller explanation for an unexpected error
+  ---
+  duration_ms: 0.315229
+  type: 'test'
+  ...
+# (node:31641) ExperimentalWarning: Transform Types is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: does not call saved evidence a live verification when runtime configuration is absent
+ok 4 - does not call saved evidence a live verification when runtime configuration is absent
+  ---
+  duration_ms: 3.265905
+  type: 'test'
+  ...
+# Subtest: reports the expected and actual configuration mismatch
+ok 5 - reports the expected and actual configuration mismatch
+  ---
+  duration_ms: 0.277214
+  type: 'test'
+  ...
+# Subtest: uses configuration match language for matching immutable values
+ok 6 - uses configuration match language for matching immutable values
+  ---
+  duration_ms: 0.373267
+  type: 'test'
+  ...
+# (node:31642) ExperimentalWarning: Transform Types is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: classifies deterministic demo data as synthetic even when timestamps are recent
+ok 7 - classifies deterministic demo data as synthetic even when timestamps are recent
+  ---
+  duration_ms: 4.520982
+  type: 'test'
+  ...
+# Subtest: keeps simulation separate from replay
+ok 8 - keeps simulation separate from replay
+  ---
+  duration_ms: 0.304163
+  type: 'test'
+  ...
+# Subtest: requires an explicitly active live runtime before using the live label
+ok 9 - requires an explicitly active live runtime before using the live label
+  ---
+  duration_ms: 0.305731
+  type: 'test'
+  ...
+# Subtest: marks last-known data as cached after a failed refresh
+ok 10 - marks last-known data as cached after a failed refresh
+  ---
+  duration_ms: 0.307606
+  type: 'test'
+  ...
+# Subtest: stored provenance overrides the current runtime mode
+ok 11 - stored provenance overrides the current runtime mode
+  ---
+  duration_ms: 0.278931
+  type: 'test'
+  ...
+# Subtest: browser evidence fails closed and records test and accessibility failures
+ok 12 - browser evidence fails closed and records test and accessibility failures
+  ---
+  duration_ms: 186.716323
+  type: 'test'
+  ...
+# Subtest: bounds browser API requests and preserves readable failure context
+ok 13 - bounds browser API requests and preserves readable failure context
+  ---
+  duration_ms: 3.441131
+  type: 'test'
+  ...
+# Subtest: fails closed when Registry discovery is unavailable
+ok 14 - fails closed when Registry discovery is unavailable
+  ---
+  duration_ms: 0.306597
+  type: 'test'
+  ...
+# Subtest: excludes CKB Registry rows without an explicit canonical identity
+ok 15 - excludes CKB Registry rows without an explicit canonical identity
+  ---
+  duration_ms: 0.52644
+  type: 'test'
+  ...
+# (node:31645) ExperimentalWarning: Transform Types is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: formats the complete u64 range without JavaScript number rounding
+ok 16 - formats the complete u64 range without JavaScript number rounding
+  ---
+  duration_ms: 195.395038
+  type: 'test'
+  ...
+# Subtest: does not round an out-of-range Registry timestamp into a different date
+ok 17 - does not round an out-of-range Registry timestamp into a different date
+  ---
+  duration_ms: 0.374627
+  type: 'test'
+  ...
+# Subtest: keeps the production OpenStreetMap source and an explicit unavailable state
+ok 18 - keeps the production OpenStreetMap source and an explicit unavailable state
+  ---
+  duration_ms: 2.415545
+  type: 'test'
+  ...
+# Subtest: uses a cross-origin referrer policy compatible with OSM tiles without dropping security headers
+ok 19 - uses a cross-origin referrer policy compatible with OSM tiles without dropping security headers
+  ---
+  duration_ms: 0.423794
+  type: 'test'
+  ...
+# (node:31668) ExperimentalWarning: Transform Types is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: keeps replay mode out of the actionable notification list
+ok 20 - keeps replay mode out of the actionable notification list
+  ---
+  duration_ms: 2.71359
+  type: 'test'
+  ...
+# Subtest: does not claim insufficient geometry when receiver data is unavailable
+ok 21 - does not claim insufficient geometry when receiver data is unavailable
+  ---
+  duration_ms: 0.331969
+  type: 'test'
+  ...
+# Subtest: reports insufficient receiver geometry once with an actionable destination
+ok 22 - reports insufficient receiver geometry once with an actionable destination
+  ---
+  duration_ms: 0.279129
+  type: 'test'
+  ...
+# [zustand persist middleware] Unable to update item 'mlat-console-operator-state', the given storage is currently unavailable.
+# [zustand persist middleware] Unable to update item 'mlat-console-operator-state', the given storage is currently unavailable.
+# [zustand persist middleware] Unable to update item 'mlat-console-operator-state', the given storage is currently unavailable.
+# [zustand persist middleware] Unable to update item 'mlat-console-operator-state', the given storage is currently unavailable.
+# [zustand persist middleware] Unable to update item 'mlat-console-operator-state', the given storage is currently unavailable.
+# [zustand persist middleware] Unable to update item 'mlat-console-operator-state', the given storage is currently unavailable.
+# [zustand persist middleware] Unable to update item 'mlat-console-operator-state', the given storage is currently unavailable.
+# (node:31675) ExperimentalWarning: Transform Types is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: does not publish a new store state when the investigation dock is unchanged
+ok 23 - does not publish a new store state when the investigation dock is unchanged
+  ---
+  duration_ms: 3.194793
+  type: 'test'
+  ...
+# Subtest: does not publish repeated receiver and investigation selections
+ok 24 - does not publish repeated receiver and investigation selections
+  ---
+  duration_ms: 0.731509
+  type: 'test'
+  ...
+# Subtest: keeps Registry, operational, and MLAT state separate in receiver details
+ok 25 - keeps Registry, operational, and MLAT state separate in receiver details
+  ---
+  duration_ms: 2.140391
+  type: 'test'
+  ...
+# Subtest: shows the complete registration-to-MLAT journey and a next action
+ok 26 - shows the complete registration-to-MLAT journey and a next action
+  ---
+  duration_ms: 2.901565
+  type: 'test'
+  ...
+# Subtest: provides actionable recovery instructions for actual runtime checks
+ok 27 - provides actionable recovery instructions for actual runtime checks
+  ---
+  duration_ms: 3.400543
+  type: 'test'
+  ...
+# Subtest: isolates page sections and maps without exposing raw errors in the UI
+ok 28 - isolates page sections and maps without exposing raw errors in the UI
+  ---
+  duration_ms: 2.18344
+  type: 'test'
+  ...
+# Subtest: keeps persistent context out of actionable notifications
+ok 29 - keeps persistent context out of actionable notifications
+  ---
+  duration_ms: 3.688253
+  type: 'test'
+  ...
+# Subtest: pipeline blockers select explanatory stages instead of linking to the same page
+ok 30 - pipeline blockers select explanatory stages instead of linking to the same page
+  ---
+  duration_ms: 2.540732
+  type: 'test'
+  ...
+# Subtest: contract verification explains values, sources, purpose, result, and trust boundary
+ok 31 - contract verification explains values, sources, purpose, result, and trust boundary
+  ---
+  duration_ms: 2.139998
+  type: 'test'
+  ...
+# Subtest: aircraft contributors expose source, Registry state, and operational state separately
+ok 32 - aircraft contributors expose source, Registry state, and operational state separately
+  ---
+  duration_ms: 1.62821
+  type: 'test'
+  ...
+# Subtest: orients every major page with purpose, current state, and a next step
+ok 33 - orients every major page with purpose, current state, and a next step
+  ---
+  duration_ms: 11.070303
+  type: 'test'
+  ...
+# Subtest: groups receiver details by Registry, operational, and MLAT source of truth
+ok 34 - groups receiver details by Registry, operational, and MLAT source of truth
+  ---
+  duration_ms: 1.704945
+  type: 'test'
+  ...
+# Subtest: keeps the receiver next action visible while placing all eight stages in an accessible disclosure
+ok 35 - keeps the receiver next action visible while placing all eight stages in an accessible disclosure
+  ---
+  duration_ms: 1.641407
+  type: 'test'
+  ...
+# Subtest: puts explicit provenance inside every map workspace
+ok 36 - puts explicit provenance inside every map workspace
+  ---
+  duration_ms: 4.640245
+  type: 'test'
+  ...
+# Subtest: uses higher-contrast supporting text and readable shared fact labels
+ok 37 - uses higher-contrast supporting text and readable shared fact labels
+  ---
+  duration_ms: 2.561044
+  type: 'test'
+  ...
+# Subtest: receiver details require selection and expose an accessible collapse control
+ok 38 - receiver details require selection and expose an accessible collapse control
+  ---
+  duration_ms: 2.049217
+  type: 'test'
+  ...
+# Subtest: contract verification rows wrap technical sources without overlapping status
+ok 39 - contract verification rows wrap technical sources without overlapping status
+  ---
+  duration_ms: 1.595495
+  type: 'test'
+  ...
+# (node:31715) ExperimentalWarning: Transform Types is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: pilot page cannot claim paid applications are open without funding and a private form URL
+ok 40 - pilot page cannot claim paid applications are open without funding and a private form URL
+  ---
+  duration_ms: 1.953535
+  type: 'test'
+  ...
+# Subtest: interest collection remains distinct from a funded paid application
+ok 41 - interest collection remains distinct from a funded paid application
+  ---
+  duration_ms: 0.314433
+  type: 'test'
+  ...
+# Subtest: pilot page states the Registry and MLAT responsibility boundary
+ok 42 - pilot page states the Registry and MLAT responsibility boundary
+  ---
+  duration_ms: 0.51358
+  type: 'test'
+  ...
+# Subtest: pilot page protects participant secrets and private locations
+ok 43 - pilot page protects participant secrets and private locations
+  ---
+  duration_ms: 0.307951
+  type: 'test'
+  ...
+# (node:31716) ExperimentalWarning: Transform Types is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: maps reported pipeline blockers to the stage that explains them
+ok 44 - maps reported pipeline blockers to the stage that explains them
+  ---
+  duration_ms: 4.143738
+  type: 'test'
+  ...
+# Subtest: leaves an unknown blocker informational instead of inventing a destination
+ok 45 - leaves an unknown blocker informational instead of inventing a destination
+  ---
+  duration_ms: 0.406714
+  type: 'test'
+  ...
+# Subtest: starts browser QA API with the repository Python environment
+ok 46 - starts browser QA API with the repository Python environment
+  ---
+  duration_ms: 1.14571
+  type: 'test'
+  ...
+# (node:31718) ExperimentalWarning: Transform Types is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: classifies observations inside the freshness window as fresh
+ok 47 - classifies observations inside the freshness window as fresh
+  ---
+  duration_ms: 1.770666
+  type: 'test'
+  ...
+# Subtest: classifies observations outside the freshness window as stale
+ok 48 - classifies observations outside the freshness window as stale
+  ---
+  duration_ms: 0.258784
+  type: 'test'
+  ...
+# Subtest: fails closed for missing, malformed, or non-positive timestamps
+ok 49 - fails closed for missing, malformed, or non-positive timestamps
+  ---
+  duration_ms: 0.24924
+  type: 'test'
+  ...
+# Subtest: rejects observations beyond the allowed future clock skew
+ok 50 - rejects observations beyond the allowed future clock skew
+  ---
+  duration_ms: 0.236781
+  type: 'test'
+  ...
+# (node:31719) ExperimentalWarning: Transform Types is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: matches a replay correlation ID to its namespaced operational receiver
+ok 51 - matches a replay correlation ID to its namespaced operational receiver
+  ---
+  duration_ms: 1.853825
+  type: 'test'
+  ...
+# Subtest: uses only the canonical identity after a receiver is registered
+ok 52 - uses only the canonical identity after a receiver is registered
+  ---
+  duration_ms: 0.328062
+  type: 'test'
+  ...
+# Subtest: requires receiver_identity instead of promoting a human receiver_id
+ok 53 - requires receiver_identity instead of promoting a human receiver_id
+  ---
+  duration_ms: 0.379241
+  type: 'test'
+  ...
+# Subtest: keeps the selected receiver visible for every existing-identity action
+ok 54 - keeps the selected receiver visible for every existing-identity action
+  ---
+  duration_ms: 8.465205
+  type: 'test'
+  ...
+# Subtest: names the exact receiver in the permanent revoke confirmation
+ok 55 - names the exact receiver in the permanent revoke confirmation
+  ---
+  duration_ms: 4.09962
+  type: 'test'
+  ...
+# Subtest: presents the compact solver report as historical evidence rather than live state
+ok 56 - presents the compact solver report as historical evidence rather than live state
+  ---
+  duration_ms: 3.255104
+  type: 'test'
+  ...
+# Subtest: exposes the benchmark through navigation and the validated evidence API
+ok 57 - exposes the benchmark through navigation and the validated evidence API
+  ---
+  duration_ms: 3.625588
+  type: 'test'
+  ...
+# Subtest: keeps production output separate from the development build
+ok 58 - keeps production output separate from the development build
+  ---
+  duration_ms: 2.73058
+  type: 'test'
+  ...
+# Subtest: prepares static assets beside the nested standalone server
+ok 59 - prepares static assets beside the nested standalone server
+  ---
+  duration_ms: 35.009191
+  type: 'test'
+  ...
+# Subtest: stages an immutable server and asset snapshot before startup
+ok 60 - stages an immutable server and asset snapshot before startup
+  ---
+  duration_ms: 39.439734
+  type: 'test'
+  ...
+1..60
+# tests 60
+# suites 0
+# pass 60
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 1890.342175

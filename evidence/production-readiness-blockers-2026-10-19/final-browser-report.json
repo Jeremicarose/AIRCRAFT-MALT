@@ -1,0 +1,41 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-10-19T16:22:06.005Z",
+  "source_commit": "57a0c7f17fd0a1cac8681ed860c5cfb1aafcecfa",
+  "source_tree": "630565092e61700913eea51145457738f960eced",
+  "worktree_clean": true,
+  "route": "/app/registry",
+  "accessibility_standard": "WCAG 2 A/AA serious and critical axe findings",
+  "total_tests": 31,
+  "completed_tests": 31,
+  "passed_tests": 27,
+  "failed_tests": 4,
+  "failures": [
+    {
+      "id": "6170c066d31b1eb0c6b5-167b1d3f4f01bc5d0735",
+      "title": " > chromium > registry-accessibility.spec.mjs > opens receiver context only after row selection and allows it to collapse",
+      "status": "failed",
+      "error": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('[data-registry-workflow]')\nExpected: visible\nTimeout: 15000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" locator('[data-registry-workflow]') with timeout 15000ms\u001b[22m\n\u001b[2m  - waiting for locator('[data-registry-workflow]')\u001b[22m\n"
+    },
+    {
+      "id": "2db8d424d38564b5ab90-28bd9f65f82df138d110",
+      "title": " > chromium > release.spec.mjs > starts on the Registry with shared Registry and MLAT navigation",
+      "status": "timedOut",
+      "error": "\u001b[31mTest timeout of 60000ms exceeded.\u001b[39m"
+    },
+    {
+      "id": "2db8d424d38564b5ab90-4816a1e7eb4962f6dbfc",
+      "title": " > chromium > release.spec.mjs > moves from an aircraft to a receiver and back to related aircraft",
+      "status": "failed",
+      "error": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: getByRole('button', { name: /^Inspect receiver RECV_[A-Z]+_001$/ }).first()\nExpected: visible\nTimeout: 15000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" getByRole('button', { name: /^Inspect receiver RECV_[A-Z]+_001$/ }).first() with timeout 15000ms\u001b[22m\n\u001b[2m  - waiting for getByRole('button', { name: /^Inspect receiver RECV_[A-Z]+_001$/ }).first()\u001b[22m\n"
+    },
+    {
+      "id": "2db8d424d38564b5ab90-3c08026ca3da55076404",
+      "title": " > chromium > release.spec.mjs > orients every major workspace with purpose, state, and next step",
+      "status": "timedOut",
+      "error": "\u001b[31mTest timeout of 60000ms exceeded.\u001b[39m"
+    }
+  ],
+  "accessibility_violations": 0,
+  "pass": false
+}

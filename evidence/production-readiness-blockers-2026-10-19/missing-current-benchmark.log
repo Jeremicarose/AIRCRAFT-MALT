@@ -1,0 +1,10 @@
+Traceback (most recent call last):
+  File "/Users/jeremicarose/Downloads/mlat-system 2/tools/mlat/run_reproducible_benchmark.py", line 241, in <module>
+    raise SystemExit(main())
+                     ^^^^^^
+  File "/Users/jeremicarose/Downloads/mlat-system 2/tools/mlat/run_reproducible_benchmark.py", line 235, in main
+    result = verify_bundle(bundle)
+             ^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/jeremicarose/Downloads/mlat-system 2/tools/mlat/run_reproducible_benchmark.py", line 156, in verify_bundle
+    raise ValueError(f"Benchmark bundle does not exist: {bundle}")
+ValueError: Benchmark bundle does not exist: /Users/jeremicarose/Downloads/mlat-system 2/evidence/mlat-reference/reproducible-benchmark-v4

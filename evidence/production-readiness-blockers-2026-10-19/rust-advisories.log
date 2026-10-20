@@ -1,0 +1,7 @@
+error: couldn't fetch advisory database: git operation failed: Failed to consume the pack sent by the remote
+Caused by:
+  -> Failed to consume the pack sent by the remote
+  -> A pack entry could not be extracted
+  -> An IO operation failed while streaming an entry
+  -> error decoding response body
+  -> operation timed out

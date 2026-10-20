@@ -1,0 +1,11 @@
+{
+  "observed_missing_files": [
+    "docs/CKB_SPARK_FORUM_PROPOSAL.md",
+    "docs/CKB_SPARK_GRANT_ANALYSIS.md",
+    "docs/CKB_SPARK_PILOT_PROPOSAL.md",
+    "docs/README.md",
+    "docs/audit/FILE_DISPOSITION.md",
+    "docs/audit/REPOSITORY_AUDIT.md"
+  ],
+  "action": "Preserved candidate snapshot; did not restore or delete these files in main."
+}

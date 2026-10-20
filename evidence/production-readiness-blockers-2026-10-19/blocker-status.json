@@ -1,0 +1,12 @@
+{
+  "release_candidate": "57a0c7f17fd0a1cac8681ed860c5cfb1aafcecfa",
+  "local_source_and_container_validation": "PASS",
+  "public_ci": "BLOCKED_PENDING_PUBLICATION_APPROVAL",
+  "target_host_recovery": "BLOCKED_HOST_NOT_SUPPLIED",
+  "independent_review": "BLOCKED_REVIEWER_NOT_SUPPLIED",
+  "fresh_wallet_lifecycle": "BLOCKED_SIGNING_AND_SPENDING_AUTHORIZATION_PENDING",
+  "physical_receiver_campaign": "BLOCKED_FEEDS_CLOCK_EVIDENCE_AND_REFERENCE_NOT_SUPPLIED",
+  "gate_a": "PASS_LOCAL_SCOPE",
+  "gate_b": "NOT_PASSED",
+  "gate_c": "NOT_PASSED"
+}

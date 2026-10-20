@@ -107,7 +107,7 @@ immutable deployment. Never use the historical mutable hash for writes.
 | `RATE_LIMIT_WINDOW_SECONDS` | `60` | Sliding rate-limit window. |
 | `RATE_LIMIT_MAX_CLIENTS` | `10000` | Memory bound for tracked client buckets. |
 | `API_STARTUP_TIMEOUT_SECONDS` | `45` | Seconds the process supervisor waits for `/healthz`. |
-| `MLAT_API_INTERNAL_URL` | `http://127.0.0.1:5057` | Server-only API origin used by Next.js. |
+| `MLAT_API_INTERNAL_URL` | `http://127.0.0.1:5057` | Server-only API origin used by Next.js. On Render free services, use the backend's actual public HTTPS origin; its private hostport cannot receive traffic. |
 | `NEXT_PUBLIC_API_BASE_URL` | same origin | Optional browser-visible API origin. Never put a credential here. |
 | `NEXT_PUBLIC_PILOT_APPLICATION_STATUS` | `preparing` | Public pilot state: `preparing`, `interest`, `open`, or `closed`. Applications are accepted only when this is `open`, funding is ready, and a valid HTTPS URL is configured. |
 | `NEXT_PUBLIC_PILOT_FUNDING_STATUS` | `seeking` | Public pilot funding state: `seeking` or `funded`. Any other value fails closed to `seeking`. |

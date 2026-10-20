@@ -4,6 +4,12 @@
 **Gate B: NOT PASSED; remaining release/operator evidence is required.**
 **Gate C: NOT PASSED. No production-readiness claim is made.**
 
+The dated checklist below preserves the original audit assessment. Subsequent
+clean-source, frontend and container results are recorded in the
+[20 October follow-up](../../evidence/console-experience-2026-10-20/README.md).
+Publication and an explicitly labelled hosted demo were authorized afterward;
+that authorization does not satisfy the remaining operational or physical gates.
+
 Each gate is independent. A configured workflow, historical signed transaction or
 passing synthetic solve does not satisfy a later gate. This assessment applies to
 the audited working tree, not to the unchanged committed HEAD.

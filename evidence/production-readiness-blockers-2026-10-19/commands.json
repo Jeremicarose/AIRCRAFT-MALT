@@ -1,0 +1,1050 @@
+[
+  {
+    "check": "missing-current-benchmark",
+    "command": [
+      "python",
+      "tools/mlat/run_reproducible_benchmark.py",
+      "--verify-only"
+    ],
+    "cwd": "/Users/jeremicarose/Downloads/mlat-system 2",
+    "started_at": "2026-10-19T07:37:04.297147+00:00",
+    "environment": {
+      "MLAT_ENV_FILE": "/dev/null",
+      "node": "22.23.1",
+      "python_environment": "artifacts/audit/venv"
+    },
+    "exit_status": 1,
+    "status": "FAIL",
+    "duration_seconds": 0.124
+  },
+  {
+    "check": "generate-current-benchmark",
+    "command": [
+      "python",
+      "tools/mlat/run_reproducible_benchmark.py"
+    ],
+    "cwd": "/Users/jeremicarose/Downloads/mlat-system 2",
+    "started_at": "2026-10-19T07:37:47.499722+00:00",
+    "environment": {
+      "MLAT_ENV_FILE": "/dev/null",
+      "node": "22.23.1",
+      "python_environment": "artifacts/audit/venv"
+    },
+    "exit_status": 0,
+    "status": "PASS",
+    "duration_seconds": 0.126
+  },
+  {
+    "check": "verify-current-benchmark",
+    "command": [
+      "python",
+      "tools/mlat/run_reproducible_benchmark.py",
+      "--verify-only"
+    ],
+    "cwd": "/Users/jeremicarose/Downloads/mlat-system 2",
+    "started_at": "2026-10-19T07:37:47.708484+00:00",
+    "environment": {
+      "MLAT_ENV_FILE": "/dev/null",
+      "node": "22.23.1",
+      "python_environment": "artifacts/audit/venv"
+    },
+    "exit_status": 0,
+    "status": "PASS",
+    "duration_seconds": 0.129
+  },
+  {
+    "check": "release-preparation-python",
+    "command": [
+      "python",
+      "-m",
+      "pytest",
+      "-q",
+      "tests/test_release_readiness.py",
+      "tests/mlat/test_reproducible_benchmark.py",
+      "tests/registry/test_registry_v2_evidence_verifier.py"
+    ],
+    "cwd": "/Users/jeremicarose/Downloads/mlat-system 2",
+    "started_at": "2026-10-19T07:39:32.869250+00:00",
+    "environment": {
+      "MLAT_ENV_FILE": "/dev/null",
+      "node": "22.23.1",
+      "python_environment": "artifacts/audit/venv"
+    },
+    "exit_status": 0,
+    "status": "PASS",
+    "duration_seconds": 2.076
+  },
+  {
+    "check": "release-preparation-docs",
+    "command": [
+      "python",
+      "tools/check_documentation.py"
+    ],
+    "cwd": "/Users/jeremicarose/Downloads/mlat-system 2",
+    "started_at": "2026-10-19T07:39:35.040412+00:00",
+    "environment": {
+      "MLAT_ENV_FILE": "/dev/null",
+      "node": "22.23.1",
+      "python_environment": "artifacts/audit/venv"
+    },
+    "exit_status": 0,
+    "status": "PASS",
+    "duration_seconds": 0.29
+  },
+  {
+    "check": "red-preflight-env",
+    "command": [
+      "python",
+      "-m",
+      "pytest",
+      "-q",
+      "tests/mlat/test_live_ingest_readiness.py",
+      "-k",
+      "explicit_environment"
+    ],
+    "cwd": "/Users/jeremicarose/Downloads/mlat-system 2",
+    "started_at": "2026-10-19T07:41:27.019178+00:00",
+    "environment": {
+      "MLAT_ENV_FILE": "/dev/null",
+      "node": "22.23.1",
+      "python_environment": "artifacts/audit/venv"
+    },
+    "exit_status": 1,
+    "status": "FAIL",
+    "duration_seconds": 0.708
+  },
+  {
+    "check": "green-preflight-env",
+    "command": [
+      "python",
+      "-m",
+      "pytest",
+      "-q",
+      "tests/mlat/test_live_ingest_readiness.py"
+    ],
+    "cwd": "/Users/jeremicarose/Downloads/mlat-system 2",
+    "started_at": "2026-10-19T07:41:55.990622+00:00",
+    "environment": {
+      "MLAT_ENV_FILE": "/dev/null",
+      "node": "22.23.1",
+      "python_environment": "artifacts/audit/venv"
+    },
+    "exit_status": 0,
+    "status": "PASS",
+    "duration_seconds": 0.446
+  },
+  {
+    "check": "candidate-sdk-install",
+    "command": [
+      "npm",
+      "ci",
+      "--offline",
+      "--no-audit",
+      "--cache",
+      "/tmp/mlat-readiness-npm-cache"
+    ],
+    "cwd": "/Users/jeremicarose/Downloads/mlat-system 2/artifacts/blockers-2026-10-19/candidate/sdk/typescript",
+    "started_at": "2026-10-19T07:41:56.690055+00:00",
+    "environment": {
+      "MLAT_ENV_FILE": "/dev/null",
+      "node": "22.23.1",
+      "python_environment": "artifacts/audit/venv"
+    },
+    "exit_status": 0,
+    "status": "PASS",
+    "duration_seconds": 6.579
+  },
+  {
+    "check": "blocker-documentation",
+    "command": [
+      "python",
+      "tools/check_documentation.py"
+    ],
+    "cwd": "/Users/jeremicarose/Downloads/mlat-system 2",
+    "started_at": "2026-10-19T07:46:30.152558+00:00",
+    "environment": {
+      "MLAT_ENV_FILE": "/dev/null",
+      "node": "22.23.1",
+      "python_environment": "artifacts/audit/venv"
+    },
+    "exit_status": 0,
+    "status": "PASS",
+    "duration_seconds": 0.445
+  },
+  {
+    "check": "blocker-lint",
+    "command": [
+      "python",
+      "-m",
+      "flake8",
+      "tools/check_container_runtime.py",
+      "tools/mlat/check_live_ingest_readiness.py",
+      "tests/mlat/test_live_ingest_readiness.py"
+    ],
+    "cwd": "/Users/jeremicarose/Downloads/mlat-system 2",
+    "started_at": "2026-10-19T07:46:30.692762+00:00",
+    "environment": {
+      "MLAT_ENV_FILE": "/dev/null",
+      "node": "22.23.1",
+      "python_environment": "artifacts/audit/venv"
+    },
+    "exit_status": 0,
+    "status": "PASS",
+    "duration_seconds": 0.759
+  },
+  {
+    "check": "candidate-frontend-install",
+    "command": [
+      "npm",
+      "ci",
+      "--offline",
+      "--no-audit",
+      "--cache",
+      "/tmp/mlat-readiness-npm-cache"
+    ],
+    "cwd": "/Users/jeremicarose/Downloads/mlat-system 2/artifacts/blockers-2026-10-19/candidate/reference/mlat/frontend",
+    "started_at": "2026-10-19T07:46:55.238601+00:00",
+    "environment": {
+      "MLAT_ENV_FILE": "/dev/null",
+      "node": "22.23.1",
+      "python_environment": "artifacts/audit/venv"
+    },
+    "exit_status": 0,
+    "status": "PASS",
+    "duration_seconds": 20.041
+  },
+  {
+    "check": "candidate-python",
+    "command": [
+      "python",
+      "-m",
+      "pytest",
+      "-q"
+    ],
+    "cwd": "/Users/jeremicarose/Downloads/mlat-system 2/artifacts/blockers-2026-10-19/candidate",
+    "started_at": "2026-10-19T07:48:13.202659+00:00",
+    "environment": {
+      "MLAT_ENV_FILE": "/dev/null",
+      "node": "22.23.1",
+      "python_environment": "artifacts/audit/venv"
+    },
+    "exit_status": 0,
+    "status": "PASS",
+    "duration_seconds": 22.185
+  },
+  {
+    "check": "candidate-format",
+    "command": [
+      "python",
+      "-m",
+      "black",
+      "--check",
+      "src",
+      "tools",
+      "tests"
+    ],
+    "cwd": "/Users/jeremicarose/Downloads/mlat-system 2/artifacts/blockers-2026-10-19/candidate",
+    "started_at": "2026-10-19T07:48:35.493332+00:00",
+    "environment": {
+      "MLAT_ENV_FILE": "/dev/null",
+      "node": "22.23.1",
+      "python_environment": "artifacts/audit/venv"
+    },
+    "exit_status": 0,
+    "status": "PASS",
+    "duration_seconds": 4.0
+  },
+  {
+    "check": "candidate-source-whitespace",
+    "command": [
+      "git",
+      "diff",
+      "HEAD~1",
+      "--check"
+    ],
+    "cwd": "/Users/jeremicarose/Downloads/mlat-system 2/artifacts/blockers-2026-10-19/candidate",
+    "started_at": "2026-10-19T07:50:21.241804+00:00",
+    "environment": {
+      "MLAT_ENV_FILE": "/dev/null",
+      "node": "22.23.1",
+      "python_environment": "artifacts/audit/venv"
+    },
+    "exit_status": 0,
+    "status": "PASS",
+    "duration_seconds": 0.28
+  },
+  {
+    "check": "candidate-mypy",
+    "command": [
+      "python",
+      "-m",
+      "mypy",
+      "src",
+      "--ignore-missing-imports"
+    ],
+    "cwd": "/Users/jeremicarose/Downloads/mlat-system 2/artifacts/blockers-2026-10-19/candidate",
+    "started_at": "2026-10-19T07:51:04.969420+00:00",
+    "environment": {
+      "MLAT_ENV_FILE": "/dev/null",
+      "node": "22.23.1",
+      "python_environment": "artifacts/audit/venv"
+    },
+    "exit_status": 0,
+    "status": "PASS",
+    "duration_seconds": 18.887
+  },
+  {
+    "check": "candidate-sdk-tests",
+    "command": [
+      "npm",
+      "test"
+    ],
+    "cwd": "/Users/jeremicarose/Downloads/mlat-system 2/artifacts/blockers-2026-10-19/candidate/sdk/typescript",
+    "started_at": "2026-10-19T07:51:04.969453+00:00",
+    "environment": {
+      "MLAT_ENV_FILE": "/dev/null",
+      "node": "22.23.1",
+      "python_environment": "artifacts/audit/venv"
+    },
+    "exit_status": 0,
+    "status": "PASS",
+    "duration_seconds": 4.94
+  },
+  {
+    "check": "candidate-frontend-build",
+    "command": [
+      "npm",
+      "run",
+      "build"
+    ],
+    "cwd": "/Users/jeremicarose/Downloads/mlat-system 2/artifacts/blockers-2026-10-19/candidate/reference/mlat/frontend",
+    "started_at": "2026-10-19T07:51:04.969477+00:00",
+    "environment": {
+      "MLAT_ENV_FILE": "/dev/null",
+      "node": "22.23.1",
+      "python_environment": "artifacts/audit/venv"
+    },
+    "exit_status": 0,
+    "status": "PASS",
+    "duration_seconds": 103.924
+  },
+  {
+    "check": "candidate-frontend-unit",
+    "command": [
+      "npm",
+      "test"
+    ],
+    "cwd": "/Users/jeremicarose/Downloads/mlat-system 2/artifacts/blockers-2026-10-19/candidate/reference/mlat/frontend",
+    "started_at": "2026-10-19T07:51:10.011661+00:00",
+    "environment": {
+      "MLAT_ENV_FILE": "/dev/null",
+      "node": "22.23.1",
+      "python_environment": "artifacts/audit/venv"
+    },
+    "exit_status": 0,
+    "status": "PASS",
+    "duration_seconds": 2.27
+  },
+  {
+    "check": "candidate-repository-check",
+    "command": [
+      "python",
+      "tools/check_release_readiness.py",
+      "--profile",
+      "repository"
+    ],
+    "cwd": "/Users/jeremicarose/Downloads/mlat-system 2/artifacts/blockers-2026-10-19/candidate",
+    "started_at": "2026-10-19T07:51:24.059447+00:00",
+    "environment": {
+      "MLAT_ENV_FILE": "/dev/null",
+      "node": "22.23.1",
+      "python_environment": "artifacts/audit/venv"
+    },
+    "exit_status": 0,
+    "status": "PASS",
+    "duration_seconds": 3.429
+  },
+  {
+    "check": "candidate-browser",
+    "command": [
+      "npm",
+      "run",
+      "test:e2e:prepared"
+    ],
+    "cwd": "/Users/jeremicarose/Downloads/mlat-system 2/artifacts/blockers-2026-10-19/candidate/reference/mlat/frontend",
+    "started_at": "2026-10-19T07:54:01.827976+00:00",
+    "environment": {
+      "MLAT_ENV_FILE": "/dev/null",
+      "node": "22.23.1",
+      "python_environment": "artifacts/audit/venv"
+    },
+    "exit_status": 0,
+    "status": "PASS",
+    "duration_seconds": 130.272,
+    "additional_environment": {
+      "PLAYWRIGHT_PYTHON_DIR": "/Users/jeremicarose/Downloads/mlat-system 2/artifacts/readiness-2026-10-19/venv",
+      "PLAYWRIGHT_DATA_MODE": "synthetic"
+    }
+  },
+  {
+    "check": "candidate-benchmark-current",
+    "command": [
+      "python",
+      "tools/mlat/run_reproducible_benchmark.py",
+      "--verify-only"
+    ],
+    "cwd": "/Users/jeremicarose/Downloads/mlat-system 2/artifacts/blockers-2026-10-19/candidate",
+    "started_at": "2026-10-19T07:54:03.014139+00:00",
+    "environment": {
+      "MLAT_ENV_FILE": "/dev/null",
+      "node": "22.23.1",
+      "python_environment": "artifacts/audit/venv"
+    },
+    "exit_status": 0,
+    "status": "PASS",
+    "duration_seconds": 0.236
+  },
+  {
+    "check": "candidate-benchmark-repeat",
+    "command": [
+      "python",
+      "tools/mlat/run_reproducible_benchmark.py",
+      "--output-dir",
+      "artifacts/benchmark-repeat"
+    ],
+    "cwd": "/Users/jeremicarose/Downloads/mlat-system 2/artifacts/blockers-2026-10-19/candidate",
+    "started_at": "2026-10-19T07:54:03.367263+00:00",
+    "environment": {
+      "MLAT_ENV_FILE": "/dev/null",
+      "node": "22.23.1",
+      "python_environment": "artifacts/audit/venv"
+    },
+    "exit_status": 0,
+    "status": "PASS",
+    "duration_seconds": 0.218
+  },
+  {
+    "check": "candidate-benchmark-compare",
+    "command": [
+      "diff",
+      "-ru",
+      "evidence/mlat-reference/reproducible-benchmark-v4",
+      "artifacts/benchmark-repeat"
+    ],
+    "cwd": "/Users/jeremicarose/Downloads/mlat-system 2/artifacts/blockers-2026-10-19/candidate",
+    "started_at": "2026-10-19T07:54:03.712464+00:00",
+    "environment": {
+      "MLAT_ENV_FILE": "/dev/null",
+      "node": "22.23.1",
+      "python_environment": "artifacts/audit/venv"
+    },
+    "exit_status": 0,
+    "status": "PASS",
+    "duration_seconds": 0.025
+  },
+  {
+    "check": "candidate-contract",
+    "command": [
+      "make",
+      "test"
+    ],
+    "cwd": "/Users/jeremicarose/Downloads/mlat-system 2/artifacts/blockers-2026-10-19/candidate/contracts/registry-v2",
+    "started_at": "2026-10-19T07:55:23.232181+00:00",
+    "environment": {
+      "MLAT_ENV_FILE": "/dev/null",
+      "node": "22.23.1",
+      "python_environment": "artifacts/audit/venv"
+    },
+    "exit_status": 0,
+    "status": "PASS",
+    "duration_seconds": 207.725
+  },
+  {
+    "check": "candidate-browser-historical",
+    "command": [
+      "npm",
+      "run",
+      "test:e2e:replay"
+    ],
+    "cwd": "/Users/jeremicarose/Downloads/mlat-system 2/artifacts/blockers-2026-10-19/candidate/reference/mlat/frontend",
+    "started_at": "2026-10-19T07:56:51.915560+00:00",
+    "environment": {
+      "MLAT_ENV_FILE": "/dev/null",
+      "node": "22.23.1",
+      "python_environment": "artifacts/audit/venv"
+    },
+    "exit_status": 0,
+    "status": "PASS",
+    "duration_seconds": 64.175,
+    "additional_environment": {
+      "PLAYWRIGHT_PYTHON_DIR": "/Users/jeremicarose/Downloads/mlat-system 2/artifacts/readiness-2026-10-19/venv",
+      "PLAYWRIGHT_DATA_MODE": "historical"
+    }
+  },
+  {
+    "check": "candidate-conformance",
+    "command": [
+      "python",
+      "tools/registry/generate_registry_v2_conformance_report.py",
+      "--output",
+      "artifacts/registry-v2/conformance-report.json"
+    ],
+    "cwd": "/Users/jeremicarose/Downloads/mlat-system 2/artifacts/blockers-2026-10-19/candidate",
+    "started_at": "2026-10-19T08:01:30.283389+00:00",
+    "environment": {
+      "MLAT_ENV_FILE": "/dev/null",
+      "node": "22.23.1",
+      "python_environment": "artifacts/audit/venv"
+    },
+    "exit_status": 0,
+    "status": "PASS",
+    "duration_seconds": 6.715
+  },
+  {
+    "check": "candidate-lint",
+    "command": [
+      "python",
+      "-m",
+      "flake8",
+      "src",
+      "tools",
+      "tests"
+    ],
+    "cwd": "/Users/jeremicarose/Downloads/mlat-system 2/artifacts/blockers-2026-10-19/candidate",
+    "started_at": "2026-10-19T08:01:37.094318+00:00",
+    "environment": {
+      "MLAT_ENV_FILE": "/dev/null",
+      "node": "22.23.1",
+      "python_environment": "artifacts/audit/venv"
+    },
+    "exit_status": 0,
+    "status": "PASS",
+    "duration_seconds": 1.598
+  },
+  {
+    "check": "candidate-python-clean",
+    "command": [
+      "python",
+      "-m",
+      "pytest",
+      "-q"
+    ],
+    "cwd": "/Users/jeremicarose/Downloads/mlat-system 2/artifacts/blockers-2026-10-19/candidate",
+    "started_at": "2026-10-19T08:03:39.410115+00:00",
+    "environment": {
+      "MLAT_ENV_FILE": "/dev/null",
+      "node": "22.23.1",
+      "python_environment": "artifacts/audit/venv"
+    },
+    "exit_status": 0,
+    "status": "PASS",
+    "duration_seconds": 16.985
+  },
+  {
+    "check": "container-backend-build",
+    "command": [
+      "/private/tmp/mlat-lima-tools/bin/limactl",
+      "shell",
+      "--workdir",
+      "/tmp/mlat-candidate",
+      "mlat-readiness",
+      "docker",
+      "build",
+      "--tag",
+      "mlat-system:readiness-ad3051a",
+      "."
+    ],
+    "cwd": "/Users/jeremicarose/Downloads/mlat-system 2",
+    "started_at": "2026-10-19T08:08:18.416687+00:00",
+    "environment": {
+      "MLAT_ENV_FILE": "/dev/null",
+      "node": "22.23.1",
+      "python_environment": "artifacts/audit/venv"
+    },
+    "exit_status": 1,
+    "status": "FAIL",
+    "duration_seconds": 422.059,
+    "additional_environment": {
+      "LIMA_HOME": "/private/tmp/mlat-readiness-lima"
+    }
+  },
+  {
+    "check": "rust-advisories",
+    "command": [
+      "/private/tmp/mlat-cargo-audit/cargo-audit-x86_64-apple-darwin-v0.22.2/cargo-audit",
+      "audit",
+      "--db",
+      "/private/tmp/mlat-rustsec-advisory-db",
+      "--json"
+    ],
+    "cwd": "/Users/jeremicarose/Downloads/mlat-system 2/artifacts/blockers-2026-10-19/candidate/contracts/registry-v2",
+    "started_at": "2026-10-19T08:10:48.326540+00:00",
+    "environment": {
+      "MLAT_ENV_FILE": "/dev/null",
+      "node": "22.23.1",
+      "python_environment": "artifacts/audit/venv"
+    },
+    "exit_status": 1,
+    "status": "FAIL",
+    "duration_seconds": 293.964
+  },
+  {
+    "check": "container-backend-build-retry",
+    "command": [
+      "/private/tmp/mlat-lima-tools/bin/limactl",
+      "shell",
+      "--workdir",
+      "/tmp/mlat-candidate",
+      "mlat-readiness",
+      "docker",
+      "build",
+      "--tag",
+      "mlat-system:readiness-ad3051a",
+      "."
+    ],
+    "cwd": "/Users/jeremicarose/Downloads/mlat-system 2",
+    "started_at": "2026-10-19T12:46:24.247994+00:00",
+    "environment": {
+      "MLAT_ENV_FILE": "/dev/null",
+      "node": "22.23.1",
+      "python_environment": "artifacts/audit/venv"
+    },
+    "exit_status": 0,
+    "status": "PASS",
+    "duration_seconds": 45.256,
+    "additional_environment": {
+      "LIMA_HOME": "/private/tmp/mlat-readiness-lima"
+    }
+  },
+  {
+    "check": "container-frontend-build",
+    "command": [
+      "/private/tmp/mlat-lima-tools/bin/limactl",
+      "shell",
+      "--workdir",
+      "/tmp/mlat-candidate",
+      "mlat-readiness",
+      "docker",
+      "build",
+      "--file",
+      "reference/mlat/frontend/Dockerfile",
+      "--tag",
+      "mlat-frontend:readiness-ad3051a",
+      "."
+    ],
+    "cwd": "/Users/jeremicarose/Downloads/mlat-system 2",
+    "started_at": "2026-10-19T12:47:06.639190+00:00",
+    "environment": {
+      "MLAT_ENV_FILE": "/dev/null",
+      "node": "22.23.1",
+      "python_environment": "artifacts/audit/venv"
+    },
+    "exit_status": 0,
+    "status": "PASS",
+    "duration_seconds": 407.624,
+    "additional_environment": {
+      "LIMA_HOME": "/private/tmp/mlat-readiness-lima"
+    }
+  },
+  {
+    "check": "rust-advisories-snapshot",
+    "command": [
+      "/private/tmp/mlat-cargo-audit/cargo-audit-x86_64-apple-darwin-v0.22.2/cargo-audit",
+      "audit",
+      "--db",
+      "/private/tmp/mlat-rustsec-shallow",
+      "--no-fetch",
+      "--json"
+    ],
+    "cwd": "/Users/jeremicarose/Downloads/mlat-system 2/artifacts/blockers-2026-10-19/candidate/contracts/registry-v2",
+    "started_at": "2026-10-19T12:48:06.562734+00:00",
+    "environment": {
+      "MLAT_ENV_FILE": "/dev/null",
+      "node": "22.23.1",
+      "python_environment": "artifacts/audit/venv"
+    },
+    "exit_status": 0,
+    "status": "PASS",
+    "duration_seconds": 1.548
+  },
+  {
+    "check": "rust-advisories-cached-index",
+    "command": [
+      "/private/tmp/mlat-cargo-audit/cargo-audit-x86_64-apple-darwin-v0.22.2/cargo-audit",
+      "audit",
+      "--db",
+      "/private/tmp/mlat-rustsec-shallow",
+      "--no-fetch",
+      "--json"
+    ],
+    "cwd": "/Users/jeremicarose/Downloads/mlat-system 2/artifacts/blockers-2026-10-19/candidate/contracts/registry-v2",
+    "started_at": "2026-10-19T12:51:52.055058+00:00",
+    "environment": {
+      "MLAT_ENV_FILE": "/dev/null",
+      "node": "22.23.1",
+      "python_environment": "artifacts/audit/venv"
+    },
+    "exit_status": 0,
+    "status": "PASS",
+    "duration_seconds": 1.021
+  },
+  {
+    "check": "container-runtime",
+    "command": [
+      "/private/tmp/mlat-lima-tools/bin/limactl",
+      "shell",
+      "--workdir",
+      "/tmp/mlat-candidate",
+      "mlat-readiness",
+      "python3",
+      "tools/check_container_runtime.py",
+      "--backend-image",
+      "mlat-system:readiness-ad3051a",
+      "--frontend-image",
+      "mlat-frontend:readiness-ad3051a",
+      "--output",
+      "/tmp/mlat-container-runtime-report.json"
+    ],
+    "cwd": "/Users/jeremicarose/Downloads/mlat-system 2",
+    "started_at": "2026-10-19T12:54:42.934950+00:00",
+    "environment": {
+      "MLAT_ENV_FILE": "/dev/null",
+      "node": "22.23.1",
+      "python_environment": "artifacts/audit/venv"
+    },
+    "exit_status": 2,
+    "status": "FAIL",
+    "duration_seconds": 41.714,
+    "additional_environment": {
+      "LIMA_HOME": "/private/tmp/mlat-readiness-lima"
+    }
+  },
+  {
+    "check": "generate-packaging-benchmark-v5",
+    "command": [
+      "python",
+      "tools/mlat/run_reproducible_benchmark.py"
+    ],
+    "cwd": "/Users/jeremicarose/Downloads/mlat-system 2",
+    "started_at": "2026-10-19T13:00:34.671462+00:00",
+    "environment": {
+      "MLAT_ENV_FILE": "/dev/null",
+      "node": "22.23.1",
+      "python_environment": "artifacts/audit/venv"
+    },
+    "exit_status": 0,
+    "status": "PASS",
+    "duration_seconds": 0.134
+  },
+  {
+    "check": "verify-packaging-benchmark-v5",
+    "command": [
+      "python",
+      "tools/mlat/run_reproducible_benchmark.py",
+      "--verify-only"
+    ],
+    "cwd": "/Users/jeremicarose/Downloads/mlat-system 2",
+    "started_at": "2026-10-19T13:00:34.895301+00:00",
+    "environment": {
+      "MLAT_ENV_FILE": "/dev/null",
+      "node": "22.23.1",
+      "python_environment": "artifacts/audit/venv"
+    },
+    "exit_status": 0,
+    "status": "PASS",
+    "duration_seconds": 0.125
+  },
+  {
+    "check": "packaging-fix-tests",
+    "command": [
+      "python",
+      "-m",
+      "pytest",
+      "-q",
+      "tests/mlat/test_reproducible_benchmark.py",
+      "tests/test_release_readiness.py"
+    ],
+    "cwd": "/Users/jeremicarose/Downloads/mlat-system 2/artifacts/blockers-2026-10-19/candidate",
+    "started_at": "2026-10-19T13:59:35.952634+00:00",
+    "environment": {
+      "MLAT_ENV_FILE": "/dev/null",
+      "node": "22.23.1",
+      "python_environment": "artifacts/audit/venv"
+    },
+    "exit_status": 0,
+    "status": "PASS",
+    "duration_seconds": 3.242
+  },
+  {
+    "check": "packaging-fix-format",
+    "command": [
+      "python",
+      "-m",
+      "black",
+      "--check",
+      "tools/check_container_runtime.py"
+    ],
+    "cwd": "/Users/jeremicarose/Downloads/mlat-system 2/artifacts/blockers-2026-10-19/candidate",
+    "started_at": "2026-10-19T13:59:39.287380+00:00",
+    "environment": {
+      "MLAT_ENV_FILE": "/dev/null",
+      "node": "22.23.1",
+      "python_environment": "artifacts/audit/venv"
+    },
+    "exit_status": 0,
+    "status": "PASS",
+    "duration_seconds": 0.453
+  },
+  {
+    "check": "final-browser",
+    "command": [
+      "npm",
+      "run",
+      "test:e2e:prepared"
+    ],
+    "cwd": "/Users/jeremicarose/Downloads/mlat-system 2/artifacts/blockers-2026-10-19/candidate/reference/mlat/frontend",
+    "started_at": "2026-10-19T14:02:23.597034+00:00",
+    "environment": {
+      "MLAT_ENV_FILE": "/dev/null",
+      "node": "22.23.1",
+      "python_environment": "artifacts/audit/venv"
+    },
+    "exit_status": 1,
+    "status": "FAIL",
+    "duration_seconds": 200.69,
+    "additional_environment": {
+      "PLAYWRIGHT_PYTHON_DIR": "/Users/jeremicarose/Downloads/mlat-system 2/artifacts/readiness-2026-10-19/venv",
+      "PLAYWRIGHT_DATA_MODE": "synthetic"
+    }
+  },
+  {
+    "check": "final-candidate-benchmark",
+    "command": [
+      "python",
+      "tools/mlat/run_reproducible_benchmark.py",
+      "--verify-only"
+    ],
+    "cwd": "/Users/jeremicarose/Downloads/mlat-system 2/artifacts/blockers-2026-10-19/candidate",
+    "started_at": "2026-10-19T14:02:24.881611+00:00",
+    "environment": {
+      "MLAT_ENV_FILE": "/dev/null",
+      "node": "22.23.1",
+      "python_environment": "artifacts/audit/venv"
+    },
+    "exit_status": 0,
+    "status": "PASS",
+    "duration_seconds": 0.233
+  },
+  {
+    "check": "final-candidate-repository",
+    "command": [
+      "python",
+      "tools/check_release_readiness.py",
+      "--profile",
+      "repository"
+    ],
+    "cwd": "/Users/jeremicarose/Downloads/mlat-system 2/artifacts/blockers-2026-10-19/candidate",
+    "started_at": "2026-10-19T14:02:25.221516+00:00",
+    "environment": {
+      "MLAT_ENV_FILE": "/dev/null",
+      "node": "22.23.1",
+      "python_environment": "artifacts/audit/venv"
+    },
+    "exit_status": 0,
+    "status": "PASS",
+    "duration_seconds": 1.842
+  },
+  {
+    "check": "container-backend-final",
+    "command": [
+      "/private/tmp/mlat-lima-tools/bin/limactl",
+      "shell",
+      "--workdir",
+      "/tmp/mlat-candidate-57a0c7f",
+      "mlat-readiness",
+      "docker",
+      "build",
+      "--tag",
+      "mlat-system:readiness-57a0c7f",
+      "."
+    ],
+    "cwd": "/Users/jeremicarose/Downloads/mlat-system 2",
+    "started_at": "2026-10-19T16:24:48.588786+00:00",
+    "environment": {
+      "MLAT_ENV_FILE": "/dev/null",
+      "node": "22.23.1",
+      "python_environment": "artifacts/audit/venv"
+    },
+    "exit_status": 0,
+    "status": "PASS",
+    "duration_seconds": 11.156,
+    "additional_environment": {
+      "LIMA_HOME": "/private/tmp/mlat-readiness-lima"
+    }
+  },
+  {
+    "check": "container-frontend-final",
+    "command": [
+      "/private/tmp/mlat-lima-tools/bin/limactl",
+      "shell",
+      "--workdir",
+      "/tmp/mlat-candidate-57a0c7f",
+      "mlat-readiness",
+      "docker",
+      "build",
+      "--file",
+      "reference/mlat/frontend/Dockerfile",
+      "--tag",
+      "mlat-frontend:readiness-57a0c7f",
+      "."
+    ],
+    "cwd": "/Users/jeremicarose/Downloads/mlat-system 2",
+    "started_at": "2026-10-19T16:25:15.356604+00:00",
+    "environment": {
+      "MLAT_ENV_FILE": "/dev/null",
+      "node": "22.23.1",
+      "python_environment": "artifacts/audit/venv"
+    },
+    "exit_status": 0,
+    "status": "PASS",
+    "duration_seconds": 3.111,
+    "additional_environment": {
+      "LIMA_HOME": "/private/tmp/mlat-readiness-lima"
+    }
+  },
+  {
+    "check": "container-runtime-final",
+    "command": [
+      "/private/tmp/mlat-lima-tools/bin/limactl",
+      "shell",
+      "--workdir",
+      "/tmp/mlat-candidate-57a0c7f",
+      "mlat-readiness",
+      "python3",
+      "tools/check_container_runtime.py",
+      "--backend-image",
+      "mlat-system:readiness-57a0c7f",
+      "--frontend-image",
+      "mlat-frontend:readiness-57a0c7f",
+      "--output",
+      "/tmp/mlat-container-runtime-final-report.json"
+    ],
+    "cwd": "/Users/jeremicarose/Downloads/mlat-system 2",
+    "started_at": "2026-10-19T16:25:54.206531+00:00",
+    "environment": {
+      "MLAT_ENV_FILE": "/dev/null",
+      "node": "22.23.1",
+      "python_environment": "artifacts/audit/venv"
+    },
+    "exit_status": 0,
+    "status": "PASS",
+    "duration_seconds": 24.498,
+    "additional_environment": {
+      "LIMA_HOME": "/private/tmp/mlat-readiness-lima"
+    }
+  },
+  {
+    "check": "final-browser-retry",
+    "command": [
+      "/usr/bin/caffeinate",
+      "-i",
+      "npm",
+      "run",
+      "test:e2e:prepared"
+    ],
+    "cwd": "/Users/jeremicarose/Downloads/mlat-system 2/artifacts/blockers-2026-10-19/candidate/reference/mlat/frontend",
+    "started_at": "2026-10-19T16:26:01.111319+00:00",
+    "environment": {
+      "MLAT_ENV_FILE": "/dev/null",
+      "node": "22.23.1",
+      "python_environment": "artifacts/audit/venv"
+    },
+    "exit_status": 0,
+    "status": "PASS",
+    "duration_seconds": 68.424,
+    "additional_environment": {
+      "PLAYWRIGHT_PYTHON_DIR": "/Users/jeremicarose/Downloads/mlat-system 2/artifacts/readiness-2026-10-19/venv",
+      "PLAYWRIGHT_DATA_MODE": "synthetic"
+    }
+  },
+  {
+    "check": "final-historical",
+    "command": [
+      "/usr/bin/caffeinate",
+      "-i",
+      "npm",
+      "run",
+      "test:e2e:replay"
+    ],
+    "cwd": "/Users/jeremicarose/Downloads/mlat-system 2/artifacts/blockers-2026-10-19/candidate/reference/mlat/frontend",
+    "started_at": "2026-10-19T16:27:34.127146+00:00",
+    "environment": {
+      "MLAT_ENV_FILE": "/dev/null",
+      "node": "22.23.1",
+      "python_environment": "artifacts/audit/venv"
+    },
+    "exit_status": 0,
+    "status": "PASS",
+    "duration_seconds": 14.279,
+    "additional_environment": {
+      "PLAYWRIGHT_PYTHON_DIR": "/Users/jeremicarose/Downloads/mlat-system 2/artifacts/readiness-2026-10-19/venv",
+      "PLAYWRIGHT_DATA_MODE": "historical"
+    }
+  },
+  {
+    "check": "stop-validation-vm",
+    "command": [
+      "/private/tmp/mlat-lima-tools/bin/limactl",
+      "stop",
+      "mlat-readiness"
+    ],
+    "cwd": "/Users/jeremicarose/Downloads/mlat-system 2",
+    "started_at": "2026-10-19T16:28:59.591100+00:00",
+    "environment": {
+      "MLAT_ENV_FILE": "/dev/null",
+      "node": "22.23.1",
+      "python_environment": "artifacts/audit/venv"
+    },
+    "exit_status": 0,
+    "status": "PASS",
+    "duration_seconds": 30.65,
+    "additional_environment": {
+      "LIMA_HOME": "/private/tmp/mlat-readiness-lima"
+    }
+  },
+  {
+    "check": "final-main-documentation",
+    "command": [
+      "python",
+      "tools/check_documentation.py"
+    ],
+    "cwd": "/Users/jeremicarose/Downloads/mlat-system 2",
+    "started_at": "2026-10-19T16:29:30.388605+00:00",
+    "environment": {
+      "MLAT_ENV_FILE": "/dev/null",
+      "node": "22.23.1",
+      "python_environment": "artifacts/audit/venv"
+    },
+    "exit_status": 0,
+    "status": "PASS",
+    "duration_seconds": 0.412
+  },
+  {
+    "check": "final-main-whitespace",
+    "command": [
+      "git",
+      "diff",
+      "--check"
+    ],
+    "cwd": "/Users/jeremicarose/Downloads/mlat-system 2",
+    "started_at": "2026-10-19T16:29:30.882780+00:00",
+    "environment": {
+      "MLAT_ENV_FILE": "/dev/null",
+      "node": "22.23.1",
+      "python_environment": "artifacts/audit/venv"
+    },
+    "exit_status": 0,
+    "status": "PASS",
+    "duration_seconds": 0.135
+  }
+]

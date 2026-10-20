@@ -1,0 +1,8 @@
+{
+  "status": "BLOCKED",
+  "authorized_receiver_config_supplied": false,
+  "independent_reference_window_supplied": false,
+  "clock_calibration_artifacts_supplied": false,
+  "physical_observation_count": 0,
+  "reason": "No operator-supplied physical receiver campaign inputs; synthetic fixtures do not satisfy this requirement."
+}

@@ -1,8 +1,9 @@
 # Deployment and recovery
 
 This is a procedure for local validation and later operator review, not evidence
-that production infrastructure has been deployed. Docker and target-host restore
-remain unverified here. See the independent [release gates](release-checklist.md).
+that production infrastructure has been deployed. Local container builds, synthetic processing, restart and backup/restore have
+now passed; target-host deployment and restore remain unverified. See the
+[20 October evidence](../../evidence/console-experience-2026-10-20/README.md). See the independent [release gates](release-checklist.md).
 
 ## Supported setup
 
@@ -31,8 +32,8 @@ npm --prefix reference/mlat/frontend run build
 
 Verify the displayed patch versions against `.python-version` and `.nvmrc`.
 Use `nvm use` if nvm manages Node. The fresh Python environment, wheel installation
-and production frontend build were executed locally; a clean committed checkout
-and container CI must still be verified after these working-tree changes are reviewed.
+and production frontend build were executed locally; clean committed source and local container execution now also pass.
+Public CI and target-host acceptance are separate requirements.
 
 The API initializes/migrates SQLite schema version 2 on connection; there is no
 separate migration service. Before upgrading any existing database, make an online
@@ -179,8 +180,10 @@ python tools/check_container_runtime.py --output artifacts/container-smoke.json
 
 The smoke tool creates uniquely named disposable resources and removes its own
 resources afterward. It checks non-root startup, public assets, proxy, persistence
-and shutdown. This command was not executable in this audit because Docker is absent.
-Do not use a configured CI workflow as evidence that the check has run.
+and shutdown. The original audit could not execute this command. The later local Linux VM run
+passed processor → storage → API → frontend checks, restart, backup/restore and
+shutdown; its actual image identifiers and reports are in the linked evidence.
+Do not treat a local VM result as target-host recovery evidence.
 
 Before external exposure, select an immutable application revision/image digest,
 complete the independent gates, back up state, restrict CORS and secrets, configure
@@ -201,3 +204,21 @@ diagnostic bundle and protected raw evidence, determine impact, rotate affected
 deployment credentials if needed, restore/roll back from verified artifacts, and
 record recovery tests and follow-up defects. Incident ownership and a rehearsal
 on the target environment are still Gate C requirements.
+
+
+## Hosted testing publication — 20 October 2026
+
+The user authorized application publication and deployment after the local checks.
+The prepared release branch includes the immutable local evidence packages. It is
+an explicitly synthetic hosted walkthrough, not a new production-readiness claim.
+Wallet signing, contract deployment and paid resources remain outside this action.
+
+The Render free-plan blueprint now requires the API service's actual public HTTPS
+origin in the frontend's server-only `MLAT_API_INTERNAL_URL`. Free web services
+cannot receive private-network traffic; the earlier `hostport` binding was invalid
+for this plan ([Render documentation](https://render.com/docs/private-network)).
+Deploy the API first, set its real HTTPS origin, then deploy the console at the
+same reviewed commit. Verify both health endpoints, proxied API provenance,
+`/app/guide`, static assets and browser navigation before claiming deployment success.
+A valid hosting login and service identities are required; no guessed hostname
+or local container result substitutes for that verification.

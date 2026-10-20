@@ -1,0 +1,48 @@
+{
+  "transport": "command-jsonl",
+  "bridge_command": "",
+  "bridge_command_valid": false,
+  "raw_observation_log": {
+    "path": "",
+    "ready": false,
+    "error": ""
+  },
+  "strict_production_mode": true,
+  "simulate_if_unavailable": false,
+  "require_live_benchmarkable_output": false,
+  "receiver_registry_type_hash_configured": false,
+  "receiver_config": {
+    "path": "",
+    "valid": false,
+    "receiver_count": 0,
+    "all_endpoints_reachable": false,
+    "receivers": [],
+    "error": ""
+  },
+  "registry_discovery": {
+    "queried": false,
+    "active_receiver_count": 0,
+    "configured_identities_verified": false,
+    "missing_configured_identities": [],
+    "error": ""
+  },
+  "checks": {
+    "readsb_installed": true,
+    "rtl_test_installed": true,
+    "rtl_sdr_detected": false,
+    "local_common_beast_ports": [],
+    "external_source_attested": false,
+    "synchronized_clocks_attested": false,
+    "max_clock_uncertainty_ns": 100.0
+  },
+  "ready_for_real_live_ingest": false,
+  "ready_for_evidence_run": false,
+  "blockers": [
+    "FOURDSKY_BRIDGE_COMMAND is not set.",
+    "MLAT_RECEIVER_CONFIG is not configured.",
+    "No complete four-receiver Beast source is available from the configured endpoints.",
+    "Synchronized receiver clocks have not been attested.",
+    "REQUIRE_LIVE_BENCHMARKABLE_OUTPUT is not enabled.",
+    "RECEIVER_REGISTRY_TYPE_HASH is not configured."
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "source_commit": "57a0c7f17fd0a1cac8681ed860c5cfb1aafcecfa",
+  "source_tree": "630565092e61700913eea51145457738f960eced",
+  "archive": "candidate-57a0c7f.tar.gz",
+  "archive_sha256": "8bede2f7dc5e2c4ba0b5a44d8c6470081a9d3fa27fc672ec826cb6b933e6df70",
+  "public_push": "PENDING_EXPLICIT_APPROVAL",
+  "independent_review_completed": false,
+  "wallet_transactions_executed": 0,
+  "physical_receiver_campaign_completed": false
+}

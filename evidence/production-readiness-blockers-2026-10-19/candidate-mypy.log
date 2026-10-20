@@ -1,0 +1,2 @@
+src/mlat_reference/api/rest_api.py:88: note: By default the bodies of untyped functions are not checked, consider using --check-untyped-defs  [annotation-unchecked]
+Success: no issues found in 30 source files
