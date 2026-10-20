@@ -6,13 +6,13 @@ test('historical observations reach stored solutions and the replay debugger', a
   page.on('pageerror', (error) => errors.push(error.message));
   await page.goto('/app/replay?event=5711382');
   await expect(page.getByRole('heading', { name: 'Historical replay', exact: true, level: 1 })).toBeVisible();
-  await expect(page.getByText('362 events · 270 solved · 92 rejected')).toBeVisible();
-  await expect(page.getByText(/Calculated position:/)).toBeVisible();
-  await expect(page.getByText(/UTC epoch is not supplied/)).toBeVisible();
+  await expect(page.getByRole('main').getByText('362 events · 270 solved · 92 rejected')).toBeVisible();
+  await expect(page.getByRole('main').getByText(/Calculated position:/)).toBeVisible();
+  await expect(page.getByRole('main').getByText(/UTC epoch is not supplied/)).toBeVisible();
   await page.getByRole('button', { name: 'Next stage', exact: true }).click();
-  await expect(page.getByText('Unique dataset identities, integer arrival timestamps and finite receiver geometry.')).toBeVisible();
+  await expect(page.getByRole('main').getByText('Unique dataset identities, integer arrival timestamps and finite receiver geometry.')).toBeVisible();
   await page.getByRole('button', { name: 'Next stage', exact: true }).click();
-  await expect(page.getByText(/Raw Mode-S frame correlation cannot be tested/)).toBeVisible();
+  await expect(page.getByRole('main').getByText(/Raw Mode-S frame correlation cannot be tested/)).toBeVisible();
   const receivers = await page.request.get('/api/receivers');
   for (const receiver of (await receivers.json()).receivers) {
     expect(receiver.last_seen).toBe(0);
@@ -28,7 +28,7 @@ test('historical replay retains rejected events and supports mobile keyboard use
   const failed = listing.events.find((event) => !event.solved);
   expect(failed).toBeTruthy();
   await page.goto(`/app/replay?event=${failed.event_id}`);
-  await expect(page.getByText(/No position was stored: altitude out of bounds/)).toBeVisible();
+  await expect(page.getByRole('main').getByText(/No position was stored: altitude out of bounds/)).toBeVisible();
   const next = page.getByRole('button', { name: 'Next stage', exact: true });
   await next.focus();
   await page.keyboard.press('Enter');
@@ -42,7 +42,7 @@ test('event links open rejected outcomes and pagination preserves navigation', a
   await page.goto('/app/replay');
   await page.getByRole('link', { name: '26543', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Event 26543', exact: true })).toBeVisible();
-  await expect(page.getByText(/No position was stored: altitude out of bounds/)).toBeVisible();
+  await expect(page.getByRole('main').getByText(/No position was stored: altitude out of bounds/)).toBeVisible();
   await page.getByRole('link', { name: 'Next events', exact: true }).click();
   await expect(page).toHaveURL(/offset=50/);
   await page.getByRole('link', { name: 'Previous events', exact: true }).click();
@@ -51,7 +51,7 @@ test('event links open rejected outcomes and pagination preserves navigation', a
 
 test('replay mission needs an explicit solver-stage inspection and retains historical qualification', async ({ page }) => {
   await page.goto('/app/replay?event=26543');
-  await expect(page.getByText(/No position was stored: altitude out of bounds/)).toBeVisible();
+  await expect(page.getByRole('main').getByText(/No position was stored: altitude out of bounds/)).toBeVisible();
   const saved = () => page.evaluate(() => JSON.parse(localStorage.getItem('receiver-console-missions-v1') || '{"state":{"completed":[]}}').state.completed);
   expect(await saved()).not.toContain('replay');
   await page.getByRole('button', { name: '5. solver', exact: true }).click();
