@@ -98,15 +98,31 @@ jobs:
         env:
           HOMEBREW_NO_AUTO_UPDATE: 1
         run: |
-          brew version-install riscv64-elf-binutils@2.46.0
-          brew version-install riscv64-elf-gcc@16.1.0
+          # Extraction preserves source hashes, but dependencies remain unversioned.
+          # Pin GCC's dependency and embedded assembler/linker paths before install.
+          brew tap-new --no-git mlat/deployment
+          brew extract riscv64-elf-binutils mlat/deployment --version=2.46.0
+          brew extract riscv64-elf-gcc mlat/deployment --version=16.1.0
+          GCC_FORMULA="$(brew --repository mlat/deployment)/Formula/riscv64-elf-gcc@16.1.0.rb"
+          python3 - "${GCC_FORMULA}" <<'PY'
+          from pathlib import Path
+          import sys
+          path = Path(sys.argv[1])
+          source = path.read_text()
+          assert 'depends_on "riscv64-elf-binutils"' in source
+          path.write_text(source.replace("riscv64-elf-binutils", "mlat/deployment/riscv64-elf-binutils@2.46.0"))
+          PY
+          brew install mlat/deployment/riscv64-elf-gcc@16.1.0
       - name: Rebuild the deployed contract from clean source
         run: |
-          GCC_PREFIX="$(brew --prefix riscv64-elf-gcc@16.1.0)"
-          BINUTILS_PREFIX="$(brew --prefix riscv64-elf-binutils@2.46.0)"
+          GCC_PREFIX="$(brew --prefix mlat/deployment/riscv64-elf-gcc@16.1.0)"
+          BINUTILS_PREFIX="$(brew --prefix mlat/deployment/riscv64-elf-binutils@2.46.0)"
           export CC_riscv64imac_unknown_none_elf="${GCC_PREFIX}/bin/riscv64-elf-gcc"
           export AR_riscv64imac_unknown_none_elf="${BINUTILS_PREFIX}/bin/riscv64-elf-ar"
           test "$("${CC_riscv64imac_unknown_none_elf}" -dumpfullversion)" = "16.1.0"
+          AS_PATH="$("${CC_riscv64imac_unknown_none_elf}" -print-prog-name=as)"
+          python3 -c 'from pathlib import Path; import sys; assert Path(sys.argv[1]).resolve() == Path(sys.argv[2]).resolve()' "${AS_PATH}" "${BINUTILS_PREFIX}/bin/riscv64-elf-as"
+          "${AS_PATH}" --version
           "${BINUTILS_PREFIX}/bin/riscv64-elf-ld" --version
           rustc -vV
           cargo -V
