@@ -42,7 +42,7 @@ export function MissionChallenge({ kind }: { kind: 'source' | 'benchmark' }) {
   const source = kind === 'source';
   const options = source ? [
     { id: 'hardware', label: 'The receiver is physically present with an accurate clock.' },
-    { id: 'authorization', label: 'The current owner authorized the recorded lifecycle state.' },
+    { id: 'authorization', label: 'The recorded owner lock and lifecycle state follow the contract rules.' },
     { id: 'accuracy', label: 'Every observation from the receiver is accurate.' },
   ] : [
     { id: 'truth', label: 'The calculated position is independently verified ground truth.' },
@@ -51,7 +51,7 @@ export function MissionChallenge({ kind }: { kind: 'source' | 'benchmark' }) {
   ];
   const correct = source ? 'authorization' : 'fit';
   const explanation = source
-    ? 'CKB verifies ownership authorization and lifecycle state. Hardware location, clock quality, and observation truth need separate evidence.'
+    ? 'The owner lock sets who can authorize spending the registry cell. CKB enforces lifecycle rules; hardware location, clock quality, and observation truth need separate evidence.'
     : 'Residual measures model fit. Geometry and timing errors can still produce a wrong position, so inspect reference error and rejected events too.';
   return <section id={`${kind}-challenge`} aria-label={source ? 'Source challenge' : 'Benchmark challenge'} className="scroll-mt-36 rounded-lg border border-line bg-graphite p-4 sm:p-5">
     <div className="flex flex-wrap items-center justify-between gap-2"><h3 className="text-sm font-semibold text-ink">{source ? 'What does a CKB Registry record verify?' : 'What does a small solver residual tell you?'}</h3><span className="text-xs font-semibold text-signal-blue">{completed ? 'Badge earned' : `${source ? 25 : 50} XP challenge`}</span></div>

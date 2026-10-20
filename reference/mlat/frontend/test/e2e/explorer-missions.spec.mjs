@@ -35,7 +35,7 @@ test('earns learning points for correct answers, persists once, pauses and reset
   await challenge.getByRole('button', { name: /physically present/ }).click();
   await expect(challenge.getByRole('status')).toContainText('Try again');
   expect(await completions(page)).toEqual([]);
-  await challenge.getByRole('button', { name: /current owner authorized/ }).click();
+  await challenge.getByRole('button', { name: /recorded owner lock/ }).click();
   await expect(page.getByRole('complementary', { name: 'Learning progress' })).toContainText('25 / 300 XP');
   await page.reload();
   await expect(challenge).toContainText('Badge earned');
@@ -50,7 +50,7 @@ test('earns learning points for correct answers, persists once, pauses and reset
   expect(await completions(page)).toEqual(['source']);
   await page.getByRole('button', { name: 'Reset learning progress' }).click();
   await page.getByRole('button', { name: 'Reset progress', exact: true }).click();
-  await expect(challenge.getByRole('button', { name: /current owner authorized/ })).toBeEnabled();
+  await expect(challenge.getByRole('button', { name: /recorded owner lock/ })).toBeEnabled();
   expect(await completions(page)).toEqual([]);
 });
 
@@ -94,7 +94,7 @@ test('mission guide supports mobile, keyboard, reduced motion and unavailable st
     };
   });
   await page.goto('/app/guide');
-  const correct = page.getByRole('button', { name: /current owner authorized/ });
+  const correct = page.getByRole('button', { name: /recorded owner lock/ });
   await expect(correct).toBeEnabled();
   await correct.focus();
   await expect(correct).toBeFocused();
@@ -110,7 +110,7 @@ test('learning and navigation remain available when runtime APIs fail', async ({
   await page.route('**/api/**', (route) => route.abort());
   await page.goto('/app/guide');
   await expect(page.getByRole('heading', { name: 'Explorer missions', level: 1 })).toBeVisible();
-  await page.getByRole('button', { name: /current owner authorized/ }).click();
+  await page.getByRole('button', { name: /recorded owner lock/ }).click();
   await expect(page.getByRole('region', { name: 'Source challenge' })).toContainText('Badge earned');
   await page.getByRole('navigation').getByRole('link', { name: 'Settings', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Settings', level: 1 })).toBeVisible();

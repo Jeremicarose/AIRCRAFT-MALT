@@ -24,7 +24,7 @@ the workspace, leaving navigation available.
 
 | Mission | Completion evidence | Points |
 | --- | --- | ---: |
-| Know your source | Correct answer about CKB ownership/lifecycle authority | 25 |
+| Know your source | Correct answer about recorded owner lock/lifecycle rules | 25 |
 | Meet a receiver | User selects an available receiver row | 50 |
 | Follow the signal | User selects an available pipeline stage | 50 |
 | Read beyond the score | Correct interpretation of a displayed benchmark residual | 50 |
