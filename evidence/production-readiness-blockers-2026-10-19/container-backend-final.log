@@ -1,0 +1,86 @@
+#0 building with "rootless" instance using docker driver
+
+#1 [internal] load build definition from Dockerfile
+#1 transferring dockerfile: 1.25kB 0.0s done
+#1 DONE 0.1s
+
+#2 [internal] load metadata for docker.io/library/python:3.12.11-slim@sha256:47ae396f09c1303b8653019811a8498470603d7ffefc29cb07c88f1f8cb3d19f
+#2 DONE 3.2s
+
+#3 [internal] load .dockerignore
+#3 transferring context: 293B done
+#3 DONE 0.0s
+
+#4 [ 1/14] FROM docker.io/library/python:3.12.11-slim@sha256:47ae396f09c1303b8653019811a8498470603d7ffefc29cb07c88f1f8cb3d19f
+#4 resolve docker.io/library/python:3.12.11-slim@sha256:47ae396f09c1303b8653019811a8498470603d7ffefc29cb07c88f1f8cb3d19f 0.0s done
+#4 DONE 0.0s
+
+#5 [internal] load build context
+#5 transferring context: 2.14MB 0.1s done
+#5 DONE 0.1s
+
+#6 [ 3/14] COPY requirements.lock .
+#6 CACHED
+
+#7 [ 4/14] COPY pyproject.toml .
+#7 CACHED
+
+#8 [ 6/14] RUN pip install --no-cache-dir --require-hashes -r requirements.lock
+#8 CACHED
+
+#9 [ 2/14] WORKDIR /app
+#9 CACHED
+
+#10 [ 5/14] COPY README.md LICENSE ./
+#10 CACHED
+
+#11 [ 7/14] COPY src/ ./src/
+#11 CACHED
+
+#12 [ 8/14] COPY tools/ ./tools/
+#12 DONE 0.1s
+
+#13 [ 9/14] COPY reference/mlat/benchmarks/ ./reference/mlat/benchmarks/
+#13 DONE 0.0s
+
+#14 [10/14] COPY evidence/mlat-reference/compact-public-solver-v2/ ./evidence/mlat-reference/compact-public-solver-v2/
+#14 DONE 0.0s
+
+#15 [11/14] COPY evidence/registry-v2-testnet-2026-09-11-data1-final/ ./evidence/registry-v2-testnet-2026-09-11-data1-final/
+#15 DONE 0.1s
+
+#16 [12/14] COPY .env.example ./
+#16 DONE 0.0s
+
+#17 [13/14] RUN pip install --no-cache-dir --no-deps --no-build-isolation .
+#17 1.625 Processing /app
+#17 1.630   Preparing metadata (pyproject.toml): started
+#17 2.753   Preparing metadata (pyproject.toml): finished with status 'done'
+#17 2.761 Building wheels for collected packages: ckb-registry-v2
+#17 2.765   Building wheel for ckb-registry-v2 (pyproject.toml): started
+#17 3.561   Building wheel for ckb-registry-v2 (pyproject.toml): finished with status 'done'
+#17 3.564   Created wheel for ckb-registry-v2: filename=ckb_registry_v2-0.2.0-py3-none-any.whl size=100430 sha256=10d5b02980078b0bb7941f27af4427a441c16e0f8973dd336366045276ff9833
+#17 3.564   Stored in directory: /tmp/pip-ephem-wheel-cache-ipaodtcv/wheels/54/1b/b7/aa63e25c8f14f4f2ae7b04e6097bdecb770e455c5c1ee0a600
+#17 3.569 Successfully built ckb-registry-v2
+#17 3.570 Installing collected packages: ckb-registry-v2
+#17 3.707 Successfully installed ckb-registry-v2-0.2.0
+#17 3.708 WARNING: Running pip as the 'root' user can result in broken permissions and conflicting behaviour with the system package manager, possibly rendering your system unusable. It is recommended to use a virtual environment instead: https://pip.pypa.io/warnings/venv. Use the --root-user-action option if you know what you are doing and want to suppress this warning.
+#17 4.696 
+#17 4.696 [notice] A new release of pip is available: 25.0.1 -> 26.2.1
+#17 4.696 [notice] To update, run: pip install --upgrade pip
+#17 DONE 4.8s
+
+#18 [14/14] RUN groupadd --gid 10001 mlat && useradd --uid 10001 --gid mlat --create-home mlat     && chmod 700 /home/mlat     && mkdir -p /app/data /app/logs && chown -R mlat:mlat /app/data /app/logs
+#18 DONE 0.4s
+
+#19 exporting to image
+#19 exporting layers
+#19 exporting layers 0.4s done
+#19 exporting manifest sha256:a7c55c2d9dd0a279161379447cda3392c06125b5ad2bd7789e5d8780ee0e7328 done
+#19 exporting config sha256:5ad5315e964886ea8593bfebdac58e34d1a362626c3a73546a7240852e3176bd 0.0s done
+#19 exporting attestation manifest sha256:d9cd1db8b210ff2fe69bc04fb9194baef439a01518f465b81db1c7488a9f1ca9 0.0s done
+#19 exporting manifest list sha256:4a1341f6adc67278ed11b100633860cd234a46ee776077cc9bb96e6cd349925d done
+#19 naming to docker.io/library/mlat-system:readiness-57a0c7f done
+#19 unpacking to docker.io/library/mlat-system:readiness-57a0c7f
+#19 unpacking to docker.io/library/mlat-system:readiness-57a0c7f 0.4s done
+#19 DONE 0.9s

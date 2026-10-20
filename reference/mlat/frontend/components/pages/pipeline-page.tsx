@@ -3,24 +3,25 @@
 import { AlertTriangle, ArrowUpRight, FileJson, Lightbulb, Wrench } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { useEffect, useMemo, useState } from 'react';
-import { ActivityRail, IssueList, SignalMarquee, Timeline, WorkspaceHeader, WorkspacePanel, WorkspaceSplit } from '@/components/operations-ui';
+import { useMissionStore } from '@/lib/mission-store';
+import { ActivityRail, IssueList, SignalMarquee, WorkspaceHeader, WorkspacePanel, WorkspaceSplit } from '@/components/operations-ui';
 import { StatusChip } from '@/components/ui/status-chip';
 import { DataNotice } from '@/components/ui/data-notice';
 import { Skeleton } from '@/components/ui/skeleton';
 import { apiQueryKeys, fetchJson, presentApiError } from '@/lib/api';
 import { number, titleCase } from '@/lib/format';
 import { useOperatorStore } from '@/lib/operator-store';
+import { pipelineStageForBlocker } from '@/lib/pipeline-stage';
 import type { MetricsData, PipelineData, StatusTone } from '@/lib/types';
 import { ProgressBar } from '@/components/ui/progress-bar';
 import { SystemFlow } from '@/components/system-flow';
-import { cn } from '@/lib/utils';
 
 const actions: Record<string, string> = {
   registry: 'Verify the Registry V2 type hash, RPC connectivity, and live receiver discovery.',
   ingest: 'Confirm receiver endpoints, transport credentials, and recent signal timestamps.',
   clock: 'Restore receiver synchronization and keep clock uncertainty within the configured limit.',
   correlation: 'Inspect rejected groups and confirm at least four synchronized observations per transmission.',
-  solver: 'Review receiver geometry, residual error, and failed solve counters.',
+  solve: 'Review receiver geometry, residual error, and failed solve counters.',
   storage: 'Check database reachability, write latency, and the newest persisted position.',
   api: 'Verify API health, response latency, and frontend origin configuration.',
   dashboard: 'Refresh the console after upstream stages pass and confirm the latest position is visible.',
@@ -43,6 +44,10 @@ export function PipelinePage({ pipeline: initialPipeline, metrics: initialMetric
   const progress = stages.length ? passed / stages.length * 100 : 0;
   const [selectedStageId, setSelectedStageId] = useState<string | null>(stages.find((stage) => stage.status !== 'pass')?.id ?? stages[0]?.id ?? null);
   const selectedStage = stages.find((stage) => stage.id === selectedStageId) ?? stages[0] ?? null;
+  const inspectStage = (id: string) => {
+    setSelectedStageId(id);
+    if (!pipelineQuery.error && stages.some((stage) => stage.id === id)) useMissionStore.getState().complete('pipeline');
+  };
   const liveReady = Boolean(pipeline?.live_evidence_ready);
   const operational = Boolean(pipeline?.pipeline_operational);
   const current = metrics?.current ?? {};
@@ -53,7 +58,26 @@ export function PipelinePage({ pipeline: initialPipeline, metrics: initialMetric
     setSelectedStageId((currentId) => stages.find((stage) => stage.id === currentId)?.id ?? stages.find((stage) => stage.status !== 'pass')?.id ?? stages[0]?.id ?? null);
   }, [stages]);
 
-  const issueList = blockers.length ? blockers.map((blocker) => ({ title: 'Pipeline blocker', detail: blocker, tone: 'failure' as StatusTone, href: '/app/pipeline', meta: 'Immediate' })) : stages.filter((stage) => stage.status !== 'pass').map((stage) => ({ title: stage.label, detail: stage.detail || 'Stage requires review.', tone: stageTone(stage.status), href: '/app/pipeline', meta: titleCase(stage.status) }));
+  const issueList = blockers.length ? blockers.map((blocker) => {
+    const stage = pipelineStageForBlocker(blocker, stages);
+    return {
+      title: stage ? `${stage.label} blocker` : 'Pipeline blocker',
+      detail: blocker,
+      tone: 'failure' as StatusTone,
+      meta: 'Immediate',
+      onSelect: stage ? () => inspectStage(stage.id) : undefined,
+      selected: stage?.id === selectedStage?.id,
+      actionLabel: stage ? `Inspect ${stage.label} blocker` : undefined,
+    };
+  }) : stages.filter((stage) => stage.status !== 'pass').map((stage) => ({
+    title: stage.label,
+    detail: stage.detail || 'Stage requires review.',
+    tone: stageTone(stage.status),
+    meta: titleCase(stage.status),
+    onSelect: () => inspectStage(stage.id),
+    selected: stage.id === selectedStage?.id,
+    actionLabel: `Inspect ${stage.label} stage`,
+  }));
   const proofLinks = useMemo(() => [
     { label: 'Pipeline state', detail: 'Current stage evidence', href: '/api/pipeline' },
     { label: 'Bounded metrics', detail: `${number(metrics?.sample_count)} samples`, href: '/api/evidence/metrics' },
@@ -113,7 +137,7 @@ export function PipelinePage({ pipeline: initialPipeline, metrics: initialMetric
           { id: 'receiver', label: 'Receivers', detail: `${receiverCount} in runtime inventory`, tone: receiverCount ? 'selection' : 'attention', href: '/app/receivers' },
           { id: 'registry', label: 'Registry', detail: stageById.get('registry')?.detail ?? 'Registry state unavailable', tone: stageTone(stageById.get('registry')?.status ?? 'waiting'), href: '/app/registry' },
           { id: 'discovery', label: 'Discovery', detail: stageById.get('discovery')?.detail ?? 'Discovery state unavailable', tone: stageTone(stageById.get('discovery')?.status ?? 'waiting'), href: '/app/receivers' },
-          { id: 'mlat', label: 'MLAT', detail: stageById.get('solve')?.detail ?? 'Localization state unavailable', tone: stageTone(stageById.get('solve')?.status ?? 'waiting'), href: '/app/pipeline' },
+          { id: 'mlat', label: 'MLAT', detail: stageById.get('solve')?.detail ?? 'Localization state unavailable', tone: stageTone(stageById.get('solve')?.status ?? 'waiting'), onSelect: () => inspectStage('solve'), selected: selectedStage?.id === 'solve' },
           { id: 'aircraft', label: 'Aircraft', detail: aircraftCount ? `${aircraftCount} currently active` : 'No active localization result', tone: aircraftCount ? 'healthy' : 'attention', href: '/app/aircraft' },
         ]} />
       </WorkspacePanel>
@@ -122,31 +146,34 @@ export function PipelinePage({ pipeline: initialPipeline, metrics: initialMetric
         secondaryWidth="340px"
         primary={<div className="space-y-4">
           <WorkspacePanel title="Readiness queue" detail="Ranked blockers and failing stages." tone={issueList[0]?.tone ?? 'healthy'}>
-            <IssueList items={issueList.length ? issueList : [{ title: 'Pipeline clear', detail: 'All tracked stages currently report passing state.', tone: 'healthy', href: '/app/metrics' }]} />
+            <IssueList items={issueList.length ? issueList : [{ title: 'Pipeline clear', detail: 'All tracked stages currently report passing state.', tone: 'healthy' }]} />
           </WorkspacePanel>
 
           <WorkspacePanel title="Stage timeline" detail="Select a stage to inspect metrics and recommended action." tone="selection">
-            <Timeline items={stages.map((stage) => ({
+            <IssueList items={stages.map((stage) => ({
               title: stage.label,
               tone: stage.id === selectedStage?.id ? 'selection' : stageTone(stage.status),
               meta: titleCase(stage.status),
-              detail: <button type="button" aria-pressed={stage.id === selectedStage?.id} aria-label={`Inspect ${stage.label} stage`} onClick={() => setSelectedStageId(stage.id)} className={cn('rounded-sm text-left underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal-blue', stage.id === selectedStage?.id && 'text-ink-secondary')}>{stage.detail || `${stage.label} did not report a current explanation.`}</button>,
+              detail: stage.detail || `${stage.label} did not report a current explanation.`,
+              onSelect: () => inspectStage(stage.id),
+              selected: stage.id === selectedStage?.id,
+              actionLabel: `Inspect ${stage.label} stage`,
             }))} />
           </WorkspacePanel>
 
           <WorkspacePanel title={selectedStage ? `${selectedStage.label} details` : 'Stage details'} detail={selectedStage?.detail || 'Select a stage to inspect current evidence.'} tone={selectedStage ? stageTone(selectedStage.status) : 'neutral'}>
-            {selectedStage ? <div className="grid gap-px bg-line md:grid-cols-3"><div className="bg-graphite p-4"><div className="flex items-center gap-2 text-[11px] font-semibold text-ink-secondary"><AlertTriangle className="size-3.5" />What happened</div><p className="mt-2 text-xs leading-5 text-ink-quiet">{selectedStage.detail || `${selectedStage.label} did not report a current explanation.`}</p></div><div className="bg-graphite p-4"><div className="flex items-center gap-2 text-[11px] font-semibold text-ink-secondary"><FileJson className="size-3.5" />Evidence</div><dl className="mt-2 space-y-1.5">{Object.entries(selectedStage.metrics ?? {}).slice(0, 5).map(([key, value]) => <div key={key} className="flex items-center justify-between gap-3"><dt className="truncate text-[11px] text-ink-quiet">{titleCase(key)}</dt><dd className="max-w-[50%] truncate font-mono text-[11px] text-ink-secondary">{String(value)}</dd></div>)}</dl>{!Object.keys(selectedStage.metrics ?? {}).length ? <p className="mt-2 text-xs text-ink-quiet">No stage metrics were attached.</p> : null}</div><div className="bg-graphite p-4"><div className="flex items-center gap-2 text-[11px] font-semibold text-ink-secondary"><Wrench className="size-3.5" />Operator action</div><p className="mt-2 text-xs leading-5 text-ink-quiet">{actions[selectedStage.id] ?? 'Inspect the attached evidence and restore the upstream dependency.'}</p></div></div> : <div className="grid h-40 place-items-center text-xs text-ink-quiet">Pipeline state is unavailable.</div>}
+            {selectedStage ? <div className="grid gap-px bg-line md:grid-cols-3"><div className="bg-graphite p-4"><div className="flex items-center gap-2 text-xs font-semibold text-ink-secondary"><AlertTriangle className="size-3.5" />What happened</div><p className="mt-2 text-xs leading-5 text-ink-quiet">{selectedStage.detail || `${selectedStage.label} did not report a current explanation.`}</p></div><div className="bg-graphite p-4"><div className="flex items-center gap-2 text-xs font-semibold text-ink-secondary"><FileJson className="size-3.5" />Evidence</div><dl className="mt-2 space-y-1.5">{Object.entries(selectedStage.metrics ?? {}).slice(0, 5).map(([key, value]) => <div key={key} className="flex items-center justify-between gap-3"><dt className="truncate text-xs text-ink-quiet">{titleCase(key)}</dt><dd className="max-w-[50%] truncate font-mono text-xs text-ink-secondary">{String(value)}</dd></div>)}</dl>{!Object.keys(selectedStage.metrics ?? {}).length ? <p className="mt-2 text-xs text-ink-quiet">No stage metrics were attached.</p> : null}</div><div className="bg-graphite p-4"><div className="flex items-center gap-2 text-xs font-semibold text-ink-secondary"><Wrench className="size-3.5" />Operator action</div><p className="mt-2 text-xs leading-5 text-ink-quiet">{actions[selectedStage.id] ?? 'Inspect the attached evidence and restore the upstream dependency.'}</p></div></div> : <div className="grid h-40 place-items-center text-xs text-ink-quiet">Pipeline state is unavailable.</div>}
           </WorkspacePanel>
         </div>}
         secondary={<div className="space-y-4">
           <WorkspacePanel title="Debugger status" detail="Current pipeline operating posture." tone={stateTone}>
-            <div className="p-4"><div className="mb-2 flex items-center justify-between text-[11px] text-ink-quiet"><span>Readiness</span><span className="font-semibold text-ink-secondary">{Math.round(progress)}%</span></div><ProgressBar value={progress} tone={stateTone} label="Pipeline readiness" /></div>
+            <div className="p-4"><div className="mb-2 flex items-center justify-between text-xs text-ink-quiet"><span>Readiness</span><span className="font-semibold text-ink-secondary">{Math.round(progress)}%</span></div><ProgressBar value={progress} tone={stateTone} label="Pipeline readiness" /></div>
             <ActivityRail items={activityRail} />
           </WorkspacePanel>
 
           <WorkspacePanel title="Proof surfaces" detail="Machine-readable evidence and latest bounded metrics." tone="trust">
-            <div>{proofLinks.map((link) => <a key={link.label} href={link.href} target="_blank" rel="noreferrer" className="flex items-center gap-3 border-b border-line px-4 py-3 outline-none transition-colors duration-standard last:border-0 hover:bg-graphite-hover/55 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-signal-blue"><FileJson className="size-4 text-ink-quiet" /><div className="min-w-0 flex-1"><p className="text-xs font-semibold text-ink">{link.label}</p><p className="mt-0.5 truncate text-[11px] text-ink-quiet">{link.detail}</p></div><ArrowUpRight className="size-3.5 text-ink-quiet" /></a>)}</div>
-            <div className="border-t border-line p-4"><div className="flex items-start gap-2 text-[11px] leading-5 text-ink-quiet"><Lightbulb className="mt-0.5 size-3.5 shrink-0 text-attention" />Resolve upstream stages before retrying proof generation or evidence publication.</div></div>
+            <div>{proofLinks.map((link) => <a key={link.label} href={link.href} target="_blank" rel="noreferrer" className="flex items-center gap-3 border-b border-line px-4 py-3 outline-none transition-colors duration-standard last:border-0 hover:bg-graphite-hover/55 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-signal-blue"><FileJson className="size-4 text-ink-quiet" /><div className="min-w-0 flex-1"><p className="text-xs font-semibold text-ink">{link.label}</p><p className="mt-0.5 truncate text-xs text-ink-quiet">{link.detail}</p></div><ArrowUpRight className="size-3.5 text-ink-quiet" /></a>)}</div>
+            <div className="border-t border-line p-4"><div className="flex items-start gap-2 text-xs leading-5 text-ink-quiet"><Lightbulb className="mt-0.5 size-3.5 shrink-0 text-attention" />Resolve upstream stages before retrying proof generation or evidence publication.</div></div>
           </WorkspacePanel>
         </div>}
       />

@@ -1,0 +1,167 @@
+## main...origin/main
+ M .dockerignore
+ M .env.example
+ M .github/workflows/pilot-readiness.yml
+ M .github/workflows/reproducibility.yml
+ M .github/workflows/security.yml
+ M .gitignore
+ M ARCHITECTURE.md
+ M CONTEXT.md
+ M DEPLOYMENT.md
+ M Dockerfile
+ M README.md
+ M REPRODUCIBILITY.md
+ M docs/ENVIRONMENT.md
+ M docs/mlat/data-source-contract.md
+ M docs/pilot/README.md
+ M docs/pilot/recruitment.md
+ M reference/mlat/frontend/Dockerfile
+ M reference/mlat/frontend/app/api/[...path]/route.ts
+ M reference/mlat/frontend/app/app/aircraft/page.tsx
+ M reference/mlat/frontend/app/app/localization/page.tsx
+ M reference/mlat/frontend/app/app/overview/page.tsx
+ M reference/mlat/frontend/app/app/registry/page.tsx
+ M reference/mlat/frontend/app/globals.css
+ M reference/mlat/frontend/components/activity-feed.tsx
+ M reference/mlat/frontend/components/airspace-map.tsx
+ M reference/mlat/frontend/components/app-shell.tsx
+ M reference/mlat/frontend/components/charts.tsx
+ M reference/mlat/frontend/components/first-run-notice.tsx
+ M reference/mlat/frontend/components/lazy-airspace-map.tsx
+ M reference/mlat/frontend/components/lazy-charts.tsx
+ M reference/mlat/frontend/components/operations-ui.tsx
+ M reference/mlat/frontend/components/pages/aircraft-page.tsx
+ M reference/mlat/frontend/components/pages/environment-page.tsx
+ M reference/mlat/frontend/components/pages/live-map-page.tsx
+ M reference/mlat/frontend/components/pages/metrics-page.tsx
+ M reference/mlat/frontend/components/pages/overview-page.tsx
+ M reference/mlat/frontend/components/pages/pipeline-page.tsx
+ M reference/mlat/frontend/components/pages/receivers-page.tsx
+ M reference/mlat/frontend/components/pages/settings-page.tsx
+ M reference/mlat/frontend/components/receiver-inspector.tsx
+ M reference/mlat/frontend/components/system-flow.tsx
+ M reference/mlat/frontend/components/ui/command-palette.tsx
+ M reference/mlat/frontend/components/ui/notification-center.tsx
+ M reference/mlat/frontend/components/ui/stat-strip.tsx
+ M reference/mlat/frontend/components/ui/status-chip.tsx
+ M reference/mlat/frontend/lib/api.ts
+ M reference/mlat/frontend/lib/format.ts
+ M reference/mlat/frontend/lib/operator-store.ts
+ M reference/mlat/frontend/lib/receiver-state.ts
+ M reference/mlat/frontend/lib/routes.ts
+ M reference/mlat/frontend/lib/types.ts
+ M reference/mlat/frontend/package-lock.json
+ M reference/mlat/frontend/package.json
+ M reference/mlat/frontend/playwright.config.mjs
+ M reference/mlat/frontend/test/e2e/registry-accessibility.spec.mjs
+ M reference/mlat/frontend/test/e2e/release.spec.mjs
+ M render-entrypoint.sh
+ M render.yaml
+ M requirements-dev.lock
+ M requirements.lock
+ M run-demo.sh
+ M run-live.sh
+ M sdk/typescript/src/discovery.ts
+ M sdk/typescript/test/conformance.test.ts
+ M src/ckb_registry/discovery.py
+ M src/mlat_reference/api/rest_api.py
+ M src/mlat_reference/base.py
+ M src/mlat_reference/config.py
+ M src/mlat_reference/correlation/correlator.py
+ M src/mlat_reference/database/database.py
+ M src/mlat_reference/ingest/client.py
+ M src/mlat_reference/ingest/feed_transports.py
+ M src/mlat_reference/runtime.py
+ M src/mlat_reference/solver/robust.py
+ M tests/mlat/test_api.py
+ M tests/mlat/test_correlator.py
+ M tests/mlat/test_database.py
+ M tests/mlat/test_operational_evidence.py
+ M tests/mlat/test_production_mlat_pipeline.py
+ M tests/mlat/test_runtime_guardrails.py
+ M tests/registry/test_ckb_registry.py
+ M tools/check_documentation.py
+ M tools/mlat/capture_grant_evidence.py
+ M tools/mlat/capture_reliability_window.py
+ M tools/mlat/export_positions_for_benchmark.py
+ M tools/mlat/run_reproducible_benchmark.py
+ M tools/mlat/verify_live_evidence.py
+?? docs/audit/2026-10-08-changes.csv
+?? docs/audit/2026-10-08-file-inventory.csv
+?? docs/audit/2026-10-08-initial-audit.md
+?? docs/audit/2026-10-08-production-readiness.md
+?? docs/audit/2026-10-14-remediation.md
+?? docs/mlat/HISTORICAL_REPLAY.md
+?? docs/mlat/OPERATIONS.md
+?? docs/mlat/compact-public-solver-benchmark.md
+?? docs/pilot/APPLICATION_FORM.md
+?? docs/pilot/BRAND_AND_POSITIONING.md
+?? docs/pilot/CONSENT_FORM.md
+?? docs/pilot/FUNDING_PROPOSAL_DRAFT.md
+?? docs/pilot/PARTICIPANT_REQUIREMENTS.md
+?? docs/pilot/PROGRAMME_LAUNCH_PLAN.md
+?? docs/pilot/PROJECT_ONE_PAGER.md
+?? docs/pilot/assets/
+?? docs/pilot/video/
+?? evidence/mlat-reference/compact-public-solver-v1/
+?? evidence/mlat-reference/compact-public-solver-v2/
+?? evidence/mlat-reference/production-readiness-2026-10/
+?? evidence/mlat-reference/reproducible-benchmark-v3/
+?? reference/mlat/benchmarks/fixtures/README.md
+?? reference/mlat/benchmarks/fixtures/compact-public/
+?? reference/mlat/benchmarks/fixtures/mpyc-gps-five-event.json
+?? reference/mlat/benchmarks/fixtures/mpyc-gps-five-source.json
+?? reference/mlat/frontend/app/app/benchmark/
+?? reference/mlat/frontend/app/app/replay/
+?? reference/mlat/frontend/app/pilot/
+?? reference/mlat/frontend/components/aircraft-contributors.tsx
+?? reference/mlat/frontend/components/data-source-banner.tsx
+?? reference/mlat/frontend/components/map-source-badge.tsx
+?? reference/mlat/frontend/components/pages/historical-replay-page.tsx
+?? reference/mlat/frontend/components/pages/solver-benchmark-page.tsx
+?? reference/mlat/frontend/components/receiver-readiness-journey.tsx
+?? reference/mlat/frontend/components/registry-contract-verification.tsx
+?? reference/mlat/frontend/components/section-error-boundary.tsx
+?? reference/mlat/frontend/lib/contract-verification.ts
+?? reference/mlat/frontend/lib/data-source.ts
+?? reference/mlat/frontend/lib/operator-notices.ts
+?? reference/mlat/frontend/lib/pilot-programme.ts
+?? reference/mlat/frontend/lib/pipeline-stage.ts
+?? reference/mlat/frontend/test/contract-verification.test.mjs
+?? reference/mlat/frontend/test/data-source.test.mjs
+?? reference/mlat/frontend/test/e2e/historical-replay.spec.mjs
+?? reference/mlat/frontend/test/operator-notices.test.mjs
+?? reference/mlat/frontend/test/operator-store.test.mjs
+?? reference/mlat/frontend/test/p0-usability-contract.test.mjs
+?? reference/mlat/frontend/test/p1-usability-contract.test.mjs
+?? reference/mlat/frontend/test/p2-usability-contract.test.mjs
+?? reference/mlat/frontend/test/pilot-programme.test.mjs
+?? reference/mlat/frontend/test/pipeline-stage.test.mjs
+?? reference/mlat/frontend/test/solver-benchmark-page.test.mjs
+?? requirements-security.in
+?? requirements-security.lock
+?? run-replay.sh
+?? src/mlat_reference/api/diagnostic_export.py
+?? src/mlat_reference/api/health.py
+?? src/mlat_reference/benchmarks/
+?? src/mlat_reference/database/backup.py
+?? src/mlat_reference/diagnostics.py
+?? src/mlat_reference/ingest/validation.py
+?? src/mlat_reference/provenance.py
+?? src/mlat_reference/replay.py
+?? tests/mlat/test_api_provenance.py
+?? tests/mlat/test_backup_recovery.py
+?? tests/mlat/test_compact_solver_benchmark.py
+?? tests/mlat/test_failure_recovery.py
+?? tests/mlat/test_historical_replay.py
+?? tests/mlat/test_input_security.py
+?? tests/mlat/test_pilot_contract.py
+?? tests/mlat/test_remediation_security.py
+?? tests/mlat/test_storage_provenance.py
+?? tests/mlat/test_transport_recovery.py
+?? tools/check_container_runtime.py
+?? tools/mlat/database_snapshot.py
+?? tools/mlat/measure_pipeline_envelope.py
+?? tools/mlat/replay_compact_dataset.py
+?? tools/mlat/run_compact_solver_benchmark.py
+?? tools/mlat/run_process_soak.py

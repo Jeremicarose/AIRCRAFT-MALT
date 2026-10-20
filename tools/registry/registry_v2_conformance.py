@@ -201,6 +201,14 @@ async def _discovery_outcome(
     async def search() -> list[Dict[str, Any]]:
         return cells
 
+    async def rpc(method, params, url=None):
+        assert method == "get_live_cell"
+        candidate = next(cell for cell in cells if cell["out_point"] == params[0])
+        return {
+            "status": "live",
+            "cell": {"output": candidate["output"], "data": {"content": candidate["output_data"]}},
+        }
+
     active_discovery = CKBPeerDiscovery(
         CKBConfig(
             receiver_registry_type_hash=registry_script["code_hash"],
@@ -211,6 +219,7 @@ async def _discovery_outcome(
         )
     )
     active_discovery._search_receiver_cells = search  # type: ignore[method-assign]
+    active_discovery._rpc_call = rpc  # type: ignore[method-assign]
     active = await active_discovery.discover_peers()
 
     historical_discovery = CKBPeerDiscovery(
@@ -223,6 +232,7 @@ async def _discovery_outcome(
         )
     )
     historical_discovery._search_receiver_cells = search  # type: ignore[method-assign]
+    historical_discovery._rpc_call = rpc  # type: ignore[method-assign]
     historical = await historical_discovery.discover_peers(
         include_inactive=True,
         include_revoked=True,

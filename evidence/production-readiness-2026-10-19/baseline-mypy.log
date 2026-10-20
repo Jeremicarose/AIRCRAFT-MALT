@@ -1,0 +1,3 @@
+src/mlat_reference/api/diagnostic_export.py:15: error: Incompatible types in assignment (expression has type "float", target has type "str | int | None")  [assignment]
+src/mlat_reference/api/rest_api.py:88: note: By default the bodies of untyped functions are not checked, consider using --check-untyped-defs  [annotation-unchecked]
+Found 1 error in 1 file (checked 30 source files)

@@ -1,0 +1,91 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900" role="img" aria-labelledby="title desc">
+  <title id="title">Receiver coordination problem</title>
+  <desc id="desc">Receivers can move, be replaced, change owners, or retire while separate systems retain different identifiers. The pilot tests whether a shared lifecycle record helps.</desc>
+  <defs>
+    <style>
+      .eyebrow { font: 600 15px Inter, "IBM Plex Sans", Arial, sans-serif; fill: #68d5e8; }
+      .title { font: 650 42px Inter, "IBM Plex Sans", Arial, sans-serif; fill: #f1f4f8; }
+      .subtitle { font: 400 20px Inter, "IBM Plex Sans", Arial, sans-serif; fill: #aab2bd; }
+      .event { font: 650 21px Inter, "IBM Plex Sans", Arial, sans-serif; fill: #f1f4f8; }
+      .body { font: 400 16px Inter, "IBM Plex Sans", Arial, sans-serif; fill: #aab2bd; }
+      .small { font: 500 13px Inter, "IBM Plex Sans", Arial, sans-serif; fill: #8f99a6; }
+      .mono { font: 500 14px "IBM Plex Mono", Consolas, monospace; fill: #aab2bd; }
+      .question { font: 600 20px Inter, "IBM Plex Sans", Arial, sans-serif; fill: #f1f4f8; }
+      .icon { fill: none; stroke-linecap: round; stroke-linejoin: round; stroke-width: 2.4; }
+    </style>
+  </defs>
+  <rect width="1600" height="900" fill="#080a0d"/>
+  <text x="64" y="70" class="eyebrow">THE COORDINATION PROBLEM</text>
+  <text x="64" y="126" class="title">Receiver networks change. Their records must keep up.</text>
+  <text x="64" y="164" class="subtitle">The pilot starts with real operating events, not an assumed “identity crisis.”</text>
+
+  <g transform="translate(64 220)">
+    <rect width="340" height="250" rx="8" fill="#0d1014" stroke="#2a3039"/>
+    <rect width="5" height="250" rx="2" fill="#5b9cff"/>
+    <g transform="translate(24 28)" class="icon" stroke="#5b9cff">
+      <circle cx="22" cy="22" r="5" fill="#5b9cff" stroke="none"/>
+      <path d="M10 22a12 12 0 0 1 24 0M4 22a18 18 0 0 1 36 0M22 27v35M11 62h22"/>
+      <path d="M56 18h30M78 10l8 8-8 8"/>
+    </g>
+    <text x="24" y="124" class="event">Receiver moved</text>
+    <text x="24" y="158" class="body">Coordinates and network context</text>
+    <text x="24" y="182" class="body">may need updating.</text>
+    <text x="24" y="224" class="small">REAL EVENT TO VALIDATE</text>
+  </g>
+
+  <g transform="translate(442 220)">
+    <rect width="340" height="250" rx="8" fill="#0d1014" stroke="#2a3039"/>
+    <rect width="5" height="250" rx="2" fill="#9b8cf4"/>
+    <g transform="translate(24 28)" class="icon" stroke="#9b8cf4">
+      <path d="M5 18h34v44H5zM12 27h20M12 37h20M12 47h12"/>
+      <path d="M51 28h32l-7-7M83 28l-7 7M83 51H51l7-7M51 51l7 7"/>
+    </g>
+    <text x="24" y="124" class="event">Hardware replaced</text>
+    <text x="24" y="158" class="body">A local identifier may be reused,</text>
+    <text x="24" y="182" class="body">changed, or lost.</text>
+    <text x="24" y="224" class="small">REAL EVENT TO VALIDATE</text>
+  </g>
+
+  <g transform="translate(820 220)">
+    <rect width="340" height="250" rx="8" fill="#0d1014" stroke="#2a3039"/>
+    <rect width="5" height="250" rx="2" fill="#4bb6a3"/>
+    <g transform="translate(24 28)" class="icon" stroke="#4bb6a3">
+      <circle cx="18" cy="17" r="9"/><circle cx="68" cy="17" r="9"/>
+      <path d="M4 55c2-13 8-20 14-20s12 7 14 20M54 55c2-13 8-20 14-20s12 7 14 20M34 28h18M46 21l7 7-7 7"/>
+    </g>
+    <text x="24" y="124" class="event">Ownership transferred</text>
+    <text x="24" y="158" class="body">Control moves from one independent</text>
+    <text x="24" y="182" class="body">operator to another.</text>
+    <text x="24" y="224" class="small">REAL EVENT TO VALIDATE</text>
+  </g>
+
+  <g transform="translate(1198 220)">
+    <rect width="338" height="250" rx="8" fill="#0d1014" stroke="#2a3039"/>
+    <rect width="5" height="250" rx="2" fill="#ef6b72"/>
+    <g transform="translate(24 28)" class="icon" stroke="#ef6b72">
+      <circle cx="22" cy="22" r="5" fill="#ef6b72" stroke="none"/>
+      <path d="M10 22a12 12 0 0 1 24 0M4 22a18 18 0 0 1 36 0M22 27v35M11 62h22"/>
+      <path d="M52 18h34v34H52zM60 26l18 18M78 26L60 44"/>
+    </g>
+    <text x="24" y="124" class="event">Receiver retired</text>
+    <text x="24" y="158" class="body">Old records may disappear or remain</text>
+    <text x="24" y="182" class="body">active in another system.</text>
+    <text x="24" y="224" class="small">REAL EVENT TO VALIDATE</text>
+  </g>
+
+  <path d="M234 490V548M612 490V548M990 490V548M1367 490V548" stroke="#2a3039" stroke-width="2" stroke-dasharray="5 6"/>
+  <rect x="100" y="548" width="418" height="92" rx="8" fill="#14181e" stroke="#2a3039"/>
+  <text x="124" y="578" class="small">NETWORK DIRECTORY A</text>
+  <text x="124" y="613" class="mono">receiver: R-021 · owner: local-admin</text>
+  <rect x="591" y="548" width="418" height="92" rx="8" fill="#14181e" stroke="#2a3039"/>
+  <text x="615" y="578" class="small">NETWORK DIRECTORY B</text>
+  <text x="615" y="613" class="mono">station: node-8 · state: online</text>
+  <rect x="1082" y="548" width="418" height="92" rx="8" fill="#14181e" stroke="#2a3039"/>
+  <text x="1106" y="578" class="small">SHARED SPREADSHEET</text>
+  <text x="1106" y="613" class="mono">row: RX-17 · notes: check owner</text>
+
+  <rect x="64" y="704" width="1472" height="116" rx="8" fill="#0d1014" stroke="#2a3039"/>
+  <circle cx="104" cy="762" r="10" fill="#e6c45d"/>
+  <text x="132" y="752" class="question">Pilot question</text>
+  <text x="132" y="786" class="body">Does one owner-controlled lifecycle record reduce real coordination work across independently operated receivers?</text>
+</svg>

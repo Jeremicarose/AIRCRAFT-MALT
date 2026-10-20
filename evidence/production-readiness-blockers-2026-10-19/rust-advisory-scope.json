@@ -1,0 +1,65 @@
+{
+  "scanner": "cargo-audit 0.22.2",
+  "advisory_database_commit": "999ec89d5d3f10f20be14750ec8c2d8b44e0ac9b",
+  "vulnerability_category_count": 0,
+  "warnings": [
+    {
+      "category": "unmaintained",
+      "package": "atomic-polyfill",
+      "version": "1.0.3",
+      "advisory": "RUSTSEC-2023-0089",
+      "title": "atomic-polyfill is unmaintained",
+      "in_contract_target_normal_or_build_graph": false
+    },
+    {
+      "category": "unmaintained",
+      "package": "paste",
+      "version": "1.0.15",
+      "advisory": "RUSTSEC-2024-0436",
+      "title": "paste - no longer maintained",
+      "in_contract_target_normal_or_build_graph": false
+    },
+    {
+      "category": "unsound",
+      "package": "faster-hex",
+      "version": "0.6.1",
+      "advisory": "RUSTSEC-2026-0306",
+      "title": "`hex_decode_unchecked` AVX2 path reads past `src`",
+      "in_contract_target_normal_or_build_graph": false
+    },
+    {
+      "category": "unsound",
+      "package": "lru",
+      "version": "0.7.8",
+      "advisory": "RUSTSEC-2026-0253",
+      "title": "Potential use-after-free due to lack of panic safety in `LruCache::pop()`",
+      "in_contract_target_normal_or_build_graph": false
+    },
+    {
+      "category": "unsound",
+      "package": "memmap2",
+      "version": "0.5.10",
+      "advisory": "RUSTSEC-2026-0186",
+      "title": "Unchecked pointer offset in crate `memmap2`",
+      "in_contract_target_normal_or_build_graph": false
+    },
+    {
+      "category": "unsound",
+      "package": "rand",
+      "version": "0.7.3",
+      "advisory": "RUSTSEC-2026-0097",
+      "title": "Rand is unsound with a custom logger using `rand::rng()`",
+      "in_contract_target_normal_or_build_graph": false
+    },
+    {
+      "category": "yanked",
+      "package": "spin",
+      "version": "0.9.8",
+      "advisory": null,
+      "title": null,
+      "in_contract_target_normal_or_build_graph": false
+    }
+  ],
+  "independent_review_completed": false,
+  "interpretation": "Warnings remain review items; target-graph exclusion is not an independent security attestation."
+}

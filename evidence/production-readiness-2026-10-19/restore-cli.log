@@ -1,0 +1,9 @@
+{
+  "status": "PASS",
+  "integrity": "ok",
+  "schema_version": 2,
+  "pages": 500,
+  "bytes": 2048000,
+  "sha256": "a867ffa94b97891ff1126f5ebee5210972a4ede11cb6fa497d8be6ea3bba4057",
+  "operation": "restore"
+}

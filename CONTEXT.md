@@ -72,8 +72,9 @@ and exposes an operator API/frontend.
 _Avoid_: primary product
 
 **Replay Mode**:
-An explicit MLAT-only synthetic data path. Replay results are integration
-evidence, never CKB discovery evidence or live field evidence.
+Historical observations processed in an isolated database with preserved source
+time and explicit missing-evidence limits. Synthetic demonstration is a separate
+mode. Neither constitutes live field evidence or CKB registration proof.
 _Avoid_: live mode, production data
 
 **Field-Trial Harness**:

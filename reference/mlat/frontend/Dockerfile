@@ -2,14 +2,15 @@ FROM node:22.23.1-alpine3.24@sha256:16e22a550f3863206a3f701448c45f7912c6896a62de
 
 WORKDIR /workspace/sdk/typescript
 COPY sdk/typescript/package.json sdk/typescript/package-lock.json ./
-RUN npm ci
 COPY sdk/typescript/ ./
-RUN npm run build
+# npm ci runs this SDK's prepare hook, which requires its sources and tsconfig.
+RUN npm ci
 
 WORKDIR /workspace/reference/mlat/frontend
 COPY reference/mlat/frontend/package.json reference/mlat/frontend/package-lock.json ./
 RUN npm ci
 COPY reference/mlat/frontend/ ./
+COPY docs/pilot/assets/ /workspace/docs/pilot/assets/
 
 ARG NEXT_PUBLIC_REGISTRY_CODE_HASH
 ARG NEXT_PUBLIC_REGISTRY_CONTRACT_TX_HASH

@@ -13,6 +13,8 @@ export interface FlowNode {
   tone: StatusTone;
   icon?: LucideIcon;
   href?: string;
+  onSelect?: () => void;
+  selected?: boolean;
 }
 
 function NodeIcon({ node }: { node: FlowNode }) {
@@ -41,6 +43,8 @@ export function SystemFlow({ nodes, ariaLabel }: { nodes: FlowNode[]; ariaLabel:
         let nodeContent: ReactNode = <div className="min-w-0 flex-1 text-center">{content}</div>;
         if (node.href) {
           nodeContent = <Link href={node.href} className="min-w-0 flex-1 rounded-md px-1 text-center outline-none transition-colors duration-standard hover:bg-graphite-hover/60 focus-visible:ring-2 focus-visible:ring-signal-blue">{content}</Link>;
+        } else if (node.onSelect) {
+          nodeContent = <button type="button" onClick={node.onSelect} aria-pressed={node.selected} aria-label={`Inspect ${node.label} stage`} className={cn('min-w-0 flex-1 rounded-md px-1 text-center outline-none transition-colors duration-standard hover:bg-graphite-hover/60 focus-visible:ring-2 focus-visible:ring-signal-blue', node.selected && 'bg-graphite-hover/70')}>{content}</button>;
         }
         return (
         <li key={node.id} className="flex min-w-0 basis-1/2 items-start sm:basis-1/3 md:basis-1/4 xl:basis-auto xl:flex-1">

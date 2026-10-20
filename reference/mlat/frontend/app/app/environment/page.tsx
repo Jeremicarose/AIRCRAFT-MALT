@@ -1,4 +1,3 @@
-import { AppShell } from '@/components/app-shell';
 import { EnvironmentPage } from '@/components/pages/environment-page';
 import { fetchJsonSafe, fetchShellSnapshot } from '@/lib/api';
 import type { HealthData, ReadinessData } from '@/lib/types';
@@ -9,5 +8,5 @@ export default async function EnvironmentRoute() {
     fetchJsonSafe<HealthData | null>('/api/health', null),
     fetchJsonSafe<ReadinessData | null>('/api/readiness', null),
   ]);
-  return <AppShell pageKey="environment" title="Diagnostics" description="Review deployment mode, connectivity, Registry discovery, and production readiness." snapshot={snapshot}><EnvironmentPage modeData={snapshot.modeData} health={health} readiness={readiness} /></AppShell>;
+  return <><EnvironmentPage modeData={snapshot.modeData} health={health} readiness={readiness} /></>;
 }

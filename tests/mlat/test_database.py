@@ -144,6 +144,7 @@ def test_database_prunes_old_simulation_data(tmp_path):
         num_receivers=4,
         receiver_ids=["R1", "R2", "R3", "R4"],
         residual=0.0,
+        data_provenance="SYNTHETIC",
     )
     db.store_position(
         aircraft_id="NEW123",
@@ -155,6 +156,7 @@ def test_database_prunes_old_simulation_data(tmp_path):
         num_receivers=4,
         receiver_ids=["R1", "R2", "R3", "R4"],
         residual=0.0,
+        data_provenance="SYNTHETIC",
     )
 
     db.store_statistics(
@@ -163,6 +165,7 @@ def test_database_prunes_old_simulation_data(tmp_path):
         active_aircraft=2,
         active_receivers=4,
         avg_uncertainty=135.0,
+        synthetic_feed_mode=True,
     )
     db.conn.execute(
         "UPDATE statistics SET timestamp = ?, created_at = datetime('now', '-10 days') WHERE id = 1",

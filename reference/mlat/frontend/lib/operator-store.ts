@@ -75,6 +75,16 @@ const defaultInvestigationState: InvestigationState = {
   watchlist: [],
 };
 
+function dockStatesEqual(left: InvestigationDockState | null, right: InvestigationDockState | null): boolean {
+  if (left === right) return true;
+  if (!left || !right) return false;
+  return JSON.stringify(left) === JSON.stringify(right);
+}
+
+function investigationStatesEqual(left: InvestigationState, right: InvestigationState): boolean {
+  return JSON.stringify(left) === JSON.stringify(right);
+}
+
 export const useOperatorStore = create<OperatorState>()(persist((set) => ({
   hasHydrated: false,
   sidebarCollapsed: false,
@@ -96,26 +106,35 @@ export const useOperatorStore = create<OperatorState>()(persist((set) => ({
   setCommandOpen: (commandOpen) => set({ commandOpen }),
   setRightDockOpen: (rightDockOpen) => set({ rightDockOpen }),
   setDensity: (density) => set({ density }),
-  setSelectedAircraftId: (selectedAircraftId) => set((state) => ({
-    selectedAircraftId,
-    investigation: {
+  setSelectedAircraftId: (selectedAircraftId) => set((state) => {
+    const investigation = {
       ...state.investigation,
       focus: selectedAircraftId ?? state.investigation.focus,
-    },
-  })),
-  setSelectedReceiverId: (selectedReceiverId) => set((state) => ({
-    selectedReceiverId,
-    investigation: {
+    };
+    return state.selectedAircraftId === selectedAircraftId
+      && investigationStatesEqual(state.investigation, investigation)
+      ? state
+      : { selectedAircraftId, investigation };
+  }),
+  setSelectedReceiverId: (selectedReceiverId) => set((state) => {
+    const investigation = {
       ...state.investigation,
       focus: selectedReceiverId ?? state.investigation.focus,
-    },
-  })),
+    };
+    return state.selectedReceiverId === selectedReceiverId
+      && investigationStatesEqual(state.investigation, investigation)
+      ? state
+      : { selectedReceiverId, investigation };
+  }),
   toggleReceiverLinks: () => set((state) => ({ showReceiverLinks: !state.showReceiverLinks })),
   toggleUncertainty: () => set((state) => ({ showUncertainty: !state.showUncertainty })),
-  setInvestigationContext: (value) => set((state) => ({ investigation: { ...state.investigation, ...value } })),
+  setInvestigationContext: (value) => set((state) => {
+    const investigation = { ...state.investigation, ...value };
+    return investigationStatesEqual(state.investigation, investigation) ? state : { investigation };
+  }),
   clearInvestigationContext: () => set({ investigation: defaultInvestigationState }),
-  setDock: (dock) => set({ dock }),
-  clearDock: () => set({ dock: null }),
+  setDock: (dock) => set((state) => dockStatesEqual(state.dock, dock) ? state : { dock }),
+  clearDock: () => set((state) => state.dock === null ? state : { dock: null }),
   pushRouteHistory: (entry) => set((state) => {
     const next = [{ ...entry, visitedAt: Date.now() }, ...state.routeHistory.filter((item) => item.key !== entry.key)];
     return { routeHistory: next.slice(0, 8) };

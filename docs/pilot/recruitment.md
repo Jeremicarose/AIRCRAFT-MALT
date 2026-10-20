@@ -14,6 +14,11 @@ relocation, network migration, multi-network inventory, provenance, or feed
 integration. Public activity makes someone a lead. It does not prove current
 eligibility, interest, or participation.
 
+Use the funnel targets, channel order, weekly sequence, and stop rules in
+[PROGRAMME_LAUNCH_PLAN.md](PROGRAMME_LAUNCH_PLAN.md). The named slate below is
+only one direct-outreach wave. Expand research to 40 relevant leads before
+assuming that six sessions can be filled.
+
 The first screening slate is:
 
 - Operators: `u/NeroB18`, Eliel Felipe Junior, Michael Russo, and Albert Zrim.
@@ -115,3 +120,27 @@ Send this once. Do not keep following up without a new response.
 Record counts for leads, contacted, responses, interested, confirmed,
 scheduled, completed, and declined. Calculate response rate as responses divided
 by contacted leads. Never divide by all researched leads.
+
+## Channel-specific rules
+
+- **Community forums and Discord servers:** ask a moderator for permission and
+  the correct channel before posting. One approved post and one requested update
+  are enough.
+- **Direct contact:** use only a contact route the person has published for
+  relevant technical or community communication. Personalize the operational
+  problem, not praise or token incentives.
+- **GitHub:** use Discussions or a maintainer's published contact method. Do not
+  open an unrelated issue to recruit participants.
+- **CKB communities:** recruit sponsors, reviewers, and technically relevant
+  participants. CKB experience without receiver or network responsibility does
+  not satisfy the cohort.
+- **Paid research panels:** use only after the direct community wave is measured.
+  Require the same experience evidence and do not weaken screening to fill a
+  quota.
+
+## Public links
+
+Every invitation should link to the hosted `/pilot` page first. The private form
+link belongs on that page, not in multiple messages that can become stale. Keep
+the page in `Programme preparation` or `Interest list open` until funding and
+readiness support the stronger claim.

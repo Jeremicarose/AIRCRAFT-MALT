@@ -1,0 +1,19 @@
+{
+  "pass": true,
+  "databases": [
+    {
+      "database": "walkthrough.db",
+      "positions": 270,
+      "events": 362,
+      "mode": "HISTORICAL_REPLAY",
+      "integrity": "ok"
+    },
+    {
+      "database": "walkthrough-restored.db",
+      "positions": 270,
+      "events": 362,
+      "mode": "HISTORICAL_REPLAY",
+      "integrity": "ok"
+    }
+  ]
+}

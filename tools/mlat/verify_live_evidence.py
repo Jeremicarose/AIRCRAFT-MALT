@@ -19,6 +19,7 @@ for search_path in (SRC, TOOLS):
         sys.path.insert(0, str(search_path))
 
 from capture_grant_evidence import (
+    live_gate_failures,
     load_jsonl,
     raw_clock_config_failures,
     raw_observation_failures,
@@ -183,8 +184,11 @@ def verify_bundle(bundle: Path, *, require_publishable: bool = False) -> dict[st
         manifest = load_json(manifest_path)
     except (OSError, ValueError, json.JSONDecodeError) as exc:
         return {"valid": False, "failures": [f"Unable to load manifest: {exc}"]}
-    if manifest.get("schema_version") != 2:
-        failures.append("manifest schema_version must be 2")
+    version = manifest.get("schema_version")
+    if version not in {2, 3}:
+        failures.append("manifest schema_version must be 2 or 3")
+    if require_publishable and version != 3:
+        failures.append("publishable evidence requires schema 3 and independent frontend health")
     if require_publishable and manifest.get("evidence_status") != "publishable":
         failures.append("bundle is not marked publishable")
     if manifest.get("evidence_status") == "publishable":
@@ -197,7 +201,8 @@ def verify_bundle(bundle: Path, *, require_publishable: bool = False) -> dict[st
     artifacts = manifest.get("artifacts")
     if not isinstance(artifacts, dict):
         return {"valid": False, "failures": failures + ["manifest artifacts must be an object"]}
-    missing_required = sorted(REQUIRED_ARTIFACTS - set(artifacts))
+    required = REQUIRED_ARTIFACTS | ({"frontend-health.json"} if version == 3 else set())
+    missing_required = sorted(required - set(artifacts))
     if missing_required:
         failures.append(f"manifest is missing required artifacts: {missing_required}")
     for relative, metadata in artifacts.items():
@@ -205,7 +210,14 @@ def verify_bundle(bundle: Path, *, require_publishable: bool = False) -> dict[st
         if relative_path.is_absolute() or ".." in relative_path.parts:
             failures.append(f"unsafe artifact path: {relative}")
             continue
-        path = bundle / relative_path
+        try:
+            path = safe_artifact_path(bundle, relative)
+        except ValueError as exc:
+            failures.append(str(exc))
+            continue
+        if not isinstance(metadata, dict):
+            failures.append(f"artifact metadata must be an object: {relative}")
+            continue
         if not path.is_file():
             failures.append(f"artifact is missing: {relative}")
             continue
@@ -214,14 +226,28 @@ def verify_bundle(bundle: Path, *, require_publishable: bool = False) -> dict[st
         if file_sha256(path) != metadata.get("sha256"):
             failures.append(f"artifact sha256 mismatch: {relative}")
 
+    if failures:
+        return {"valid": False, "failures": failures}
     try:
-        receiver_config = load_json(bundle / "receiver-config.json")
+        receiver_config = load_json(safe_artifact_path(bundle, "receiver-config.json"))
         preflight = load_json(bundle / "preflight.json")
         receiver_snapshot = load_json(bundle / "receivers.json")
         raw_records = load_jsonl(bundle / "raw-observations.jsonl")
         positions = load_jsonl(bundle / "mlat.jsonl")
     except (OSError, ValueError, json.JSONDecodeError) as exc:
         return {"valid": False, "failures": failures + [f"Unable to load evidence: {exc}"]}
+
+    if version == 3:
+        try:
+            failures.extend(
+                live_gate_failures(
+                    load_json(safe_artifact_path(bundle, "mode.json")),
+                    load_json(safe_artifact_path(bundle, "pipeline.json")),
+                    load_json(safe_artifact_path(bundle, "frontend-health.json")),
+                )
+            )
+        except (OSError, ValueError) as exc:
+            failures.append(f"Unable to verify live/frontend gates: {exc}")
 
     configured_ids = {
         str(receiver.get("receiver_identity")) for receiver in receiver_config.get("receivers", [])
@@ -241,9 +267,14 @@ def verify_bundle(bundle: Path, *, require_publishable: bool = False) -> dict[st
         clock_evidence = receiver.get("clock", {}).get("evidence", {})
         captured = declared_clock_evidence.get(receiver_identity, {})
         artifact = captured.get("artifact")
-        artifact_path = bundle / str(artifact or "missing")
+        try:
+            artifact_path = safe_artifact_path(bundle, str(artifact or "missing"))
+        except ValueError as exc:
+            failures.append(str(exc))
+            continue
         if (
             not artifact
+            or artifact not in artifacts
             or not artifact_path.is_file()
             or captured.get("method") != clock_evidence.get("method")
             or captured.get("sha256") != clock_evidence.get("sha256")
@@ -265,6 +296,16 @@ def verify_bundle(bundle: Path, *, require_publishable: bool = False) -> dict[st
         "reproduction": reproduction,
         "failures": failures,
     }
+
+
+def safe_artifact_path(bundle: Path, relative: str) -> Path:
+    path = bundle / relative
+    if Path(relative).is_absolute() or ".." in Path(relative).parts:
+        raise ValueError(f"unsafe artifact path: {relative}")
+    resolved = path.resolve()
+    if not resolved.is_relative_to(bundle.resolve()) or path.is_symlink():
+        raise ValueError(f"artifact leaves the evidence bundle: {relative}")
+    return resolved
 
 
 def parse_args() -> argparse.Namespace:

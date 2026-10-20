@@ -53,6 +53,7 @@ def _bridge_command(config_path: Path, raw_log_path: Path) -> str:
 
 
 def test_read_env_file_parses_dotenv(tmp_path, monkeypatch):
+    monkeypatch.delenv("MLAT_ENV_FILE", raising=False)
     repo_root = tmp_path / "repo"
     repo_root.mkdir()
     env_path = repo_root / ".env"
@@ -71,6 +72,7 @@ def test_read_env_file_parses_dotenv(tmp_path, monkeypatch):
 
 
 def test_read_env_file_preserves_strict_production_flag(tmp_path, monkeypatch):
+    monkeypatch.delenv("MLAT_ENV_FILE", raising=False)
     repo_root = tmp_path / "repo"
     repo_root.mkdir()
     env_path = repo_root / ".env"
@@ -87,6 +89,18 @@ def test_read_env_file_preserves_strict_production_flag(tmp_path, monkeypatch):
 
     assert parsed["STRICT_PRODUCTION_MODE"] == "true"
     assert parsed["SIMULATE_IF_UNAVAILABLE"] == "false"
+
+
+def test_preflight_honors_explicit_environment_file(tmp_path, monkeypatch):
+    module = __import__("check_live_ingest_readiness")
+    monkeypatch.setattr(module, "ROOT", tmp_path)
+    (tmp_path / ".env").write_text("FOURDSKY_ENDPOINT=wss://private.invalid/feed\n")
+    monkeypatch.setenv("MLAT_ENV_FILE", "/dev/null")
+    assert module.read_env_file() == {}
+    selected = tmp_path / "selected.env"
+    selected.write_text("CKB_NETWORK=testnet\n")
+    monkeypatch.setenv("MLAT_ENV_FILE", str(selected))
+    assert module.read_env_file() == {"CKB_NETWORK": "testnet"}
 
 
 def test_evidence_readiness_requires_registry_and_strict_live_gates(tmp_path, monkeypatch):

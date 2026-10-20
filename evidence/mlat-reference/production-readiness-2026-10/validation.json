@@ -1,0 +1,137 @@
+{
+  "browser_release_evidence_note": "Browser test outcomes pass locally. The existing reporter keeps pass=false while the worktree is dirty; historical suite reuses a registry-oriented reporter. Neither report is a clean-release attestation.",
+  "checks": {
+    "api_startup": "Installed mlat-api starts under Gunicorn; /healthz and /api/health respond; SIGTERM exits zero",
+    "benchmark": {
+      "events": 362,
+      "failed": 92,
+      "repeated_output_identical": true,
+      "solved": 270,
+      "synthetic_control_under_one_metre": true
+    },
+    "black": "passed",
+    "browser": {
+      "historical": {
+        "accessibility_violations": 0,
+        "failed_tests": 0,
+        "pass": false,
+        "passed_tests": 2,
+        "total_tests": 2,
+        "worktree_clean": false
+      },
+      "synthetic": {
+        "accessibility_violations": 0,
+        "failed_tests": 0,
+        "pass": false,
+        "passed_tests": 31,
+        "total_tests": 31,
+        "worktree_clean": false
+      }
+    },
+    "ckb_indexer": "Two public cells found in two pages; successful read-only check",
+    "ckb_rpc": "Live code cell and immutable data hash verified, TLS enabled",
+    "container_execution": "NOT RUN: Docker is unavailable",
+    "cross_language_registry": {
+      "assertions": 171,
+      "cases": 57,
+      "failed": 0
+    },
+    "flake8": "passed",
+    "frontend_build": "passed",
+    "frontend_dependency_scan": {
+      "critical": 0,
+      "high": 0,
+      "low_dependency_entries": 21,
+      "moderate": 0
+    },
+    "frontend_lint": "tsc --noEmit; no independent ESLint rules",
+    "frontend_typecheck": "passed",
+    "frontend_unit": {
+      "failed": 0,
+      "passed": 60
+    },
+    "manual_browser": "See manual-review.md and screenshots",
+    "mypy": {
+      "files": 28,
+      "scope": "normal typed-function checking; ignore_missing_imports",
+      "status": "passed"
+    },
+    "new_remote_ci": "NOT RUN: changes remain uncommitted",
+    "physical_live_mlat": "NOT VALIDATED",
+    "python": {
+      "failed": 0,
+      "includes": "unit, integration, security, historical storage/API replay",
+      "passed": 257
+    },
+    "python_dependency_scan": {
+      "known_vulnerabilities": 0
+    },
+    "repository_hygiene": {
+      "checks": [
+        {
+          "detail": "present",
+          "name": "required release files",
+          "passed": true
+        },
+        {
+          "detail": "all local links resolve",
+          "name": "local documentation links",
+          "passed": true
+        },
+        {
+          "detail": "all discovered variables documented",
+          "name": "environment documentation",
+          "passed": true
+        },
+        {
+          "detail": "artifacts/ ignored",
+          "name": "generated artifact policy",
+          "passed": true
+        },
+        {
+          "detail": "no forbidden tracked paths",
+          "name": "generated and private files are untracked",
+          "passed": true
+        },
+        {
+          "detail": "no high-confidence secret patterns",
+          "name": "high-confidence secret scan",
+          "passed": true
+        }
+      ],
+      "pass": true
+    },
+    "rust": {
+      "build": "passed",
+      "check": "passed",
+      "ckb_vm": 11,
+      "unit": 5
+    },
+    "sdk": {
+      "failed": 0,
+      "passed": 72
+    },
+    "synthetic_bundle_v3": "Repeated output identical and hashes verified"
+  },
+  "git_base_commit": "df82f6cfa23be85eed7ca0f2da61db2fb8409889",
+  "limitations": [
+    "No independent Registry audit",
+    "No new wallet-signed lifecycle",
+    "No physical clock attestation",
+    "Compact data has no raw Mode-S frames or historical CKB identities",
+    "Local callback load tests do not measure external feed/network scale",
+    "21 frontend and 4 SDK low advisory entries trace to the existing wallet dependency chain"
+  ],
+  "recorded_at": "2026-10-13T13:29:35.897389+00:00",
+  "runtime": {
+    "node": "22.23.1",
+    "numpy": "2.5.1",
+    "python": "3.12.11",
+    "werkzeug": "3.1.9"
+  },
+  "schema_version": 1,
+  "scope": "Local development and validation; not a deployed release or physical field trial",
+  "source_checksums_file": "source-checksums.json",
+  "source_checksums_sha256": "ebb7ecd69e9d53da03ac30a41f533764499d90d6202b56ffc34e2b15647da259",
+  "worktree_clean": false
+}

@@ -3,6 +3,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$ROOT_DIR"
 DATABASE_PATH="${DATABASE_PATH:-$ROOT_DIR/data/mlat_data.db}"
 PROCESSOR_PID=""
 API_PID=""

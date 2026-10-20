@@ -1,0 +1,144 @@
+FFFF                                                                     [100%]
+=================================== FAILURES ===================================
+_________ test_existing_stream_stops_after_authorization_changes[key] __________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x105667560>
+tmp_path = PosixPath('/private/var/folders/j4/nyh12wqj72l5mpkp_twtvr2m0000gn/T/pytest-of-jeremicarose/pytest-6/test_existing_stream_stops_aft0')
+revocation = 'key'
+
+    @pytest.mark.parametrize("revocation", ["key", "account", "entitlement", "expiry"])
+    def test_existing_stream_stops_after_authorization_changes(monkeypatch, tmp_path, revocation):
+        module = _load_api_module(monkeypatch, tmp_path)
+        app = module.create_app()
+        commercial = _seed_api_db(module, app)
+        client = module.socketio.test_client(app)
+        client.get_received()
+        client.emit("subscribe_aircraft", {"aircraft_id": "A1B2C3", "api_key": commercial["premium_key"]})
+        assert client.get_received()[0]["args"][0]["status"] == "subscribed"
+        try:
+            with app.app_context():
+                db = module.get_db()
+                if revocation == "key":
+                    db.conn.execute("UPDATE api_keys SET status='revoked' WHERE id=?", (commercial["premium_api_key_id"],))
+                elif revocation == "account":
+                    db.conn.execute("UPDATE accounts SET status='suspended' WHERE id=?", (commercial["account_id"],))
+                elif revocation == "entitlement":
+                    db.conn.execute("UPDATE entitlements SET status='revoked'")
+                else:
+                    db.conn.execute("UPDATE entitlements SET ends_at='2000-01-01T00:00:00Z'")
+                db.conn.commit()
+                position = db.get_latest_position()
+                module.broadcast_position_update(position.aircraft_id, module._build_position_payload(position))
+>           assert not any(event["name"] == "position_update" for event in client.get_received())
+E           assert not True
+E            +  where True = any(<generator object test_existing_stream_stops_after_authorization_changes.<locals>.<genexpr> at 0x1074932a0>)
+
+tests/mlat/test_api.py:818: AssertionError
+_______ test_existing_stream_stops_after_authorization_changes[account] ________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x105667080>
+tmp_path = PosixPath('/private/var/folders/j4/nyh12wqj72l5mpkp_twtvr2m0000gn/T/pytest-of-jeremicarose/pytest-6/test_existing_stream_stops_aft1')
+revocation = 'account'
+
+    @pytest.mark.parametrize("revocation", ["key", "account", "entitlement", "expiry"])
+    def test_existing_stream_stops_after_authorization_changes(monkeypatch, tmp_path, revocation):
+        module = _load_api_module(monkeypatch, tmp_path)
+        app = module.create_app()
+        commercial = _seed_api_db(module, app)
+        client = module.socketio.test_client(app)
+        client.get_received()
+        client.emit("subscribe_aircraft", {"aircraft_id": "A1B2C3", "api_key": commercial["premium_key"]})
+        assert client.get_received()[0]["args"][0]["status"] == "subscribed"
+        try:
+            with app.app_context():
+                db = module.get_db()
+                if revocation == "key":
+                    db.conn.execute("UPDATE api_keys SET status='revoked' WHERE id=?", (commercial["premium_api_key_id"],))
+                elif revocation == "account":
+                    db.conn.execute("UPDATE accounts SET status='suspended' WHERE id=?", (commercial["account_id"],))
+                elif revocation == "entitlement":
+                    db.conn.execute("UPDATE entitlements SET status='revoked'")
+                else:
+                    db.conn.execute("UPDATE entitlements SET ends_at='2000-01-01T00:00:00Z'")
+                db.conn.commit()
+                position = db.get_latest_position()
+                module.broadcast_position_update(position.aircraft_id, module._build_position_payload(position))
+>           assert not any(event["name"] == "position_update" for event in client.get_received())
+E           assert not True
+E            +  where True = any(<generator object test_existing_stream_stops_after_authorization_changes.<locals>.<genexpr> at 0x10753cba0>)
+
+tests/mlat/test_api.py:818: AssertionError
+_____ test_existing_stream_stops_after_authorization_changes[entitlement] ______
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x1075f7aa0>
+tmp_path = PosixPath('/private/var/folders/j4/nyh12wqj72l5mpkp_twtvr2m0000gn/T/pytest-of-jeremicarose/pytest-6/test_existing_stream_stops_aft2')
+revocation = 'entitlement'
+
+    @pytest.mark.parametrize("revocation", ["key", "account", "entitlement", "expiry"])
+    def test_existing_stream_stops_after_authorization_changes(monkeypatch, tmp_path, revocation):
+        module = _load_api_module(monkeypatch, tmp_path)
+        app = module.create_app()
+        commercial = _seed_api_db(module, app)
+        client = module.socketio.test_client(app)
+        client.get_received()
+        client.emit("subscribe_aircraft", {"aircraft_id": "A1B2C3", "api_key": commercial["premium_key"]})
+        assert client.get_received()[0]["args"][0]["status"] == "subscribed"
+        try:
+            with app.app_context():
+                db = module.get_db()
+                if revocation == "key":
+                    db.conn.execute("UPDATE api_keys SET status='revoked' WHERE id=?", (commercial["premium_api_key_id"],))
+                elif revocation == "account":
+                    db.conn.execute("UPDATE accounts SET status='suspended' WHERE id=?", (commercial["account_id"],))
+                elif revocation == "entitlement":
+                    db.conn.execute("UPDATE entitlements SET status='revoked'")
+                else:
+                    db.conn.execute("UPDATE entitlements SET ends_at='2000-01-01T00:00:00Z'")
+                db.conn.commit()
+                position = db.get_latest_position()
+                module.broadcast_position_update(position.aircraft_id, module._build_position_payload(position))
+>           assert not any(event["name"] == "position_update" for event in client.get_received())
+E           assert not True
+E            +  where True = any(<generator object test_existing_stream_stops_after_authorization_changes.<locals>.<genexpr> at 0x107dfc790>)
+
+tests/mlat/test_api.py:818: AssertionError
+________ test_existing_stream_stops_after_authorization_changes[expiry] ________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x107debda0>
+tmp_path = PosixPath('/private/var/folders/j4/nyh12wqj72l5mpkp_twtvr2m0000gn/T/pytest-of-jeremicarose/pytest-6/test_existing_stream_stops_aft3')
+revocation = 'expiry'
+
+    @pytest.mark.parametrize("revocation", ["key", "account", "entitlement", "expiry"])
+    def test_existing_stream_stops_after_authorization_changes(monkeypatch, tmp_path, revocation):
+        module = _load_api_module(monkeypatch, tmp_path)
+        app = module.create_app()
+        commercial = _seed_api_db(module, app)
+        client = module.socketio.test_client(app)
+        client.get_received()
+        client.emit("subscribe_aircraft", {"aircraft_id": "A1B2C3", "api_key": commercial["premium_key"]})
+        assert client.get_received()[0]["args"][0]["status"] == "subscribed"
+        try:
+            with app.app_context():
+                db = module.get_db()
+                if revocation == "key":
+                    db.conn.execute("UPDATE api_keys SET status='revoked' WHERE id=?", (commercial["premium_api_key_id"],))
+                elif revocation == "account":
+                    db.conn.execute("UPDATE accounts SET status='suspended' WHERE id=?", (commercial["account_id"],))
+                elif revocation == "entitlement":
+                    db.conn.execute("UPDATE entitlements SET status='revoked'")
+                else:
+                    db.conn.execute("UPDATE entitlements SET ends_at='2000-01-01T00:00:00Z'")
+                db.conn.commit()
+                position = db.get_latest_position()
+                module.broadcast_position_update(position.aircraft_id, module._build_position_payload(position))
+>           assert not any(event["name"] == "position_update" for event in client.get_received())
+E           assert not True
+E            +  where True = any(<generator object test_existing_stream_stops_after_authorization_changes.<locals>.<genexpr> at 0x107e1fe00>)
+
+tests/mlat/test_api.py:818: AssertionError
+=========================== short test summary info ============================
+FAILED tests/mlat/test_api.py::test_existing_stream_stops_after_authorization_changes[key]
+FAILED tests/mlat/test_api.py::test_existing_stream_stops_after_authorization_changes[account]
+FAILED tests/mlat/test_api.py::test_existing_stream_stops_after_authorization_changes[entitlement]
+FAILED tests/mlat/test_api.py::test_existing_stream_stops_after_authorization_changes[expiry]
+4 failed, 34 deselected in 1.54s

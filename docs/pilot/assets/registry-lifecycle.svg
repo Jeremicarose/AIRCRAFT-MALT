@@ -1,0 +1,123 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="788" viewBox="0 0 1400 788" role="img" aria-labelledby="title desc">
+  <title id="title">Registry V2 receiver lifecycle</title>
+  <desc id="desc">A receiver is registered with a permanent identity, may be updated or transferred by its owner, and can finally be revoked with a permanent tombstone.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto" markerUnits="strokeWidth">
+      <path d="M0 0L10 5L0 10Z" fill="#5b9cff"/>
+    </marker>
+    <marker id="arrow-violet" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto" markerUnits="strokeWidth">
+      <path d="M0 0L10 5L0 10Z" fill="#9b8cf4"/>
+    </marker>
+    <style>
+      .title { font: 650 34px Inter, "IBM Plex Sans", Arial, sans-serif; fill: #f1f4f8; }
+      .subtitle { font: 400 18px Inter, "IBM Plex Sans", Arial, sans-serif; fill: #aab2bd; }
+      .eyebrow { font: 600 13px Inter, "IBM Plex Sans", Arial, sans-serif; fill: #68d5e8; }
+      .card-title { font: 600 22px Inter, "IBM Plex Sans", Arial, sans-serif; fill: #f1f4f8; }
+      .body { font: 400 16px Inter, "IBM Plex Sans", Arial, sans-serif; fill: #aab2bd; }
+      .small { font: 500 14px Inter, "IBM Plex Sans", Arial, sans-serif; fill: #8f99a6; }
+      .number { font: 650 15px Inter, "IBM Plex Sans", Arial, sans-serif; fill: #080a0d; text-anchor: middle; dominant-baseline: central; }
+      .label { font: 600 13px Inter, "IBM Plex Sans", Arial, sans-serif; fill: #f1f4f8; }
+      .icon { fill: none; stroke-linecap: round; stroke-linejoin: round; stroke-width: 2.3; }
+    </style>
+  </defs>
+
+  <rect width="1400" height="788" fill="#080a0d"/>
+  <text x="64" y="58" class="eyebrow">REGISTRY V2</text>
+  <text x="64" y="104" class="title">One identity. An ordered receiver lifecycle.</text>
+  <text x="64" y="138" class="subtitle">Every accepted change keeps the same 32-byte identity and advances the sequence by exactly one.</text>
+
+  <path d="M340 378H387" stroke="#5b9cff" stroke-width="3" marker-end="url(#arrow)"/>
+  <path d="M655 378H702" stroke="#5b9cff" stroke-width="3" marker-end="url(#arrow)"/>
+  <path d="M970 378H1017" stroke="#5b9cff" stroke-width="3" marker-end="url(#arrow)"/>
+
+  <g transform="translate(64 218)">
+    <rect width="276" height="322" rx="8" fill="#0d1014" stroke="#2a3039"/>
+    <rect width="276" height="5" rx="2" fill="#68d5e8"/>
+    <circle cx="32" cy="36" r="16" fill="#68d5e8"/>
+    <text x="32" y="36" class="number">1</text>
+    <g transform="translate(24 76)" class="icon" stroke="#68d5e8">
+      <rect x="0" y="7" width="38" height="30" rx="4"/>
+      <path d="M10 7V2h18v5M12 17h14M12 25h9"/>
+      <circle cx="31" cy="28" r="8" fill="#0d1014"/>
+      <path d="M31 24v8M27 28h8"/>
+    </g>
+    <text x="24" y="144" class="card-title">Register</text>
+    <text x="24" y="178" class="body">
+      <tspan x="24" dy="0">Owner creates the first</tspan>
+      <tspan x="24" dy="24">receiver record.</tspan>
+    </text>
+    <line x1="24" y1="230" x2="252" y2="230" stroke="#2a3039"/>
+    <text x="24" y="260" class="small">Identity created</text>
+    <text x="24" y="286" class="label">Lifecycle sequence 0</text>
+  </g>
+
+  <g transform="translate(379 218)">
+    <rect width="276" height="322" rx="8" fill="#0d1014" stroke="#2a3039"/>
+    <rect width="276" height="5" rx="2" fill="#5b9cff"/>
+    <circle cx="32" cy="36" r="16" fill="#5b9cff"/>
+    <text x="32" y="36" class="number">2</text>
+    <g transform="translate(24 77)" class="icon" stroke="#5b9cff">
+      <circle cx="19" cy="19" r="5" fill="#5b9cff" stroke="none"/>
+      <path d="M7 19a12 12 0 0 1 24 0M1 19a18 18 0 0 1 36 0M19 24v14M11 38h16"/>
+    </g>
+    <text x="24" y="144" class="card-title">Active record</text>
+    <text x="24" y="178" class="body">
+      <tspan x="24" dy="0">Discovery returns the</tspan>
+      <tspan x="24" dy="24">current contract-valid record.</tspan>
+    </text>
+    <line x1="24" y1="230" x2="252" y2="230" stroke="#2a3039"/>
+    <text x="24" y="260" class="small">Stable identity and label</text>
+    <text x="24" y="286" class="label">Current owner lock</text>
+  </g>
+
+  <g transform="translate(694 218)">
+    <rect width="276" height="322" rx="8" fill="#0d1014" stroke="#2a3039"/>
+    <rect width="276" height="5" rx="2" fill="#9b8cf4"/>
+    <circle cx="32" cy="36" r="16" fill="#9b8cf4"/>
+    <text x="32" y="36" class="number">3</text>
+    <g transform="translate(24 76)" class="icon" stroke="#9b8cf4">
+      <path d="M3 12h29l-6-6M32 12l-6 6M35 31H6l6-6M6 31l6 6"/>
+      <path d="M19 18v8" stroke="#aab2bd"/>
+    </g>
+    <text x="24" y="144" class="card-title">Update or transfer</text>
+    <text x="24" y="178" class="body">
+      <tspan x="24" dy="0">The current owner authorizes</tspan>
+      <tspan x="24" dy="24">metadata or owner changes.</tspan>
+    </text>
+    <line x1="24" y1="230" x2="252" y2="230" stroke="#2a3039"/>
+    <text x="24" y="260" class="small">Identity and label stay fixed</text>
+    <text x="24" y="286" class="label">Sequence increases by 1</text>
+  </g>
+
+  <path d="M751 208C751 164 913 164 913 208" fill="none" stroke="#9b8cf4" stroke-width="2" stroke-dasharray="5 6" marker-end="url(#arrow-violet)"/>
+  <rect x="781" y="166" width="102" height="28" rx="4" fill="#14181e" stroke="#2a3039"/>
+  <text x="832" y="185" class="small" text-anchor="middle">repeatable</text>
+
+  <g transform="translate(1009 218)">
+    <rect width="327" height="322" rx="8" fill="#0d1014" stroke="#2a3039"/>
+    <rect width="327" height="5" rx="2" fill="#ef6b72"/>
+    <circle cx="32" cy="36" r="16" fill="#ef6b72"/>
+    <text x="32" y="36" class="number">4</text>
+    <g transform="translate(24 76)" class="icon" stroke="#ef6b72">
+      <path d="M5 7h30v30H5zM12 14l16 16M28 14L12 30"/>
+    </g>
+    <text x="24" y="144" class="card-title">Revoked tombstone</text>
+    <text x="24" y="178" class="body">
+      <tspan x="24" dy="0">The owner permanently retires</tspan>
+      <tspan x="24" dy="24">the receiver identity.</tspan>
+    </text>
+    <line x1="24" y1="230" x2="303" y2="230" stroke="#2a3039"/>
+    <text x="24" y="260" class="small">Identity remains visible in history</text>
+    <text x="24" y="286" class="label">No update, resurrection, or burn</text>
+  </g>
+
+  <rect x="64" y="592" width="1272" height="112" rx="8" fill="#0d1014" stroke="#2a3039"/>
+  <circle cx="96" cy="628" r="9" fill="#68d5e8"/>
+  <text x="120" y="634" class="label">What CKB verifies</text>
+  <text x="120" y="668" class="body">Owner authorization, exact lifecycle order, stable identity, and terminal revocation.</text>
+  <line x1="738" y1="612" x2="738" y2="684" stroke="#2a3039"/>
+  <circle cx="774" cy="628" r="9" fill="#8f99a6"/>
+  <text x="798" y="634" class="label">What it does not verify</text>
+  <text x="798" y="668" class="body">Physical hardware, coordinates, clock quality, or feed honesty.</text>
+  <text x="64" y="754" class="small">CKB Receiver Registry V2 · Testnet pilot visual</text>
+</svg>

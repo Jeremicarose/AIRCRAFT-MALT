@@ -130,6 +130,9 @@ function registryCell(
 function fakeClient(pages: ccc.Cell[][]): ccc.Client {
   let calls = 0;
   return {
+    async getCellLive(outPoint: ccc.OutPointLike) {
+      return pages.flat().find((cell) => cell.outPoint.eq(outPoint));
+    },
     async findCellsPaged() {
       const cells = pages[calls] ?? [];
       calls += 1;

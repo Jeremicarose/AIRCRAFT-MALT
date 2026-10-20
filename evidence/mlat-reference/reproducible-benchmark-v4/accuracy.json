@@ -1,0 +1,93 @@
+{
+  "accuracy": {
+    "altitude_error_median_m": 10.0,
+    "altitude_error_p95_m": 10.0,
+    "horizontal_error_median_m": 13.949995596,
+    "horizontal_error_p95_m": 13.95381944,
+    "match_delta_median_ms": 99.999904633,
+    "match_delta_p95_ms": 99.999904633
+  },
+  "altitude_error_median_m": 10.0,
+  "altitude_error_p95_m": 10.0,
+  "coverage_ratio_vs_reference": 1.0,
+  "evidence_status": "pipeline_only",
+  "freshness": {
+    "end_to_store_age_median_ms": 450.000047684,
+    "end_to_store_age_p95_ms": 500.0,
+    "measured_records": 3
+  },
+  "generated_at": "2024-03-09T16:00:03Z",
+  "horizontal_error_median_m": 13.949995596,
+  "horizontal_error_p95_m": 13.95381944,
+  "inputs": {
+    "mlat": {
+      "filename": "mlat.jsonl",
+      "sha256": "a1b22ab3703477ad5bb74a5eac6fd7be6f5499ffcd827db645f1f19bcaf04b0e"
+    },
+    "reference": {
+      "filename": "reference.jsonl",
+      "sha256": "d0050dc90e54950f7c692d3b1f4bb7f5f69ef270c0967701b7a798a58f6dc2b4"
+    },
+    "runtime_snapshot": {
+      "filename": "readiness.json",
+      "sha256": "ced96b803714037e642956b7195682489abd1c1966cce5a8b8caea809ba6299d"
+    }
+  },
+  "matched_records": 3,
+  "matching": {
+    "strategy": "nearest_timestamp_one_to_one",
+    "time_tolerance_seconds": 0.25
+  },
+  "provenance": {
+    "benchmarkable": false,
+    "claim_scope": "Deterministic regression evidence only; not live receiver or accuracy proof.",
+    "data_provenance": "synthetic",
+    "fixture": true,
+    "limitations": [
+      "The dataset was not explicitly attested as live receiver data."
+    ],
+    "reference_source": "deterministic-fixture",
+    "region": "fixture-grid",
+    "solver_methods": [
+      "robust_mlat"
+    ]
+  },
+  "quality": {
+    "avg_quality_score": 0.92,
+    "avg_receiver_count": 4.333333333
+  },
+  "runtime_snapshot": {
+    "captured_at": "2024-03-09T16:00:03Z",
+    "freshness": {
+      "last_store_age_s": 0.5,
+      "ready": true
+    },
+    "ready": true,
+    "reliability": {
+      "active_receivers": 4,
+      "failed_solves": 0,
+      "ready": true
+    }
+  },
+  "sample": {
+    "coverage_ratio_vs_reference": 1.0,
+    "match_ratio_vs_mlat": 1.0,
+    "matched_aircraft": 2,
+    "matched_records": 3,
+    "total_mlat_records": 3,
+    "total_reference_records": 3
+  },
+  "schema_version": 1,
+  "total_mlat_records": 3,
+  "total_reference_records": 3,
+  "window": {
+    "mlat": {
+      "end": 1710000002.0,
+      "start": 1710000000.0
+    },
+    "reference": {
+      "end": 1710000002.1,
+      "start": 1710000000.1
+    }
+  }
+}

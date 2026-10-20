@@ -1,4 +1,3 @@
-import { AppShell } from '@/components/app-shell';
 import { OverviewPage } from '@/components/pages/overview-page';
 import { fetchJsonSafe, fetchJsonState, fetchShellSnapshot, PUBLIC_POSITIONS_PATH } from '@/lib/api';
 import type { JsonValue, PipelineData, PositionsResponse, ReadinessData } from '@/lib/types';
@@ -11,5 +10,5 @@ export default async function OverviewRoute() {
     fetchJsonState<PositionsResponse>(PUBLIC_POSITIONS_PATH, { positions: [] }),
     fetchJsonSafe<PipelineData | null>('/api/pipeline', null),
   ]);
-  return <AppShell pageKey="overview" title="Overview" description="Current airspace, infrastructure health, and evidence readiness." snapshot={snapshot}><OverviewPage snapshot={snapshot} readiness={readiness} benchmark={benchmark} positionsData={positionsState.data} positionsError={positionsState.error} initialPipeline={pipeline} /></AppShell>;
+  return <><OverviewPage snapshot={snapshot} readiness={readiness} benchmark={benchmark} positionsData={positionsState.data} positionsError={positionsState.error} initialPipeline={pipeline} /></>;
 }

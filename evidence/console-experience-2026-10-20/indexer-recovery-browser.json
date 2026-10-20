@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-10-20T07:46:24.997Z",
+  "source_commit": "3b19c3f7976fe90310d46ae73ff66791ef30c09e",
+  "source_tree": "df172b4ebe428d359da158327647d025f3f0cf95",
+  "worktree_clean": true,
+  "route": "/app/registry",
+  "accessibility_standard": "WCAG 2 A/AA serious and critical axe findings",
+  "total_tests": 1,
+  "completed_tests": 1,
+  "passed_tests": 1,
+  "failed_tests": 0,
+  "failures": [],
+  "accessibility_violations": 0,
+  "pass": true
+}

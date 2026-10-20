@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-10-20T07:39:54.847Z",
+  "source_commit": "bd9ba5840cffea2f0f71a996c1dc2cbcf8de09b5",
+  "source_tree": "fcd7db3e60f2d64b50ac9a279dbd7ed805c765dd",
+  "worktree_clean": true,
+  "route": "/app/registry",
+  "accessibility_standard": "WCAG 2 A/AA serious and critical axe findings",
+  "total_tests": 38,
+  "completed_tests": 38,
+  "passed_tests": 37,
+  "failed_tests": 1,
+  "failures": [
+    {
+      "id": "2db8d424d38564b5ab90-b24cc63c36f003b56dbe",
+      "title": " > chromium > release.spec.mjs > visualizes the historical solver benchmark without implying live accuracy",
+      "status": "failed",
+      "error": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: getByText('Not live', { exact: true })\nExpected: visible\nError: strict mode violation: getByText('Not live', { exact: true }) resolved to 2 elements:\n    1) <span>Not live</span> aka locator('#main-content').getByText('Not live', { exact: true })\n    2) <span>Not live</span> aka getByText('Not live').nth(2)\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" getByText('Not live', { exact: true }) with timeout 15000ms\u001b[22m\n\u001b[2m  - waiting for getByText('Not live', { exact: true })\u001b[22m\n"
+    }
+  ],
+  "accessibility_violations": 0,
+  "pass": false
+}

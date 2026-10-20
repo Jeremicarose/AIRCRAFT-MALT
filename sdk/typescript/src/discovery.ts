@@ -24,6 +24,7 @@ export interface DiscoveryOptions {
   pageSize?: number;
   nowSeconds?: bigint;
   maxFutureRecordSkewSeconds?: bigint;
+  timeoutMs?: number;
 }
 
 export interface RegistryProvenance {
@@ -57,6 +58,30 @@ function outPointOf(cell: ccc.Cell): { txHash: string; index: bigint } {
   return { txHash: cell.outPoint.txHash, index: cell.outPoint.index };
 }
 
+function discoveryDeadline(options: DiscoveryOptions): number {
+  const timeoutMs = options.timeoutMs ?? 30_000;
+  if (!Number.isFinite(timeoutMs) || timeoutMs <= 0 || timeoutMs > 300_000) {
+    throw new Error("Registry discovery timeoutMs must be within (0, 300000]");
+  }
+  return performance.now() + timeoutMs;
+}
+
+async function beforeDeadline<T>(request: () => Promise<T>, deadline: number): Promise<T> {
+  const remaining = deadline - performance.now();
+  if (remaining <= 0) throw new Error("Registry discovery deadline exceeded");
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      request(),
+      new Promise<never>((_resolve, reject) => {
+        timer = setTimeout(() => reject(new Error("Registry discovery deadline exceeded")), remaining);
+      }),
+    ]);
+  } finally {
+    if (timer !== undefined) clearTimeout(timer);
+  }
+}
+
 export class RegistryV2Discovery {
   readonly contractCodeHash: string;
 
@@ -73,6 +98,7 @@ export class RegistryV2Discovery {
   }
 
   async discover(options: DiscoveryOptions = {}): Promise<DiscoveryResult> {
+    const deadline = discoveryDeadline(options);
     const pageSize = Math.max(1, Math.min(options.pageSize ?? 100, 1_000));
     const maxPages = Math.max(1, options.maxPages ?? 1_000);
     const maxCells = Math.max(1, options.maxCells ?? 10_000);
@@ -87,12 +113,13 @@ export class RegistryV2Discovery {
     const seenIdentities = new Set<string>();
     const duplicates = new Set<string>();
     let cursor: string | undefined;
+    const seenCursors = new Set<string>();
     let exhausted = false;
     let pagesScanned = 0;
     let cellsScanned = 0;
 
     for (; pagesScanned < maxPages; pagesScanned += 1) {
-      const page = await this.client.findCellsPaged(
+      const page = await beforeDeadline(() => this.client.findCellsPaged(
         {
           script: {
             codeHash: this.contractCodeHash,
@@ -106,7 +133,7 @@ export class RegistryV2Discovery {
         "asc",
         pageSize,
         cursor,
-      );
+      ), deadline);
       cellsScanned += page.cells.length;
       if (cellsScanned > maxCells) {
         failures.push({ code: "pagination_limit", message: "Registry discovery exceeded maxCells" });
@@ -115,6 +142,9 @@ export class RegistryV2Discovery {
       }
 
       for (const cell of page.cells) {
+        // Use a fresh node request; indexer contents alone do not prove the
+        // candidate remains unspent. RPC errors invalidate the whole snapshot.
+        if (!(await beforeDeadline(() => this.nodeConfirmsCell(cell), deadline))) continue;
         let receiverIdentity: string | undefined;
         try {
           receiverIdentity = this.receiverIdentityOf(cell);
@@ -150,7 +180,7 @@ export class RegistryV2Discovery {
         pagesScanned += 1;
         break;
       }
-      if (nextCursor === undefined || nextCursor === cursor) {
+      if (nextCursor === undefined || seenCursors.has(nextCursor)) {
         failures.push({
           code: "pagination_limit",
           message: "Registry indexer returned an invalid cursor after a non-empty page",
@@ -160,6 +190,7 @@ export class RegistryV2Discovery {
         pagesScanned += 1;
         break;
       }
+      seenCursors.add(nextCursor);
       cursor = nextCursor;
     }
 
@@ -189,6 +220,7 @@ export class RegistryV2Discovery {
     receiverIdentityValue: string,
     options: DiscoveryOptions = {},
   ): Promise<DiscoveredReceiver | undefined> {
+    const deadline = discoveryDeadline(options);
     const receiverIdentity = normalizeReceiverIdentity(receiverIdentityValue);
     const pageSize = Math.max(1, Math.min(options.pageSize ?? 100, 1_000));
     const maxPages = Math.max(1, options.maxPages ?? 100);
@@ -196,9 +228,11 @@ export class RegistryV2Discovery {
     const cells: ccc.Cell[] = [];
     let cursor: string | undefined;
     let exhausted = false;
+    let cellsScanned = 0;
+    const seenCursors = new Set<string>();
 
     for (let pageIndex = 0; pageIndex < maxPages; pageIndex += 1) {
-      const page = await this.client.findCellsPaged(
+      const page = await beforeDeadline(() => this.client.findCellsPaged(
         {
           script: {
             codeHash: this.contractCodeHash,
@@ -212,21 +246,25 @@ export class RegistryV2Discovery {
         "asc",
         pageSize,
         cursor,
-      );
-      cells.push(...page.cells);
-      if (cells.length > maxCells) {
+      ), deadline);
+      cellsScanned += page.cells.length;
+      if (cellsScanned > maxCells) {
         throw new Error(`Registry lookup for ${receiverIdentity} exceeded maxCells`);
+      }
+      for (const cell of page.cells) {
+        if (await beforeDeadline(() => this.nodeConfirmsCell(cell), deadline)) cells.push(cell);
       }
       const nextCursor = page.lastCursor || undefined;
       if (page.cells.length === 0) {
         exhausted = true;
         break;
       }
-      if (nextCursor === undefined || nextCursor === cursor) {
+      if (nextCursor === undefined || seenCursors.has(nextCursor)) {
         throw new Error(
           `Registry lookup for ${receiverIdentity} received an invalid pagination cursor`,
         );
       }
+      seenCursors.add(nextCursor);
       cursor = nextCursor;
     }
 
@@ -272,6 +310,19 @@ export class RegistryV2Discovery {
         typeScript: { codeHash: type.codeHash, hashType: type.hashType, args: type.args },
       },
     };
+  }
+
+  private async nodeConfirmsCell(cell: ccc.Cell): Promise<boolean> {
+    const verified = await this.client.getCellLive(cell.outPoint, true, false);
+    if (verified === undefined) return false;
+    if (
+      !verified.outPoint.eq(cell.outPoint) ||
+      ccc.hexFrom(verified.cellOutput.toBytes()) !== ccc.hexFrom(cell.cellOutput.toBytes()) ||
+      verified.outputData !== cell.outputData
+    ) {
+      throw new Error("Registry indexer candidate does not match the trusted node");
+    }
+    return true;
   }
 
   private receiverIdentityOf(cell: ccc.Cell): string {

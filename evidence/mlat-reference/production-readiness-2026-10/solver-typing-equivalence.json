@@ -1,0 +1,8 @@
+{
+  "base_commit": "df82f6cfa23be85eed7ca0f2da61db2fb8409889",
+  "comparison": "AST with typing imports, annotations and cast calls removed",
+  "numerical_executable_ast_equal": true,
+  "baseline_source_sha256": "c1c09473bb19a924e08afe056307171bc354c6356a49b007c5ec28da4dbd4759",
+  "current_source_sha256": "b725e7fdad9518369cef4b36dc439d41712c2c539d093be24e7c34160eacdf7b",
+  "normalized_ast_sha256": "620eb6f6a205c752d4fd27810bd9f56e5965f317772e97870162316dc18b9c6f"
+}

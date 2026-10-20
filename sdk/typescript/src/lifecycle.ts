@@ -376,6 +376,15 @@ export class RegistryV2Sdk {
       );
     }
     const cell = cells[0]!;
+    const verified = await this.client.getCellLive(cell.outPoint, true, false);
+    if (
+      verified === undefined ||
+      !verified.outPoint.eq(cell.outPoint) ||
+      ccc.hexFrom(verified.cellOutput.toBytes()) !== ccc.hexFrom(cell.cellOutput.toBytes()) ||
+      verified.outputData !== cell.outputData
+    ) {
+      throw new Error("Registry lifecycle cell is not confirmed live with matching data by the node");
+    }
     const parsed = this.discovery.parseCell(cell);
     return { cell, record: parsed.record };
   }

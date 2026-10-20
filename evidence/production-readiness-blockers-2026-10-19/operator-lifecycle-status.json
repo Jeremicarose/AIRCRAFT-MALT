@@ -1,0 +1,8 @@
+{
+  "status": "AWAITING_OPERATOR_APPROVAL",
+  "transactions_prepared": 0,
+  "transactions_signed": 0,
+  "transactions_broadcast": 0,
+  "private_key_requested": false,
+  "runbook": "docs/production-readiness/operator-acceptance-runbook.md"
+}

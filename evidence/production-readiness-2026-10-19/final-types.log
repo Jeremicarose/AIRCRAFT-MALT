@@ -1,0 +1,3 @@
+src/mlat_reference/api/rest_api.py:88: note: By default the bodies of untyped functions are not checked, consider using --check-untyped-defs  [annotation-unchecked]
+src/mlat_reference/api/rest_api.py:956: error: "_FallbackSocketIO" has no attribute "server"  [attr-defined]
+Found 1 error in 1 file (checked 30 source files)

@@ -1,0 +1,402 @@
+{
+  "database": {
+    "advisory-count": 1338,
+    "last-commit": null,
+    "last-updated": null
+  },
+  "lockfile": {
+    "dependency-count": 226
+  },
+  "settings": {
+    "target_arch": [],
+    "target_os": [],
+    "severity": null,
+    "ignore": [],
+    "informational_warnings": [
+      "unmaintained",
+      "unsound",
+      "notice"
+    ]
+  },
+  "vulnerabilities": {
+    "found": false,
+    "count": 0,
+    "list": []
+  },
+  "warnings": {
+    "unmaintained": [
+      {
+        "kind": "unmaintained",
+        "package": {
+          "name": "atomic-polyfill",
+          "version": "1.0.3",
+          "source": "registry+https://github.com/rust-lang/crates.io-index",
+          "checksum": "8cf2bce30dfe09ef0bfaef228b9d414faaf7e563035494d7fe092dba54b300f4",
+          "dependencies": [
+            {
+              "name": "critical-section",
+              "version": "1.2.0",
+              "source": "registry+https://github.com/rust-lang/crates.io-index"
+            }
+          ],
+          "replace": null
+        },
+        "advisory": {
+          "id": "RUSTSEC-2023-0089",
+          "package": "atomic-polyfill",
+          "title": "atomic-polyfill is unmaintained",
+          "description": "The author has archived the GitHub repository and mentions deprecation in\nproject's\n[README](https://github.com/embassy-rs/atomic-polyfill/blob/48e55c166684f37af0b00fbee5a0809b1a2bae8e/README.md).\n\n## Possible alternatives\n\n * [portable-atomic](https://crates.io/crates/portable-atomic)",
+          "date": "2023-07-11",
+          "aliases": [],
+          "related": [],
+          "collection": "crates",
+          "categories": [],
+          "keywords": [],
+          "cvss": null,
+          "informational": "unmaintained",
+          "references": [],
+          "source": null,
+          "url": "https://github.com/embassy-rs/atomic-polyfill/commit/48e55c166684f37af0b00fbee5a0809b1a2bae8e",
+          "withdrawn": null,
+          "license": "CC0-1.0",
+          "expect-deleted": false
+        },
+        "affected": null,
+        "versions": {
+          "patched": [],
+          "unaffected": []
+        }
+      },
+      {
+        "kind": "unmaintained",
+        "package": {
+          "name": "paste",
+          "version": "1.0.15",
+          "source": "registry+https://github.com/rust-lang/crates.io-index",
+          "checksum": "57c0d7b74b563b49d38dae00a0c37d4d6de9b432382b2892f0574ddcae73fd0a",
+          "replace": null
+        },
+        "advisory": {
+          "id": "RUSTSEC-2024-0436",
+          "package": "paste",
+          "title": "paste - no longer maintained",
+          "description": "The creator of the crate `paste` has stated in the [`README.md`](https://github.com/dtolnay/paste/blob/master/README.md) \nthat this project is not longer maintained as well as archived the repository\n\n## Possible Alternative(s)\n\n- [`pastey`]: a fork of paste and is aimed to be a drop-in replacement with additional features for paste crate\n- [`with_builtin_macros`]: crate providing a [superset of `paste`'s functionality including general `macro_rules!` eager expansions](https://docs.rs/with_builtin_macros/0.1.0/with_builtin_macros/macro.with_eager_expansions.html)  and `concat!`/`concat_idents!` macros\n\n[`pastey`]: https://crates.io/crates/pastey\n[`with_builtin_macros`]: https://crates.io/crates/with_builtin_macros",
+          "date": "2024-10-07",
+          "aliases": [],
+          "related": [],
+          "collection": "crates",
+          "categories": [],
+          "keywords": [],
+          "cvss": null,
+          "informational": "unmaintained",
+          "references": [],
+          "source": null,
+          "url": "https://github.com/dtolnay/paste",
+          "withdrawn": null,
+          "license": "CC0-1.0",
+          "expect-deleted": false
+        },
+        "affected": null,
+        "versions": {
+          "patched": [],
+          "unaffected": []
+        }
+      }
+    ],
+    "unsound": [
+      {
+        "kind": "unsound",
+        "package": {
+          "name": "faster-hex",
+          "version": "0.6.1",
+          "source": "registry+https://github.com/rust-lang/crates.io-index",
+          "checksum": "51e2ce894d53b295cf97b05685aa077950ff3e8541af83217fc720a6437169f8",
+          "replace": null
+        },
+        "advisory": {
+          "id": "RUSTSEC-2026-0306",
+          "package": "faster-hex",
+          "title": "`hex_decode_unchecked` AVX2 path reads past `src`",
+          "description": "`faster_hex::hex_decode_unchecked` is a safe function. On x86 and x86_64, when AVX2 is enabled, `hex_decode_avx2` keeps decoding while `dst.len() >= 32` and then loads 32 bytes from `src` and 32 bytes from `src[32..]`. Nothing in that loop requires `src` to contain 64 bytes.\n\nA safe caller can pass a short `src` and a `dst` of at least 32 bytes. The AVX2 load then reads outside `src`.\n\nThe function has had this shape since 0.3.0. 0.10.0 is the last release with the unbounded AVX2 read. The maintainer agreed to this advisory and shipped the backport in 0.10.1 (pull request 74): the AVX2 loop now requires `src.len() >= 64` before those loads. 1.0.0 rewrites `hex_decode_unchecked` so the decoded length is `min(src.len() / 2, dst.len())`. Both are covered by `>= 0.10.1`. Other architectures take the scalar fallback and are outside this advisory.",
+          "date": "2026-09-20",
+          "aliases": [],
+          "related": [],
+          "collection": "crates",
+          "categories": [
+            "memory-corruption"
+          ],
+          "keywords": [
+            "buffer-overflow",
+            "avx2"
+          ],
+          "cvss": null,
+          "informational": "unsound",
+          "references": [
+            "https://github.com/nervosnetwork/faster-hex/pull/72",
+            "https://github.com/nervosnetwork/faster-hex/pull/74"
+          ],
+          "source": null,
+          "url": "https://github.com/nervosnetwork/faster-hex/issues/73",
+          "withdrawn": null,
+          "license": "CC0-1.0",
+          "expect-deleted": false
+        },
+        "affected": {
+          "arch": [
+            "x86",
+            "x86_64"
+          ],
+          "os": [],
+          "functions": {
+            "faster_hex::hex_decode_unchecked": [
+              ">=0.3.0, <0.10.1"
+            ]
+          }
+        },
+        "versions": {
+          "patched": [
+            ">=0.10.1"
+          ],
+          "unaffected": [
+            "<0.3.0"
+          ]
+        }
+      },
+      {
+        "kind": "unsound",
+        "package": {
+          "name": "lru",
+          "version": "0.7.8",
+          "source": "registry+https://github.com/rust-lang/crates.io-index",
+          "checksum": "e999beba7b6e8345721bd280141ed958096a2e4abdf74f67ff4ce49b4b54e47a",
+          "dependencies": [
+            {
+              "name": "hashbrown",
+              "version": "0.12.3",
+              "source": "registry+https://github.com/rust-lang/crates.io-index"
+            }
+          ],
+          "replace": null
+        },
+        "advisory": {
+          "id": "RUSTSEC-2026-0253",
+          "package": "lru",
+          "title": "Potential use-after-free due to lack of panic safety in `LruCache::pop()`",
+          "description": "`LruCache::pop()` in `lru` was not panic-safe. If the `Drop` implementation of a stored key panics during `pop()`, `self.detach()` is never called, leaving dangling pointers in the internal doubly-linked list.\n\nA subsequent cache operation that triggers eviction can then dereference these dangling pointers:\n- The node is freed from the map, but remains linked in the LRU list due to the skipped `detach()` call\n- When a new insertion causes eviction, the LRU traversal encounters the dangling pointer\n- This results in a write to already-freed memory during the eviction process\n\n## Impact\n\n- **CWE-416 (Use-After-Free):** memory corruption when subsequent cache operations access freed node pointers in the linked list\n- **CWE-415 (Double Free):** potential heap corruption when the same memory is freed multiple times\n\nBoth types of undefined behavior can be invoked in safe Rust, but only if unwinding panics are enabled and `std::panic::catch_unwind` is used with key types that have potentially-panicking `Drop` implementations.\n\n## Fix\n\nFixed in `lru` 0.18.2 by detaching the node from the linked list before freeing it and dropping the key ([lru-rs#238](https://github.com/jeromefroe/lru-rs/pull/238)).",
+          "date": "2026-05-12",
+          "aliases": [],
+          "related": [],
+          "collection": "crates",
+          "categories": [
+            "memory-corruption"
+          ],
+          "keywords": [
+            "panic-safety",
+            "memory-safety",
+            "use-after-free",
+            "double-free"
+          ],
+          "cvss": null,
+          "informational": "unsound",
+          "references": [],
+          "source": null,
+          "url": "https://github.com/jeromefroe/lru-rs/pull/238",
+          "withdrawn": null,
+          "license": "CC0-1.0",
+          "expect-deleted": false
+        },
+        "affected": null,
+        "versions": {
+          "patched": [
+            ">=0.18.2"
+          ],
+          "unaffected": []
+        }
+      },
+      {
+        "kind": "unsound",
+        "package": {
+          "name": "memmap2",
+          "version": "0.5.10",
+          "source": "registry+https://github.com/rust-lang/crates.io-index",
+          "checksum": "83faa42c0a078c393f6b29d5db232d8be22776a891f8f56e5284faee4a20b327",
+          "dependencies": [
+            {
+              "name": "libc",
+              "version": "0.2.189",
+              "source": "registry+https://github.com/rust-lang/crates.io-index"
+            }
+          ],
+          "replace": null
+        },
+        "advisory": {
+          "id": "RUSTSEC-2026-0186",
+          "package": "memmap2",
+          "title": "Unchecked pointer offset in crate `memmap2`",
+          "description": "Affected versionf of `memmap2` did not perform enough validation on the `offset` and `len` parameters of\n`Mmap::[unchecked_]advise_range()`,\n`MmapMut::[unchecked_]advise_ranage()`\nand `MmapMut::flush[_async]_range()`.\n\nThis can cause undefined behavior due to invalid values being passed to [`pointer::offset()`] and [`pointer::add()`]\nwhen passing an out-of-bounds range to any of the affected functions.\n\nThe flaw was corrected in commit [`cee7cf0`] and released in version `0.9.11`.\n\nThe invalid pointer is not dereferenced,\nbut it is passed to the `madvise` and `msync` syscalls and their Windows equivalents.\n\n[`pointer::offset()`]: https://doc.rust-lang.org/stable/std/primitive.pointer.html#method.offset-1\n[`pointer::add()`]: https://doc.rust-lang.org/stable/std/primitive.pointer.html#method.add-1\n[`cee7cf0`] https://github.com/RazrFalcon/memmap2-rs/pull/170/changes/cee7cf03a9ee095982a3c37b7aac8e3f68f1a00c",
+          "date": "2026-06-20",
+          "aliases": [],
+          "related": [],
+          "collection": "crates",
+          "categories": [],
+          "keywords": [
+            "pointer-arithmetic",
+            "out-of-bounds"
+          ],
+          "cvss": null,
+          "informational": "unsound",
+          "references": [
+            "https://github.com/RazrFalcon/memmap2-rs/pull/170"
+          ],
+          "source": null,
+          "url": "https://github.com/RazrFalcon/memmap2-rs/issues/169",
+          "withdrawn": null,
+          "license": "CC0-1.0",
+          "expect-deleted": false
+        },
+        "affected": {
+          "arch": [],
+          "os": [],
+          "functions": {
+            "memmap2::Mmap::advise_range": [
+              ">=0.5.9",
+              "<0.9.11"
+            ],
+            "memmap2::Mmap::unchecked_advise_range": [
+              ">=0.8.0",
+              "<0.9.11"
+            ],
+            "memmap2::MmapMut::advise_range": [
+              ">=0.5.9",
+              "<0.9.11"
+            ],
+            "memmap2::MmapMut::flush_async_range": [
+              "<0.9.11"
+            ],
+            "memmap2::MmapMut::flush_range": [
+              "<0.9.11"
+            ],
+            "memmap2::MmapMut::unchecked_advise_range": [
+              ">=0.8.0",
+              "<0.9.11"
+            ]
+          }
+        },
+        "versions": {
+          "patched": [
+            ">=0.9.11"
+          ],
+          "unaffected": []
+        }
+      },
+      {
+        "kind": "unsound",
+        "package": {
+          "name": "rand",
+          "version": "0.7.3",
+          "source": "registry+https://github.com/rust-lang/crates.io-index",
+          "checksum": "6a6b1679d49b24bbfe0c803429aa1874472f50d9b363131f0e89fc356b544d03",
+          "dependencies": [
+            {
+              "name": "getrandom",
+              "version": "0.1.16",
+              "source": "registry+https://github.com/rust-lang/crates.io-index"
+            },
+            {
+              "name": "libc",
+              "version": "0.2.189",
+              "source": "registry+https://github.com/rust-lang/crates.io-index"
+            },
+            {
+              "name": "rand_chacha",
+              "version": "0.2.2",
+              "source": "registry+https://github.com/rust-lang/crates.io-index"
+            },
+            {
+              "name": "rand_core",
+              "version": "0.5.1",
+              "source": "registry+https://github.com/rust-lang/crates.io-index"
+            },
+            {
+              "name": "rand_hc",
+              "version": "0.2.0",
+              "source": "registry+https://github.com/rust-lang/crates.io-index"
+            },
+            {
+              "name": "rand_pcg",
+              "version": "0.2.1",
+              "source": "registry+https://github.com/rust-lang/crates.io-index"
+            }
+          ],
+          "replace": null
+        },
+        "advisory": {
+          "id": "RUSTSEC-2026-0097",
+          "package": "rand",
+          "title": "Rand is unsound with a custom logger using `rand::rng()`",
+          "description": "It has been reported (by [@lopopolo](https://github.com/lopopolo)) that the `rand` library is [unsound](https://rust-lang.github.io/unsafe-code-guidelines/glossary.html#soundness-of-code--of-a-library) (i.e. that safe code using the public API can cause Undefined Behaviour) when all the following conditions are met:\n\n- The `log` and `thread_rng` features are enabled\n- A [custom logger](https://docs.rs/log/latest/log/#implementing-a-logger) is defined\n- The custom logger accesses `rand::rng()` (previously `rand::thread_rng()`) and calls any `TryRng` (previously `RngCore`) methods on `ThreadRng`\n- The `ThreadRng` (attempts to) reseed while called from the custom logger (this happens every 64 kB of generated data)\n- Trace-level logging is enabled or warn-level logging is enabled and the random source (the `getrandom` crate) is unable to provide a new seed\n\n`TryRng` (previously `RngCore`) methods for `ThreadRng` use `unsafe` code to cast `*mut BlockRng<ReseedingCore>` to `&mut BlockRng<ReseedingCore>`. When all the above conditions are met this results in an aliased mutable reference, violating the Stacked Borrows rules. Miri is able to detect this violation in sample code. Since construction of [aliased mutable references is Undefined Behaviour](https://doc.rust-lang.org/stable/nomicon/references.html), the behaviour of optimized builds is hard to predict.",
+          "date": "2026-04-09",
+          "aliases": [
+            "GHSA-cq8v-f236-94qc"
+          ],
+          "related": [],
+          "collection": "crates",
+          "categories": [],
+          "keywords": [],
+          "cvss": null,
+          "informational": "unsound",
+          "references": [],
+          "source": null,
+          "url": "https://github.com/rust-random/rand/pull/1763",
+          "withdrawn": null,
+          "license": "CC0-1.0",
+          "expect-deleted": false
+        },
+        "affected": {
+          "arch": [],
+          "os": [],
+          "functions": {
+            "rand::rng": [
+              ">=0.9.0"
+            ],
+            "rand::thread_rng": [
+              "<0.10.0, >=0.7.0"
+            ]
+          }
+        },
+        "versions": {
+          "patched": [
+            ">=0.10.1",
+            "<0.10.0, >=0.9.3",
+            "<0.9.0, >=0.8.6"
+          ],
+          "unaffected": [
+            "<0.7.0"
+          ]
+        }
+      }
+    ],
+    "yanked": [
+      {
+        "kind": "yanked",
+        "package": {
+          "name": "spin",
+          "version": "0.9.8",
+          "source": "registry+https://github.com/rust-lang/crates.io-index",
+          "checksum": "6980e8d7511241f8acf4aebddbb1ff938df5eebe98691418c4468d0b72a96a67",
+          "dependencies": [
+            {
+              "name": "lock_api",
+              "version": "0.4.14",
+              "source": "registry+https://github.com/rust-lang/crates.io-index"
+            }
+          ],
+          "replace": null
+        },
+        "advisory": null,
+        "affected": null,
+        "versions": null
+      }
+    ]
+  }
+}

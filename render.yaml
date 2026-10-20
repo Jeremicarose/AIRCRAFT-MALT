@@ -37,7 +37,7 @@ services:
       - key: DEMO_READ_ONLY
         value: "true"
       - key: DEMO_LABEL
-        value: Hosted demo - Northeast replay
+        value: Hosted demo - Synthetic Northeast scenario
       - key: DEMO_AUTO_CONNECT
         value: "true"
       - key: LOG_LEVEL
@@ -55,8 +55,7 @@ services:
     dockerfilePath: ./reference/mlat/frontend/Dockerfile
     healthCheckPath: /healthz
     envVars:
+      # Free web services cannot receive private-network requests. Set this
+      # server-only value to the reference API's actual public HTTPS origin.
       - key: MLAT_API_INTERNAL_URL
-        fromService:
-          type: web
-          name: registry-v2-mlat-reference
-          property: hostport
+        sync: false

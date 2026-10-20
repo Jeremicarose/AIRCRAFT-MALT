@@ -14,6 +14,8 @@ import math
 import os
 from pathlib import Path
 import queue
+import re
+import sqlite3
 import threading
 import time
 from datetime import datetime, timezone
@@ -24,16 +26,17 @@ from typing import Any, Dict, List, Optional
 from mlat_reference.demo import get_demo_scenario, get_scenario_metadata
 from mlat_reference.config import load_runtime_settings
 from mlat_reference.api.rate_limit import SlidingWindowRateLimiter
+from mlat_reference.api.health import component_health
+from mlat_reference.api.diagnostic_export import (
+    public_context,
+    public_qualification,
+    public_runtime,
+)
+from mlat_reference.ingest.validation import strict_json
 
-try:
-    from dotenv import load_dotenv
-except ImportError:
-    load_dotenv = None
+from dotenv import load_dotenv
 
-try:
-    from flask_cors import CORS
-except ImportError:
-    CORS = None
+from flask_cors import CORS
 
 try:
     from flask_socketio import SocketIO, emit as _socketio_emit
@@ -69,8 +72,13 @@ def _split_csv(name: str, default: str = "") -> List[str]:
 DEFAULT_ALLOWED_ORIGINS = (
     "http://localhost:3000,http://127.0.0.1:3000,http://localhost:8080,http://127.0.0.1:8080"
 )
+REPOSITORY_ROOT = Path(__file__).resolve().parents[3]
+if not (REPOSITORY_ROOT / "evidence").is_dir():
+    # Installed wheels live under site-packages. Container/source deployments
+    # keep their public assets in the documented working directory.
+    REPOSITORY_ROOT = Path.cwd()
 _broadcast_lock = threading.Lock()
-_api_latencies_ms = deque(maxlen=1000)
+_api_latencies_ms: deque[float] = deque(maxlen=1000)
 
 
 if SocketIO is None:
@@ -129,6 +137,10 @@ def load_app_config() -> Dict[str, object]:
         "BENCHMARK_REPORT_PATH": os.getenv(
             "BENCHMARK_REPORT_PATH", "evidence/mlat-reference/live/latest.json"
         ),
+        "SOLVER_BENCHMARK_REPORT_PATH": os.getenv(
+            "SOLVER_BENCHMARK_REPORT_PATH",
+            str(REPOSITORY_ROOT / "evidence/mlat-reference/compact-public-solver-v2/report.json"),
+        ),
         "PERFORMANCE_REPORT_PATH": os.getenv(
             "PERFORMANCE_REPORT_PATH",
             "evidence/mlat-reference/experimental/performance-local-simulation.json",
@@ -140,7 +152,7 @@ def load_app_config() -> Dict[str, object]:
         "BENCHMARK_MAX_REPORT_BYTES": int(os.getenv("BENCHMARK_MAX_REPORT_BYTES", "5242880")),
         "REGISTRY_EVIDENCE_BUNDLE": os.getenv(
             "REGISTRY_EVIDENCE_BUNDLE",
-            "evidence/registry-v2-testnet-2026-09-11-data1-final",
+            str(REPOSITORY_ROOT / "evidence/registry-v2-testnet-2026-09-11-data1-final"),
         ),
         "CKB_TESTNET_EXPLORER_TX_URL": os.getenv(
             "CKB_TESTNET_EXPLORER_TX_URL",
@@ -182,6 +194,7 @@ def create_app(config_overrides: Optional[Dict[str, object]] = None) -> Flask:
     """Create and configure the Flask app."""
     app = Flask(__name__)
     app.config.update(load_app_config())
+    app.config["MAX_CONTENT_LENGTH"] = 65_536
     if config_overrides:
         app.config.update(config_overrides)
 
@@ -196,6 +209,18 @@ def create_app(config_overrides: Optional[Dict[str, object]] = None) -> Flask:
 
     @app.before_request
     def enforce_rate_limit():
+        if request.method == "POST" and request.is_json:
+            try:
+                strict_json(request.get_data(cache=True))
+            except (ValueError, UnicodeError):
+                return (
+                    jsonify(
+                        {
+                            "error": "Request must contain bounded JSON with unique keys and finite numbers."
+                        }
+                    ),
+                    400,
+                )
         if (
             not app.config["RATE_LIMIT_ENABLED"]
             or request.method == "OPTIONS"
@@ -242,11 +267,13 @@ def create_app(config_overrides: Optional[Dict[str, object]] = None) -> Flask:
             return response
 
     if SocketIO is not None:
-        socketio.init_app(app, cors_allowed_origins=allowed_origins)
+        socketio.init_app(app, cors_allowed_origins=allowed_origins, max_http_buffer_size=65_536)
     else:
         socketio.init_app(app)
 
     app.teardown_appcontext(close_db)
+    app.extensions["mlat_stream_subscriptions"] = {}
+    app.extensions["mlat_stream_lock"] = threading.Lock()
     app.register_blueprint(api_bp)
 
     database = MLATDatabase(app.config["DATABASE_PATH"])
@@ -283,7 +310,7 @@ def _validate_api_key() -> bool:
         return False
     header_name = current_app.config["API_KEY_HEADER"]
     supplied = request.headers.get(header_name)
-    return bool(supplied) and hmac.compare_digest(str(supplied), str(api_key))
+    return bool(supplied) and hmac.compare_digest(str(supplied).encode(), str(api_key).encode())
 
 
 def _resolve_request_auth() -> Optional[Dict[str, Any]]:
@@ -423,7 +450,7 @@ def _parse_cleanup_days() -> int:
         raise ValueError("Request body must be a JSON object")
 
     days = data.get("days", 7)
-    if not isinstance(days, int):
+    if type(days) is not int:
         raise ValueError("'days' must be an integer")
     if days < 1 or days > 365:
         raise ValueError("'days' must be between 1 and 365")
@@ -433,10 +460,33 @@ def _parse_cleanup_days() -> int:
 def get_runtime_state(db: Optional[MLATDatabase] = None) -> Optional[Dict[str, object]]:
     """Read runtime telemetry in-process or from processor snapshots in SQLite."""
     runtime = production_main.CURRENT_RUNTIME
+    snapshot = db.get_runtime_snapshot() if db is not None else None
     if runtime is not None:
         state = runtime.get_runtime_state()
         state["telemetry_source"] = "in_process"
         state["telemetry_fresh"] = True
+    elif snapshot is not None:
+        state = snapshot["state"]
+        age = max(0.0, time.time() - snapshot["recorded_at"])
+        threshold = max(
+            int(current_app.config["HEALTH_STALE_SIGNAL_SECONDS"]),
+            int(os.getenv("STATS_INTERVAL_SECONDS", "60")) * 2,
+        )
+        state.update(
+            telemetry_source="database", telemetry_age_s=age, telemetry_fresh=age <= threshold
+        )
+        state["is_running"] = bool(state.get("is_running") and age <= threshold)
+        for name in ("last_signal_age_s", "last_store_age_s", "last_successful_solve_age_s"):
+            if state.get(name) is not None:
+                state[name] += age
+        state["signal_fresh"] = bool(
+            state["is_running"]
+            and state.get("last_signal_age_s") is not None
+            and state["last_signal_age_s"] <= threshold
+        )
+        if not state["is_running"]:
+            state["registry_discovery_live"] = False
+            state["clock_synchronized_receivers"] = 0
     elif db is not None:
         latest_stats = db.get_latest_statistics()
         if latest_stats is None:
@@ -558,6 +608,9 @@ def _load_registry_evidence() -> tuple[Optional[Dict[str, Any]], str]:
         code_hash = normalize_receiver_identity(
             manifest["contract"]["type_script_hash_for_registry_code_hash"]
         )
+        hash_type = str(manifest["contract"]["registry_script_hash_type"])
+        if hash_type not in {"data1", "type"}:
+            raise ValueError("Registry evidence hash type is invalid")
         accepted = manifest["accepted_transactions"]
         lifecycle = []
         for action in ("create", "update", "transfer", "revoke"):
@@ -616,6 +669,7 @@ def _load_registry_evidence() -> tuple[Optional[Dict[str, Any]], str]:
             "private_keys_included": bool(manifest.get("private_keys_included")),
             "contract": {
                 "code_hash": code_hash,
+                "hash_type": hash_type,
                 "deployment_transaction": normalize_receiver_identity(
                     manifest["contract"]["deployment_tx_hash"]
                 ),
@@ -653,6 +707,57 @@ def _load_benchmark_report() -> tuple[Optional[Dict[str, Any]], str]:
         or report.get("evidence_status") not in {"publishable", "pipeline_only"}
         or not isinstance(report.get("generated_at"), str)
         or any(not isinstance(report.get(field), dict) for field in required_objects)
+    ):
+        return None, "invalid"
+    return report, "available"
+
+
+def _load_solver_benchmark_report() -> tuple[Optional[Dict[str, Any]], str]:
+    """Load the pinned historical solver-only benchmark artifact."""
+    report_path = Path(str(current_app.config["SOLVER_BENCHMARK_REPORT_PATH"]))
+    if not report_path.exists():
+        return None, "not_found"
+    if not report_path.is_file():
+        return None, "invalid"
+    if report_path.stat().st_size > int(current_app.config["BENCHMARK_MAX_REPORT_BYTES"]):
+        return None, "too_large"
+
+    try:
+        report = json.loads(report_path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+        logger.exception("Failed to load solver benchmark report from %s", report_path)
+        return None, "invalid"
+
+    required_objects = (
+        "synthetic_control",
+        "published_event",
+        "compact_dataset",
+        "interpretation",
+    )
+    if (
+        not isinstance(report, dict)
+        or report.get("schema_version") != 1
+        or report.get("benchmark_id")
+        not in {"compact-public-solver-v1", "compact-public-solver-v2"}
+        or report.get("claim_scope") != "solver_only"
+        or any(not isinstance(report.get(field), dict) for field in required_objects)
+    ):
+        return None, "invalid"
+
+    synthetic = report["synthetic_control"]
+    published = report["published_event"]
+    dataset = report["compact_dataset"]
+    interpretation = report["interpretation"]
+    if (
+        synthetic.get("is_live") is not False
+        or published.get("is_live") is not False
+        or dataset.get("is_live") is not False
+        or dataset.get("data_source") != "HISTORICAL_RECORDING"
+        or interpretation.get("production_pipeline_validated") is not False
+        or interpretation.get("registry_identity_validated") is not False
+        or interpretation.get("live_operation_validated") is not False
+        or not isinstance(dataset.get("event_counts"), dict)
+        or not isinstance(dataset.get("accuracy_m"), dict)
     ):
         return None, "invalid"
     return report, "available"
@@ -760,12 +865,41 @@ def _parse_receiver_ids(raw_receiver_ids: Any) -> List[str]:
     return []
 
 
+def _positions_provenance(positions) -> str:
+    kinds = {position.data_provenance for position in positions}
+    return next(iter(kinds)) if len(kinds) == 1 else "UNKNOWN"
+
+
+def _receiver_qualification(receiver) -> dict:
+    qualification = json.loads(receiver.qualification or "{}")
+    observed_at = qualification.get("received_at", 0)
+    if (
+        not observed_at
+        or not 0 <= time.time() - observed_at <= current_app.config["HEALTH_STALE_SIGNAL_SECONDS"]
+    ):
+        qualification.update(
+            state="UNQUALIFIED",
+            reason="no_recent_clock_evidence",
+            action="Connect the receiver and verify its timing source and synchronization.",
+        )
+    qualification.setdefault("state", "UNQUALIFIED")
+    return qualification
+
+
 def _build_position_payload(position: StoredPosition) -> Dict:
     receiver_ids = _parse_receiver_ids(position.receiver_ids)
     return {
         "id": position.id,
         "aircraft_id": position.aircraft_id,
         "timestamp": position.timestamp,
+        "timestamp_ns": position.timestamp_ns,
+        "source_timestamp_ns": position.source_timestamp_ns,
+        "data_provenance": position.data_provenance,
+        "source_id": position.source_id,
+        "replay_run_id": position.replay_run_id or None,
+        "correlation_id": position.correlation_id or None,
+        "receiver_geometry": json.loads(position.receiver_geometry),
+        "observation_evidence": json.loads(position.observation_evidence),
         "position": {
             "latitude": position.latitude,
             "longitude": position.longitude,
@@ -777,11 +911,14 @@ def _build_position_payload(position: StoredPosition) -> Dict:
             "score": position.quality_score,
             "bucket": position.quality_bucket,
             "uncertainty_m": position.uncertainty,
+            "confidence_calibrated": False,
+            "interpretation": "Heuristic solver diagnostics, not a probability or calibrated position error bound.",
         },
         "solver": {
             "method": position.solver_method,
             "residual_m": position.solver_residual_m,
             "iterations": position.solver_iterations,
+            "status": "SOLVED",
         },
         "correlation": {
             "time_span_s": position.correlation_time_span_s,
@@ -793,12 +930,40 @@ def _build_position_payload(position: StoredPosition) -> Dict:
 
 
 def broadcast_position_update(aircraft_id: str, position_data: Dict):
-    """Broadcast a position update to websocket clients."""
+    """Recheck current access before every delivery, including existing sessions."""
     payload = {
         "aircraft_id": aircraft_id,
         "position": position_data,
     }
-    socketio.emit("position_update", payload, room=aircraft_id)
+    subscriptions = current_app.extensions["mlat_stream_subscriptions"]
+    with current_app.extensions["mlat_stream_lock"]:
+        try:
+            checked = {}
+            for sid, aircraft in list(subscriptions.items()):
+                key_id = aircraft.get(aircraft_id)
+                if key_id is None:
+                    continue
+                if key_id not in checked:
+                    checked[key_id] = get_db().get_api_key_access(key_id)
+                auth = checked[key_id]
+                if (
+                    auth is None
+                    or auth["api_key_status"] != "active"
+                    or auth["account_status"] != "active"
+                    or not auth.get("can_stream_live", False)
+                    or not _has_active_entitlement(auth, "live_stream")
+                ):
+                    server = getattr(socketio, "server", None)
+                    if server is None:
+                        return
+                    server.leave_room(sid, aircraft_id, namespace="/")
+                    aircraft.pop(aircraft_id, None)
+                    if not aircraft:
+                        subscriptions.pop(sid, None)
+        except (sqlite3.Error, OSError, ValueError):
+            logger.warning("Stream authorization unavailable; position update withheld")
+            return
+        socketio.emit("position_update", payload, room=aircraft_id)
 
 
 def _start_background_broadcaster(app: Flask):
@@ -821,25 +986,20 @@ def _start_background_broadcaster(app: Flask):
 
             while True:
                 try:
-                    position_id = position_queue.get(timeout=1.0)
-                    position = poll_db.get_position_by_id(position_id)
-                    if position is None:
-                        continue
-                    last_position_id = max(last_position_id, position.id or 0)
-                    payload = _build_position_payload(position)
-                    broadcast_position_update(
-                        aircraft_id=position.aircraft_id,
-                        position_data=payload,
-                    )
+                    position_queue.get(timeout=1.0)
                 except queue.Empty:
-                    new_positions = poll_db.get_positions_after_id(last_position_id, limit=200)
-                    for position in new_positions:
-                        last_position_id = max(last_position_id, position.id or 0)
+                    pass
+                try:
+                    for position in poll_db.get_positions_after_id(last_position_id, limit=200):
                         payload = _build_position_payload(position)
-                        broadcast_position_update(
-                            aircraft_id=position.aircraft_id,
-                            position_data=payload,
-                        )
+                        with app.app_context():
+                            broadcast_position_update(
+                                aircraft_id=position.aircraft_id, position_data=payload
+                            )
+                        last_position_id = max(last_position_id, position.id or 0)
+                except (sqlite3.Error, OSError):
+                    logger.error("Position broadcaster cannot read storage; retrying in one second")
+                    time.sleep(1)
         finally:
             poll_db.close()
 
@@ -873,8 +1033,21 @@ def liveness_check():
 
 @api_bp.route("/api/health", methods=["GET"])
 def health_check():
-    db = get_db()
-    db_stats = db.get_database_stats()
+    try:
+        db = get_db()
+        db_stats = db.get_database_stats()
+    except (sqlite3.Error, OSError):
+        return (
+            jsonify(
+                {
+                    "status": "failed",
+                    "components": component_health(
+                        {}, {}, registry_configured=False, database_ok=False
+                    ),
+                }
+            ),
+            503,
+        )
     runtime_state = get_runtime_state(db) or {}
     recent_receivers = db.get_receivers()
     now = time.time()
@@ -890,6 +1063,12 @@ def health_check():
     return jsonify(
         {
             "status": status,
+            "data_provenance": db.get_runtime_context()["data_provenance"],
+            "components": component_health(
+                runtime_state,
+                db.get_runtime_context(),
+                registry_configured=bool(current_app.config["RECEIVER_REGISTRY_TYPE_HASH"]),
+            ),
             "timestamp": datetime.now().isoformat(),
             "service": "MLAT API",
             "database": {
@@ -951,7 +1130,9 @@ def readiness_check():
         else 0.0
     )
     simulated_positions = sum(
-        1 for position in recent_positions if _is_synthetic_solver_method(position.solver_method)
+        1
+        for position in recent_positions
+        if position.data_provenance != "LIVE" or _is_synthetic_solver_method(position.solver_method)
     )
     synthetic_feed = bool(
         runtime_state.get(
@@ -1087,6 +1268,30 @@ def get_latest_benchmark():
     return jsonify(report)
 
 
+@api_bp.route("/api/evidence/solver-benchmark/latest", methods=["GET"])
+def get_latest_solver_benchmark():
+    """Publish historical solver accuracy without treating it as live evidence."""
+    report, status = _load_solver_benchmark_report()
+    if report is None:
+        status_code = 404 if status == "not_found" else 503
+        return (
+            jsonify(
+                {
+                    "available": False,
+                    "status": status,
+                    "message": "No valid historical solver benchmark is currently published.",
+                }
+            ),
+            status_code,
+        )
+
+    include_events = request.args.get("include_events", "").strip().lower() == "true"
+    dataset = dict(report["compact_dataset"])
+    if not include_events:
+        dataset.pop("events", None)
+    return jsonify({**report, "is_live": False, "compact_dataset": dataset})
+
+
 @api_bp.route("/api/evidence/performance/latest", methods=["GET"])
 def get_latest_performance_evidence():
     """Publish the latest reproducible local performance baseline."""
@@ -1159,8 +1364,10 @@ def get_public_evidence_metrics():
             "window_hours": hours,
             "sample_count": sample_count,
             "provenance": {
-                "mode": "replay" if current.get("synthetic_feed_mode") else "live",
-                "live_data": not bool(current.get("synthetic_feed_mode")),
+                "mode": db.get_runtime_context()["data_provenance"],
+                "data_provenance": db.get_runtime_context()["data_provenance"],
+                "live_data": db.get_runtime_context()["data_provenance"] == "LIVE"
+                and bool(runtime_state.get("telemetry_fresh")),
                 "source": "processor_statistics",
             },
             "current": current,
@@ -1208,7 +1415,10 @@ def get_pipeline_evidence():
     benchmarkable = bool(
         positions
         and not synthetic
-        and all(not _is_synthetic_solver_method(item.solver_method) for item in positions)
+        and all(
+            item.data_provenance == "LIVE" and not _is_synthetic_solver_method(item.solver_method)
+            for item in positions
+        )
     )
     benchmark_report, benchmark_status = _load_benchmark_report()
     benchmark_publishable = bool(
@@ -1216,7 +1426,14 @@ def get_pipeline_evidence():
         and benchmark_report.get("evidence_status") == "publishable"
         and benchmark_report.get("provenance", {}).get("benchmarkable") is True
     )
-    provenance_mode = "replay" if synthetic or demo else "live"
+    provenance = db.get_runtime_context().get("data_provenance", "UNKNOWN")
+    if provenance == "UNKNOWN" and (synthetic or demo):
+        provenance = "SYNTHETIC"
+    provenance_mode = {
+        "SYNTHETIC": "synthetic",
+        "HISTORICAL_REPLAY": "historical_replay",
+        "LIVE": "live",
+    }.get(provenance, "unknown")
 
     def stage(
         stage_id: str,
@@ -1337,7 +1554,7 @@ def get_pipeline_evidence():
             "MLAT solve",
             solve_status,
             (
-                "Replay arrival times were localized by the robust MLAT solver; replay provenance prevents live benchmark claims."
+                "Synthetic arrival times were localized by the robust MLAT solver; replay provenance prevents live benchmark claims."
                 if synthetic and latest_position
                 else (
                     "Robust MLAT positions are available."
@@ -1366,14 +1583,14 @@ def get_pipeline_evidence():
             "api",
             "Public API",
             "pass",
-            "Health, positions, pipeline, metrics, and evidence routes are responding.",
+            "This pipeline API request completed successfully.",
             avg_api_latency_ms=runtime_state.get("avg_api_latency_ms", 0.0),
         ),
         stage(
             "dashboard",
             "Dashboard",
-            "pass",
-            "Operational pages consume the same public evidence APIs.",
+            "waiting",
+            "The frontend runs separately. Check its /healthz endpoint and open the console to verify rendering.",
             pipeline_route="/app/pipeline",
             metrics_route="/app/analytics",
         ),
@@ -1400,7 +1617,8 @@ def get_pipeline_evidence():
             "generated_at": datetime.now().isoformat(),
             "provenance": {
                 "mode": provenance_mode,
-                "live_data": provenance_mode == "live",
+                "data_provenance": provenance,
+                "live_data": provenance == "LIVE" and bool(runtime_state.get("telemetry_fresh")),
                 "synthetic_feed_mode": synthetic,
                 "registry_discovery_live": registry_discovery_live,
                 "benchmarkable_output": benchmarkable,
@@ -1457,6 +1675,7 @@ def get_system_mode():
     demo_mode = bool(current_app.config["DEMO_MODE"])
     db = get_db()
     runtime_state = get_runtime_state(db) or {}
+    context = db.get_runtime_context()
     runtime_status = (
         "active"
         if runtime_state.get("telemetry_fresh") and runtime_state.get("is_running")
@@ -1471,7 +1690,9 @@ def get_system_mode():
         recent_positions
         and not synthetic_feed_mode
         and all(
-            not _is_synthetic_solver_method(position.solver_method) for position in recent_positions
+            position.data_provenance == "LIVE"
+            and not _is_synthetic_solver_method(position.solver_method)
+            for position in recent_positions
         )
     )
     startup_guardrail_status = (
@@ -1485,13 +1706,23 @@ def get_system_mode():
     )
     return jsonify(
         {
+            "data_provenance": (
+                context["data_provenance"]
+                if context["data_provenance"] != "UNKNOWN"
+                else "SYNTHETIC" if synthetic_feed_mode or demo_mode else "UNKNOWN"
+            ),
+            "source_context": context,
             "mode": (
-                "demo"
-                if demo_mode
+                "historical_replay"
+                if context["data_provenance"] == "HISTORICAL_REPLAY"
                 else (
-                    "simulation"
-                    if configured_simulation or synthetic_feed_mode
-                    else "live" if runtime_status == "active" else "configured_live"
+                    "demo"
+                    if demo_mode
+                    else (
+                        "simulation"
+                        if configured_simulation or synthetic_feed_mode
+                        else "live" if runtime_status == "active" else "configured_live"
+                    )
                 )
             ),
             "simulation_mode": configured_simulation,
@@ -1532,7 +1763,12 @@ def get_system_mode():
 
 @api_bp.route("/api/aircraft", methods=["GET"])
 def get_aircraft_list():
-    seconds = request.args.get("seconds", default=300, type=int)
+    try:
+        seconds = _positive_int_query("seconds", 300)
+        if seconds > 86_400:
+            raise ValueError("'seconds' must not exceed 86400")
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
     aircraft_ids = get_db().get_active_aircraft(seconds=seconds)
     record_usage("rest_request", "aircraft_list", metadata={"seconds": seconds})
     return jsonify(
@@ -1540,6 +1776,95 @@ def get_aircraft_list():
             "aircraft": aircraft_ids,
             "count": len(aircraft_ids),
             "time_window_seconds": seconds,
+            "data_provenance": get_db().get_runtime_context()["data_provenance"],
+        }
+    )
+
+
+@api_bp.route("/api/replay", methods=["GET"])
+def get_replay():
+    database = get_db()
+    context = database.get_runtime_context()
+    if context["data_provenance"] != "HISTORICAL_REPLAY":
+        return jsonify(
+            {
+                "data_provenance": context["data_provenance"],
+                "configured": False,
+                "events": [],
+                "action": "Run the historical replay command against a separate database, then point this API at that database.",
+            }
+        )
+    try:
+        limit = _positive_int_query("limit", 50)
+        offset = int(request.args.get("offset", "0"))
+        if limit > 100 or not 0 <= offset <= 100_000:
+            raise ValueError("Replay pagination requires limit 1..100 and offset 0..100000")
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+    events = database.get_replay_events(limit, offset)
+    return jsonify(
+        {
+            **context,
+            "configured": True,
+            "events": [
+                {
+                    key: value
+                    for key, value in item.items()
+                    if key not in {"observations", "receiver_geometry", "stages"}
+                }
+                for item in events
+            ],
+            "offset": offset,
+            "limit": limit,
+        }
+    )
+
+
+@api_bp.route("/api/replay/events/<event_id>", methods=["GET"])
+def get_replay_event(event_id):
+    if not re.fullmatch(r"[0-9]{1,20}", event_id):
+        return jsonify({"error": "Event identifier must contain 1..20 decimal digits."}), 400
+    database = get_db()
+    result = database.get_replay_event(event_id)
+    if result is None:
+        return jsonify({"error": "Historical event not found. Run the compact replay first."}), 404
+    position = (
+        database.get_position_by_id(result["position_id"]) if result.get("position_id") else None
+    )
+    return jsonify({**result, "position": _build_position_payload(position) if position else None})
+
+
+@api_bp.route("/api/diagnostics/bundle", methods=["GET"])
+def get_diagnostic_bundle():
+    database = get_db()
+    runtime = get_runtime_state(database) or {}
+    # Deliberate allowlist: no environment dump, endpoint URLs, keys, argv,
+    # raw subprocess output, arbitrary exceptions, or wallet material.
+    return jsonify(
+        {
+            "schema_version": 1,
+            "generated_at": datetime.now(timezone.utc).isoformat(),
+            "source_context": public_context(database.get_runtime_context()),
+            "configuration": {
+                "transport": current_app.config["CONFIGURED_TRANSPORT"],
+                "strict_production_mode": current_app.config["STRICT_PRODUCTION_MODE"],
+                "registry_configured": bool(current_app.config["RECEIVER_REGISTRY_TYPE_HASH"]),
+            },
+            "components": component_health(
+                runtime,
+                database.get_runtime_context(),
+                registry_configured=bool(current_app.config["RECEIVER_REGISTRY_TYPE_HASH"]),
+            ),
+            "runtime": public_runtime(runtime),
+            "receivers": [
+                {
+                    "receiver_id": receiver.receiver_id,
+                    "data_source": receiver.data_source,
+                    "last_seen": receiver.last_seen,
+                    "qualification": public_qualification(_receiver_qualification(receiver)),
+                }
+                for receiver in database.get_receivers()
+            ],
         }
     )
 
@@ -1574,6 +1899,8 @@ def get_recent_positions():
             "positions": positions_data,
             "count": len(positions_data),
             "time_window_seconds": seconds,
+            "data_provenance": _positions_provenance(positions),
+            "sources": sorted({position.source_id for position in positions}),
         }
     )
 
@@ -1594,6 +1921,20 @@ def get_receivers():
             "last_seen": receiver.last_seen,
             "capabilities": json.loads(receiver.capabilities),
             "updated_at": receiver.updated_at,
+            "registry_state": (
+                "REVOKED"
+                if receiver.status == "revoked"
+                else "ACTIVE" if receiver.receiver_identity else "NOT_REGISTERED"
+            ),
+            "operational_state": (
+                "ONLINE"
+                if receiver.last_seen
+                and 0
+                <= time.time() - receiver.last_seen
+                <= current_app.config["HEALTH_STALE_SIGNAL_SECONDS"]
+                else "STALE" if receiver.last_seen else "OFFLINE"
+            ),
+            "qualification": _receiver_qualification(receiver),
             "registry": {
                 "sequence": str(receiver.registry_sequence),
                 "updated_at": str(receiver.registry_updated_at),
@@ -1670,27 +2011,10 @@ def get_aircraft_track(aircraft_id: str):
             "num_positions": track.num_positions,
             "positions": [
                 {
-                    "timestamp": position.timestamp,
+                    **_build_position_payload(position),
                     "latitude": position.latitude,
                     "longitude": position.longitude,
                     "altitude": position.altitude,
-                    "uncertainty": position.uncertainty,
-                    "num_receivers": position.num_receivers,
-                    "quality": {
-                        "score": position.quality_score,
-                        "bucket": position.quality_bucket,
-                        "uncertainty_m": position.uncertainty,
-                    },
-                    "solver": {
-                        "method": position.solver_method,
-                        "residual_m": position.solver_residual_m,
-                        "iterations": position.solver_iterations,
-                    },
-                    "correlation": {
-                        "time_span_s": position.correlation_time_span_s,
-                        "receiver_count": position.receiver_count,
-                        "receiver_ids": _parse_receiver_ids(position.receiver_ids),
-                    },
                 }
                 for position in track.positions
             ],
@@ -1870,16 +2194,28 @@ def handle_connect():
 
 @socketio.on("disconnect")
 def handle_disconnect():
+    with current_app.extensions["mlat_stream_lock"]:
+        current_app.extensions["mlat_stream_subscriptions"].pop(request.sid, None)
     logger.info("Client disconnected from WebSocket")
 
 
 @socketio.on("subscribe_aircraft")
 def handle_subscribe(data):
+    if (
+        not isinstance(data, dict)
+        or not isinstance(data.get("aircraft_id"), str)
+        or not re.fullmatch(r"[A-Za-z0-9:-]{1,64}", data["aircraft_id"])
+    ):
+        emit(
+            "subscription_response",
+            {"status": "denied", "error": "Provide a valid aircraft identifier."},
+        )
+        return
     aircraft_id = data.get("aircraft_id")
     api_key = data.get("api_key")
     logger.info("Client subscribed to aircraft: %s", aircraft_id)
 
-    if not api_key:
+    if not isinstance(api_key, str) or not 1 <= len(api_key) <= 512:
         emit(
             "subscription_response",
             {"aircraft_id": aircraft_id, "status": "denied", "error": "API key required"},
@@ -1922,7 +2258,21 @@ def handle_subscribe(data):
     if SocketIO is not None:
         from flask_socketio import join_room
 
-        join_room(aircraft_id)
+        subscriptions = current_app.extensions["mlat_stream_subscriptions"]
+        with current_app.extensions["mlat_stream_lock"]:
+            aircraft = subscriptions.get(request.sid, {})
+            if aircraft_id not in aircraft and (
+                len(aircraft) >= 100
+                or sum(len(items) for items in subscriptions.values()) >= 10_000
+            ):
+                emit(
+                    "subscription_response",
+                    {"status": "denied", "error": "Subscription limit reached"},
+                )
+                return
+            join_room(aircraft_id)
+            aircraft[aircraft_id] = auth["api_key_id"]
+            subscriptions[request.sid] = aircraft
 
     emit(
         "subscription_response",
@@ -1960,12 +2310,32 @@ def run_server(app: Optional[Flask] = None):
 
 
 def main():
-    """Console entry point for the REST API."""
-    run_server()
+    """Start the installed API under the production server used by launchers."""
+    config = load_app_config()
+    if config["API_DEBUG"]:
+        run_server()
+        return
+    os.execvp(
+        "gunicorn",
+        [
+            "gunicorn",
+            "--bind",
+            f"{config['API_HOST']}:{config['API_PORT']}",
+            "--workers",
+            "1",
+            "--worker-class",
+            "gthread",
+            "--threads",
+            "4",
+            "--timeout",
+            "120",
+            "mlat_reference.api.rest_api:app",
+        ],
+    )
 
 
 app = create_app()
 
 
 if __name__ == "__main__":
-    run_server(app)
+    main()

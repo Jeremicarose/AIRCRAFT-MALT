@@ -14,6 +14,8 @@ ROOT = Path(__file__).resolve().parents[1]
 LINK_RE = re.compile(r"(?<!!)\[[^\]]+\]\(([^)]+)\)")
 SKIP_PREFIXES = ("http://", "https://", "mailto:", "#")
 SKIP_DIRECTORY_NAMES = {
+    "artifacts",
+    ".venv",
     ".git",
     ".next",
     "node_modules",
@@ -28,6 +30,8 @@ SKIP_TREES = {
     Path("deploy"),
     Path("evidence/registry-v2-testnet-2026-07-30-final"),
     Path("evidence/mlat-reference/reproducible-benchmark-v2/source"),
+    Path("evidence/mlat-reference/reproducible-benchmark-v3/source"),
+    Path("evidence/mlat-reference/reproducible-benchmark-v4/source"),
 }
 
 

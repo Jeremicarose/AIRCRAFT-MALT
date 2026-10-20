@@ -67,7 +67,7 @@ export function StatusIcon({ tone = 'neutral', label, className }: { tone?: Stat
 export function StatusChip({ label, tone = 'neutral', className }: { label: string; tone?: StatusTone; className?: string }) {
   const Icon = toneIcons[tone];
   return (
-    <span className={cn('inline-flex h-6 shrink-0 items-center gap-1.5 rounded-full px-2 text-[11px] font-semibold leading-none', toneStyles[tone], className)}>
+    <span className={cn('inline-flex h-6 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full px-2 text-[11px] font-semibold leading-none', toneStyles[tone], className)}>
       <Icon aria-hidden="true" className="size-3" strokeWidth={2.25} />
       <span>{label}</span>
     </span>

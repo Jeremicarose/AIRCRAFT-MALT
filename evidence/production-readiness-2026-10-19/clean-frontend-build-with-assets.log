@@ -1,0 +1,46 @@
+
+> mlat-airspace-console@0.1.0 build
+> next build --webpack
+
+▲ Next.js 16.3.8 (webpack)
+✓ Running next.config.mjs took 31ms
+
+  Creating an optimized production build ...
+✓ Compiled successfully in 113s
+  Running TypeScript ...
+  Finished TypeScript in 11.5s ...
+  Collecting page data using 7 workers ...
+  Generating static pages using 7 workers (0/20) ...
+  Generating static pages using 7 workers (5/20) 
+  Generating static pages using 7 workers (10/20) 
+  Generating static pages using 7 workers (15/20) 
+✓ Generating static pages using 7 workers (20/20) in 2.4s
+  Finalizing page optimization ...
+  Collecting build traces ...
+
+Route (app)
+┌ ○ /
+├ ○ /_not-found
+├ ƒ /api/[...path]
+├ ○ /app
+├ ƒ /app/aircraft
+├ ○ /app/analytics
+├ ƒ /app/benchmark
+├ ƒ /app/environment
+├ ƒ /app/localization
+├ ƒ /app/metrics
+├ ƒ /app/overview
+├ ƒ /app/pipeline
+├ ƒ /app/receivers
+├ ƒ /app/registry
+├ ƒ /app/replay
+├ ƒ /app/settings
+├ ○ /dashboard
+├ ƒ /healthz
+├ ○ /icon.svg
+└ ○ /pilot
+
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+

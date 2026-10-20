@@ -1,0 +1,2 @@
+{"status": "PASS", "installed_entrypoint": "mlat-api", "source_pythonpath": false, "liveness": 200, "diagnostics": 200, "provenance": "UNKNOWN"}
+{"shutdown_exit_code": 0}
