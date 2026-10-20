@@ -43,6 +43,26 @@
   --z-index-tooltip: 80;
 }
 
+/* Keep the console frame stable and reveal only the incoming workspace. */
+@keyframes workspace-arrive {
+  from { opacity: 0.72; transform: translateY(3px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.workspace-enter { animation: workspace-arrive 180ms var(--ease-operational); }
+.mission-earned { animation: workspace-arrive 200ms var(--ease-operational); }
+.navigation-pending { animation: navigation-wait 1s ease-in-out infinite alternate; }
+@keyframes navigation-wait { to { opacity: 0.35; } }
+.mission-progress { appearance: none; border: 0; border-radius: 4px; background: var(--color-line); accent-color: var(--color-signal-blue); }
+.mission-progress::-webkit-progress-bar { border-radius: 4px; background: var(--color-line); }
+.mission-progress::-webkit-progress-value { border-radius: 4px; background: var(--color-signal-blue); transition: width 180ms var(--ease-operational); }
+.mission-progress::-moz-progress-bar { border-radius: 4px; background: var(--color-signal-blue); }
+
+@media (prefers-reduced-motion: reduce) {
+  .workspace-enter, .mission-earned, .navigation-pending { animation: none; }
+  .mission-progress::-webkit-progress-value { transition: none; }
+}
+
 * {
   box-sizing: border-box;
 }

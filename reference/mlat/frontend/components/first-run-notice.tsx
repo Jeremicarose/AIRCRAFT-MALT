@@ -35,7 +35,7 @@ export function FirstRunNotice() {
         <p className="mt-2 max-w-3xl text-xs leading-5 text-ink-quiet">CKB does not prove that hardware exists at the declared location, or that its clock and observation feed are accurate.</p>
       </div>
       <div className="flex shrink-0 items-center gap-2">
-        <Link href="/app/receivers" className={buttonVariants({ variant: 'primary', size: 'sm' })}>Follow receiver readiness<ArrowRight className="size-4" /></Link>
+        <Link href="/app/guide" className={buttonVariants({ variant: 'primary', size: 'sm' })}>Start explorer missions<ArrowRight className="size-4" /></Link>
         <button type="button" onClick={dismiss} className={cn(buttonVariants({ variant: 'ghost', size: 'icon-sm' }))} aria-label="Dismiss introduction"><X className="size-4" /></button>
       </div>
     </section>

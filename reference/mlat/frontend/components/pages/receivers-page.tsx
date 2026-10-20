@@ -8,6 +8,7 @@ import { ArrowUpRight, Download, RadioTower, RefreshCw, UserRound } from 'lucide
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useMissionStore } from '@/lib/mission-store';
 import { ReceiverInspector } from '@/components/receiver-inspector';
 import { RegistryContractVerification } from '@/components/registry-contract-verification';
 import { SectionErrorBoundary } from '@/components/section-error-boundary';
@@ -87,7 +88,7 @@ export function ReceiversPage({
   selectedReceiverId,
   returnAircraftId,
   modeData,
-  registryEvidence,
+  registryEvidence: initialRegistryEvidence,
   positionsData,
   perspective = 'receivers',
 }: {
@@ -102,6 +103,15 @@ export function ReceiversPage({
   const router = useRouter();
   const searchParams = useSearchParams();
   const queryClient = useQueryClient();
+  const registryEvidenceQuery = useQuery({
+    queryKey: ['registry-evidence'],
+    queryFn: () => fetchJson<RegistryEvidenceData>('/api/registry/evidence'),
+    initialData: initialRegistryEvidence ?? undefined,
+    enabled: perspective === 'registry',
+    staleTime: 60_000,
+    retry: 1,
+  });
+  const registryEvidence = registryEvidenceQuery.data ?? null;
   const { client, signerInfo, open } = ccc.useCcc();
   const sdk = useMemo(() => createRegistrySdk(client), [client]);
   const storeHydrated = useOperatorStore((state) => state.hasHydrated);
@@ -180,13 +190,16 @@ export function ReceiversPage({
   }, [perspective, selectedReceiverId]);
 
   const selectReceiver = useCallback((receiverIdentity: string) => {
+    if (unifiedReceivers.some((receiver) => receiver.key === receiverIdentity)) {
+      useMissionStore.getState().complete('receiver');
+    }
     setSelectedId(receiverIdentity);
     setReceiverDetailsExpanded(true);
     setStoreSelectedReceiverId(receiverIdentity);
     const query = new URLSearchParams({ receiver: receiverIdentity });
     if (sourceAircraftId) query.set('fromAircraft', sourceAircraftId);
     router.replace(`${basePath}?${query.toString()}`, { scroll: false });
-  }, [basePath, router, setStoreSelectedReceiverId, sourceAircraftId]);
+  }, [basePath, router, setStoreSelectedReceiverId, sourceAircraftId, unifiedReceivers]);
 
   const ownedIdentities = useMemo(() => new Set(discovered.filter((receiver) => ownsReceiver(receiver, walletLocks)).map((receiver) => receiver.receiver_identity)), [discovered, walletLocks]);
   const filtered = useMemo(() => {
@@ -406,7 +419,10 @@ export function ReceiversPage({
         /> : <div className="space-y-4"><SectionErrorBoundary title="Receiver inventory unavailable" detail="The receiver list failed to render. The rest of the console remains available." resetKey={perspective} diagnosticsHref="/app/environment">{directoryPanel}</SectionErrorBoundary>{registryEventsPanel}</div>
       )}
 
-      {perspective === 'registry' ? <RegistryContractVerification evidence={registryEvidence} mode={modeData} /> : null}
+      {perspective === 'registry' ? <>
+        {registryEvidenceQuery.error ? <DataNotice title="Saved Registry evidence could not be refreshed" detail="Check the evidence service and retry. Saved lifecycle evidence remains separate from live discovery." onRetry={() => void registryEvidenceQuery.refetch()} /> : null}
+        <RegistryContractVerification evidence={registryEvidence} mode={modeData} />
+      </> : null}
     </div>
   );
 }

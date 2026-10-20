@@ -2,15 +2,16 @@
 
 import * as Dialog from '@radix-ui/react-dialog';
 import { useQuery } from '@tanstack/react-query';
-import { Activity, ChevronLeft, ChevronRight, Crosshair, Database, Gauge, Map, Menu, PanelLeftClose, PanelRightClose, PanelRightOpen, Plane, RadioTower, Search, Settings, SlidersHorizontal, Workflow, X } from 'lucide-react';
-import Link from 'next/link';
+import { Activity, ChevronLeft, ChevronRight, Compass, Crosshair, Database, Gauge, Map, Menu, PanelLeftClose, PanelRightClose, PanelRightOpen, Plane, RadioTower, Search, Settings, SlidersHorizontal, Workflow, X } from 'lucide-react';
+import Link, { useLinkStatus } from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import type { LucideIcon } from 'lucide-react';
 import { InvestigationActions, InvestigationEvidenceList, InvestigationFacts, InvestigationTimeline } from '@/components/operations-ui';
 import { PageOrientation } from '@/components/data-source-banner';
 import { FirstRunNotice } from '@/components/first-run-notice';
+import { MissionFeedback, MissionShortcut } from '@/components/missions';
 import { SectionErrorBoundary } from '@/components/section-error-boundary';
 import { WalletControl } from '@/components/wallet-control';
 import { Button } from '@/components/ui/button';
@@ -27,6 +28,7 @@ import type { HealthData, InvestigationDockState, ModeData, ReceiversResponse, S
 import { cn } from '@/lib/utils';
 
 const routeIcons: Record<string, LucideIcon> = {
+  guide: Compass,
   overview: Gauge,
   localization: Map,
   aircraft: Plane,
@@ -40,6 +42,13 @@ const routeIcons: Record<string, LucideIcon> = {
 };
 
 const groups: ConsoleRoute['group'][] = ['Registry', 'MLAT reference', 'System'];
+
+function NavigationPending({ label }: { label: string }) {
+  const { pending } = useLinkStatus();
+  return <span className="ml-auto flex size-3 shrink-0 items-center justify-center" role="status">
+    {pending ? <><span className="navigation-pending size-2 rounded-full bg-signal-blue" aria-hidden="true" /><span className="sr-only">Opening {label}</span></> : null}
+  </span>;
+}
 
 function getSystemSummary(snapshot: ShellSnapshot, healthAvailable = true): { label: string; tone: StatusTone; environment: string } {
   const mode = snapshot.modeData;
@@ -74,6 +83,7 @@ function Navigation({ collapsed, onNavigate }: { collapsed: boolean; onNavigate?
                 <Link href={route.href} onClick={onNavigate} aria-current={active ? 'page' : undefined} className={cn('group flex h-10 items-center gap-3 rounded-md px-2.5 text-[13px] font-medium text-ink-secondary transition-colors duration-standard hover:bg-graphite-hover hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal-blue', active && 'bg-graphite-hover text-ink')}>
                   <Icon className={cn('size-4 shrink-0 text-ink-quiet transition-colors group-hover:text-ink-secondary', active && 'text-signal-blue')} strokeWidth={2} />
                   {!collapsed ? <span className="truncate">{route.label}</span> : null}
+                  {!collapsed ? <NavigationPending label={route.label} /> : null}
                 </Link>
               );
               return collapsed ? <Tooltip key={route.key} label={route.label}>{link}</Tooltip> : <div key={route.key}>{link}</div>;
@@ -135,7 +145,14 @@ function ContextBar({ snapshot, selectedAircraftId, selectedReceiverId, pageKey,
   );
 }
 
-export function AppShell({ pageKey, title, description, snapshot, children }: { pageKey: string; title: string; description: string; snapshot: ShellSnapshot; children: ReactNode }) {
+export function AppShell({ snapshot, children }: { snapshot: ShellSnapshot; children: ReactNode }) {
+  const pathname = usePathname();
+  const route = consoleRoutes.find((item) => item.href === pathname) ?? consoleRoutes[0];
+  const pageKey = route.key;
+  const title = pageKey === 'overview' ? 'Overview' : pageKey === 'receivers' ? 'Receivers' : route.label;
+  const description = route.detail;
+  const previousPath = useRef(pathname);
+  const headingRef = useRef<HTMLHeadingElement>(null);
   const collapsed = useOperatorStore((state) => state.sidebarCollapsed);
   const setCollapsed = useOperatorStore((state) => state.setSidebarCollapsed);
   const mobileOpen = useOperatorStore((state) => state.mobileNavigationOpen);
@@ -174,6 +191,15 @@ export function AppShell({ pageKey, title, description, snapshot, children }: { 
     { label: 'Receiver Registry', href: '/app/registry' },
     ...(pinnedRoute && pinnedRoute.key !== 'registry' ? [{ label: pinnedRoute.label, href: pinnedRoute.href }] : []),
   ];
+
+  useEffect(() => {
+    if (previousPath.current === pathname) return;
+    previousPath.current = pathname;
+    setMobileOpen(false);
+    // A modal inspector must not cover the destination opened from its own link.
+    if (!wideDock) setRightDockOpen(false);
+    headingRef.current?.focus({ preventScroll: true });
+  }, [pathname, setMobileOpen, setRightDockOpen, wideDock]);
 
   useEffect(() => {
     const media = window.matchMedia('(min-width: 1536px)');
@@ -224,7 +250,7 @@ export function AppShell({ pageKey, title, description, snapshot, children }: { 
   }, [summary.label, summary.tone]);
 
   return (
-    <div className="min-h-screen bg-graphite-deep text-ink" data-page={pageKey}>
+    <div className="min-h-screen bg-graphite-deep text-ink" data-page={pageKey} data-console-frame>
       <a href="#main-content" className="sr-only z-modal rounded-md bg-signal-blue px-3 py-2 font-semibold text-graphite-deep focus:not-sr-only focus:fixed focus:left-3 focus:top-3">Skip to main content</a>
       <aside className={cn('fixed inset-y-0 left-0 z-sticky hidden border-r border-line bg-[#0b0e12] transition-[width] duration-standard ease-operational lg:flex lg:flex-col', collapsed ? 'w-[68px]' : 'w-[232px]')}>
         <div className={cn('flex h-16 items-center border-b border-line', collapsed ? 'justify-center px-2' : 'justify-between px-3')}>
@@ -236,6 +262,7 @@ export function AppShell({ pageKey, title, description, snapshot, children }: { 
         </div>
         <Navigation collapsed={collapsed} />
         <div className="border-t border-line p-2">
+          <MissionShortcut collapsed={collapsed} />
           <div className={cn('flex items-center gap-2 rounded-md px-2 py-2', collapsed && 'justify-center px-0')}>
               <span aria-hidden="true" className={cn('size-2 shrink-0 rounded-full', summary.tone === 'healthy' ? 'bg-healthy' : summary.tone === 'trust' ? 'bg-trust-cyan' : summary.tone === 'replay' ? 'bg-replay' : summary.tone === 'attention' ? 'bg-attention' : 'bg-failure')} />
             {!collapsed ? <div className="min-w-0 flex-1"><p className="truncate text-xs font-semibold text-ink-secondary">CKB testnet</p><p className="truncate text-[11px] text-ink-quiet">{summary.environment} · {summary.label}</p></div> : null}
@@ -267,7 +294,7 @@ export function AppShell({ pageKey, title, description, snapshot, children }: { 
                 <div className="mb-1 hidden items-center gap-1.5 text-xs text-ink-quiet md:flex">
                   {breadcrumbRoutes.map((item, index) => <div key={`${item.label}-${index}`} className="flex items-center gap-1.5">{index ? <ChevronRight className="size-3 text-ink-quiet/70" /> : null}<Link href={item.href} className="rounded-sm hover:text-ink-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal-blue">{item.label}</Link></div>)}
                 </div>
-                <h1 className="truncate text-base font-semibold leading-tight text-ink sm:text-xl">{title}</h1>
+                <h1 ref={headingRef} tabIndex={-1} className="truncate text-base font-semibold leading-tight text-ink outline-none sm:text-xl">{title}</h1>
                 <p className="mt-0.5 hidden truncate text-[13px] text-ink-quiet sm:block">{description}</p>
               </div>
             </div>
@@ -283,11 +310,13 @@ export function AppShell({ pageKey, title, description, snapshot, children }: { 
           <ContextBar snapshot={liveSnapshot} selectedAircraftId={selectedAircraftId} selectedReceiverId={selectedReceiverId} pageKey={pageKey} healthAvailable={healthAvailable} />
         </header>
         <main id="main-content" className="min-w-0 p-3 sm:p-6">
+          <div key={pageKey} className="workspace-enter">
           {pageKey === 'registry' ? <FirstRunNotice /> : null}
-          <PageOrientation pageKey={pageKey} snapshot={liveSnapshot} cached={!healthAvailable} />
+          {pageKey !== 'guide' ? <PageOrientation pageKey={pageKey} snapshot={liveSnapshot} cached={!healthAvailable} /> : null}
           <SectionErrorBoundary title={`${title} unavailable`} detail="This workspace encountered an unexpected frontend error. Retry this section or use Diagnostics while the navigation and other console areas remain available." resetKey={pageKey} diagnosticsHref="/app/environment">
             {children}
           </SectionErrorBoundary>
+          </div>
         </main>
       </div>
 
@@ -303,6 +332,7 @@ export function AppShell({ pageKey, title, description, snapshot, children }: { 
 
       {rightDockOpen && wideDock ? <aside className="fixed inset-y-0 right-0 z-sticky hidden w-[360px] flex-col border-l border-line bg-[#0c1015] 2xl:flex"><div className="flex h-16 items-center justify-between border-b border-line px-4"><p className="text-sm font-semibold text-ink">Investigation inspector</p><Tooltip label="Hide investigation inspector" side="left"><Button variant="ghost" size="icon-sm" aria-label="Hide investigation inspector" onClick={() => setRightDockOpen(false)}><PanelRightClose className="size-4" /></Button></Tooltip></div><InvestigationDock dock={dock} pageKey={pageKey} /></aside> : null}
       <CommandPalette snapshot={liveSnapshot} />
+      <MissionFeedback />
     </div>
   );
 }

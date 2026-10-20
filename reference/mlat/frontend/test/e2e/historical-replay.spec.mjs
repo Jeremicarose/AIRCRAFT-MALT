@@ -48,3 +48,16 @@ test('event links open rejected outcomes and pagination preserves navigation', a
   await page.getByRole('link', { name: 'Previous events', exact: true }).click();
   await expect(page.getByRole('link', { name: '26543', exact: true })).toBeVisible();
 });
+
+test('replay mission needs an explicit solver-stage inspection and retains historical qualification', async ({ page }) => {
+  await page.goto('/app/replay?event=26543');
+  await expect(page.getByText(/No position was stored: altitude out of bounds/)).toBeVisible();
+  const saved = () => page.evaluate(() => JSON.parse(localStorage.getItem('receiver-console-missions-v1') || '{"state":{"completed":[]}}').state.completed);
+  expect(await saved()).not.toContain('replay');
+  await page.getByRole('button', { name: '5. solver', exact: true }).click();
+  await expect.poll(saved).toContain('replay');
+  await page.getByRole('button', { name: '5. solver', exact: true }).click();
+  expect((await saved()).filter((id) => id === 'replay')).toHaveLength(1);
+  const receivers = await (await page.request.get('/api/receivers')).json();
+  expect(receivers.receivers.every((receiver) => receiver.qualification.state === 'UNQUALIFIED')).toBe(true);
+});

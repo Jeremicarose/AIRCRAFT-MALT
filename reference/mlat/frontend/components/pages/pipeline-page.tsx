@@ -3,6 +3,7 @@
 import { AlertTriangle, ArrowUpRight, FileJson, Lightbulb, Wrench } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { useEffect, useMemo, useState } from 'react';
+import { useMissionStore } from '@/lib/mission-store';
 import { ActivityRail, IssueList, SignalMarquee, WorkspaceHeader, WorkspacePanel, WorkspaceSplit } from '@/components/operations-ui';
 import { StatusChip } from '@/components/ui/status-chip';
 import { DataNotice } from '@/components/ui/data-notice';
@@ -43,6 +44,10 @@ export function PipelinePage({ pipeline: initialPipeline, metrics: initialMetric
   const progress = stages.length ? passed / stages.length * 100 : 0;
   const [selectedStageId, setSelectedStageId] = useState<string | null>(stages.find((stage) => stage.status !== 'pass')?.id ?? stages[0]?.id ?? null);
   const selectedStage = stages.find((stage) => stage.id === selectedStageId) ?? stages[0] ?? null;
+  const inspectStage = (id: string) => {
+    setSelectedStageId(id);
+    if (!pipelineQuery.error && stages.some((stage) => stage.id === id)) useMissionStore.getState().complete('pipeline');
+  };
   const liveReady = Boolean(pipeline?.live_evidence_ready);
   const operational = Boolean(pipeline?.pipeline_operational);
   const current = metrics?.current ?? {};
@@ -60,7 +65,7 @@ export function PipelinePage({ pipeline: initialPipeline, metrics: initialMetric
       detail: blocker,
       tone: 'failure' as StatusTone,
       meta: 'Immediate',
-      onSelect: stage ? () => setSelectedStageId(stage.id) : undefined,
+      onSelect: stage ? () => inspectStage(stage.id) : undefined,
       selected: stage?.id === selectedStage?.id,
       actionLabel: stage ? `Inspect ${stage.label} blocker` : undefined,
     };
@@ -69,7 +74,7 @@ export function PipelinePage({ pipeline: initialPipeline, metrics: initialMetric
     detail: stage.detail || 'Stage requires review.',
     tone: stageTone(stage.status),
     meta: titleCase(stage.status),
-    onSelect: () => setSelectedStageId(stage.id),
+    onSelect: () => inspectStage(stage.id),
     selected: stage.id === selectedStage?.id,
     actionLabel: `Inspect ${stage.label} stage`,
   }));
@@ -132,7 +137,7 @@ export function PipelinePage({ pipeline: initialPipeline, metrics: initialMetric
           { id: 'receiver', label: 'Receivers', detail: `${receiverCount} in runtime inventory`, tone: receiverCount ? 'selection' : 'attention', href: '/app/receivers' },
           { id: 'registry', label: 'Registry', detail: stageById.get('registry')?.detail ?? 'Registry state unavailable', tone: stageTone(stageById.get('registry')?.status ?? 'waiting'), href: '/app/registry' },
           { id: 'discovery', label: 'Discovery', detail: stageById.get('discovery')?.detail ?? 'Discovery state unavailable', tone: stageTone(stageById.get('discovery')?.status ?? 'waiting'), href: '/app/receivers' },
-          { id: 'mlat', label: 'MLAT', detail: stageById.get('solve')?.detail ?? 'Localization state unavailable', tone: stageTone(stageById.get('solve')?.status ?? 'waiting'), onSelect: () => setSelectedStageId('solve'), selected: selectedStage?.id === 'solve' },
+          { id: 'mlat', label: 'MLAT', detail: stageById.get('solve')?.detail ?? 'Localization state unavailable', tone: stageTone(stageById.get('solve')?.status ?? 'waiting'), onSelect: () => inspectStage('solve'), selected: selectedStage?.id === 'solve' },
           { id: 'aircraft', label: 'Aircraft', detail: aircraftCount ? `${aircraftCount} currently active` : 'No active localization result', tone: aircraftCount ? 'healthy' : 'attention', href: '/app/aircraft' },
         ]} />
       </WorkspacePanel>
@@ -150,7 +155,7 @@ export function PipelinePage({ pipeline: initialPipeline, metrics: initialMetric
               tone: stage.id === selectedStage?.id ? 'selection' : stageTone(stage.status),
               meta: titleCase(stage.status),
               detail: stage.detail || `${stage.label} did not report a current explanation.`,
-              onSelect: () => setSelectedStageId(stage.id),
+              onSelect: () => inspectStage(stage.id),
               selected: stage.id === selectedStage?.id,
               actionLabel: `Inspect ${stage.label} stage`,
             }))} />

@@ -6,6 +6,7 @@ import { buttonVariants } from '@/components/ui/button';
 import { StatStrip, type StatItem } from '@/components/ui/stat-strip';
 import { StatusChip } from '@/components/ui/status-chip';
 import { number, percent } from '@/lib/format';
+import { MissionChallenge } from '@/components/missions';
 import type { SolverBenchmarkMetricSummary, SolverBenchmarkReport } from '@/lib/types';
 
 function accuracyRow(label: string, metric: SolverBenchmarkMetricSummary | null) {
@@ -74,6 +75,7 @@ export function SolverBenchmarkPage({ report, error }: { report: SolverBenchmark
       />
 
       <StatStrip items={stats} layout="five" />
+      {!error ? <MissionChallenge kind="benchmark" /> : null}
 
       <WorkspaceSplit
         secondaryWidth="360px"

@@ -16,7 +16,8 @@ test('keeps persistent context out of actionable notifications', () => {
 test('pipeline blockers select explanatory stages instead of linking to the same page', () => {
   const pipeline = read('components/pages/pipeline-page.tsx');
   assert.match(pipeline, /pipelineStageForBlocker/);
-  assert.match(pipeline, /onSelect: stage \? \(\) => setSelectedStageId/);
+  assert.match(pipeline, /onSelect: stage \? \(\) => inspectStage/);
+  assert.match(pipeline, /setSelectedStageId\(id\)/);
   assert.doesNotMatch(pipeline, /detail: blocker[\s\S]{0,180}href: '\/app\/pipeline'/);
 });
 

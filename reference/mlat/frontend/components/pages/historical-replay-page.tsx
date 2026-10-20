@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useState } from 'react';
+import { useMissionStore } from '@/lib/mission-store';
 import LazyAirspaceMap from '@/components/lazy-airspace-map';
 import { WorkspaceHeader, WorkspacePanel } from '@/components/operations-ui';
 import { StatusChip } from '@/components/ui/status-chip';
@@ -41,6 +42,13 @@ export function HistoricalReplayPage({ overview, selected, error }: { overview: 
   const [stageIndex, setStageIndex] = useState(0);
   const stages = selected?.stages ?? [];
   const stage = stages[stageIndex];
+  const inspectStage = (index: number) => {
+    if (!stages[index]) return;
+    setStageIndex(index);
+    if (!error && overview?.configured && selected && stages[index].stage === 'solver') {
+      useMissionStore.getState().complete('replay');
+    }
+  };
   const offset = overview?.offset ?? 0;
   const receivers: Receiver[] = (selected?.receiver_geometry ?? []).map((receiver) => ({ ...receiver, altitude: receiver.altitude_m, data_source: 'historical_replay' }));
   return <div className="space-y-4">
@@ -66,9 +74,9 @@ export function HistoricalReplayPage({ overview, selected, error }: { overview: 
         <div className="min-w-0 space-y-4">
           {selected ? <WorkspacePanel title={`Event ${selected.event_id}`} detail={`Dataset aircraft ${selected.aircraft_dataset_id}. This identifier is not an ICAO address.`}>
             <div className="space-y-4 p-4">
-              <ol aria-label="Replay processing stages" className="flex flex-wrap gap-2">{stages.map((item, index) => <li key={item.stage}><button type="button" aria-pressed={index === stageIndex} onClick={() => setStageIndex(index)} className={buttonVariants({ variant: index === stageIndex ? 'primary' : 'secondary', size: 'sm' })}>{index+1}. {item.stage.replaceAll('_', ' ')}</button></li>)}</ol>
+              <ol aria-label="Replay processing stages" className="flex flex-wrap gap-2">{stages.map((item, index) => <li key={item.stage}><button type="button" aria-pressed={index === stageIndex} onClick={() => inspectStage(index)} className={buttonVariants({ variant: index === stageIndex ? 'primary' : 'secondary', size: 'sm' })}>{index+1}. {item.stage.replaceAll('_', ' ')}</button></li>)}</ol>
               {stage ? <div aria-live="polite" className="min-h-24 border-y border-line py-3"><StatusChip label={stage.status} tone={stage.status === 'REJECTED' ? 'attention' : 'replay'} /><p className="mt-2 text-sm leading-6 text-ink-secondary">{stage.detail}</p></div> : null}
-              <div className="flex justify-between gap-2"><button type="button" disabled={stageIndex === 0} className={buttonVariants({ variant: 'secondary', size: 'sm' })} onClick={() => setStageIndex(stageIndex-1)}>Previous stage</button><button type="button" disabled={stageIndex >= stages.length-1} className={buttonVariants({ variant: 'secondary', size: 'sm' })} onClick={() => setStageIndex(stageIndex+1)}>Next stage</button></div>
+              <div className="flex justify-between gap-2"><button type="button" disabled={stageIndex === 0} className={buttonVariants({ variant: 'secondary', size: 'sm' })} onClick={() => inspectStage(stageIndex-1)}>Previous stage</button><button type="button" disabled={stageIndex >= stages.length-1} className={buttonVariants({ variant: 'secondary', size: 'sm' })} onClick={() => inspectStage(stageIndex+1)}>Next stage</button></div>
               <dl className="grid grid-cols-2 gap-3 text-xs"><div><dt className="text-ink-quiet">Source arrival time</dt><dd className="mt-1 break-all font-mono">{selected.source_timestamp_ns} ns</dd></div><div><dt className="text-ink-quiet">Residual</dt><dd className="mt-1">{number(selected.diagnostics.residual_m, 2)} m</dd></div><div><dt className="text-ink-quiet">Best-candidate iteration</dt><dd className="mt-1">{number(selected.diagnostics.iterations)}</dd></div><div><dt className="text-ink-quiet">Receiver observations</dt><dd className="mt-1">{receivers.length}</dd></div></dl>
               {selected.position ? <p className="text-sm text-ink">Calculated position: {number(selected.position.position?.latitude, 6)}°, {number(selected.position.position?.longitude, 6)}°, {number(selected.position.position?.altitude, 1)} m.</p> : <p className="text-sm text-attention">No position was stored: {selected.diagnostics.failure_category?.replaceAll('_', ' ')}. Inspect geometry and timestamps; do not treat a rejected candidate as an aircraft position.</p>}
               <p className="text-xs leading-5 text-ink-secondary">Calibrated uncertainty is unavailable. Residual measures model fit, not the distance from the true aircraft position.</p>

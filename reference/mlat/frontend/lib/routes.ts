@@ -8,6 +8,7 @@ export interface ConsoleRoute {
 
 export const consoleRoutes: ConsoleRoute[] = [
   { key: 'registry', href: '/app/registry', label: 'Receiver directory', detail: 'Canonical identity, ownership, and lifecycle', group: 'Registry' },
+  { key: 'guide', href: '/app/guide', label: 'Explorer missions', detail: 'Learn the investigation workflow and earn browser-local badges', group: 'Registry' },
   { key: 'overview', href: '/app/overview', label: 'MLAT overview', detail: 'Reference consumer posture', group: 'MLAT reference' },
   { key: 'localization', href: '/app/localization', label: 'Airspace map', detail: 'Aircraft and receiver geometry from the current source', group: 'MLAT reference' },
   { key: 'aircraft', href: '/app/aircraft', label: 'Aircraft', detail: 'Localization and receiver contribution', group: 'MLAT reference' },
