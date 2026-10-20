@@ -9,7 +9,7 @@ authorized physical receivers/reference data, and a target deployment host.
 ## What changed
 
 The console now uses a shared Next.js layout. Its sidebar, header, wallet surface,
-query cache and investigation state remain mounted between routes. Individual
+query provider and investigation state remain mounted between routes. Individual
 pages stream workspace content, with a small loading skeleton instead of replacing
 the entire application. The shell loads health asynchronously so a backend outage
 does not prevent the local guide or settings from opening.
@@ -61,6 +61,16 @@ The first full browser run caught a selector error in the new receiver test and
 an actual modal-inspector persistence regression. Both were corrected without
 weakening behavior assertions. A saved-evidence initial-load failure led to bounded
 client recovery. Failed reports remain in the dated artifacts directory.
+
+Production browser testing also caught a startup mismatch: the server rendered
+“Refresh map” while the shell’s shared request cache caused the browser to render
+“Refreshing”. A browser-debugger capture confirmed both values on the same text
+node. Development reloads did not reproduce it; an initial first-render guard
+was insufficient and was removed. The shell now has its own query keys so its
+background polling cannot change a streamed workspace’s initial data/loading state.
+This adds separate shell status requests at bounded 10–30 second intervals; it
+does not change workspace polling or suppress hydration errors. The existing map
+regression and additional cold-load coverage retain error-free rendering assertions.
 
 A small local comparison used the same synthetic backend and desktop Chromium:
 five transitions in the prior candidate and five with the shared layout. The old

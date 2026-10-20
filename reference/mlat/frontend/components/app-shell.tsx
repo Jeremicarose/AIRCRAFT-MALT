@@ -170,10 +170,12 @@ export function AppShell({ snapshot, children }: { snapshot: ShellSnapshot; chil
   const storeHydrated = useOperatorStore((state) => state.hasHydrated);
   const reduceMotion = useReducedMotion();
   const [wideDock, setWideDock] = useState(false);
-  const modeQuery = useQuery({ queryKey: apiQueryKeys.mode, queryFn: () => fetchJson<ModeData>('/api/system/mode'), initialData: snapshot.modeData ?? undefined, refetchInterval: 20_000 });
-  const healthQuery = useQuery({ queryKey: apiQueryKeys.health, queryFn: () => fetchJson<HealthData>('/api/health'), initialData: snapshot.healthData ?? undefined, refetchInterval: 10_000 });
-  const receiversQuery = useQuery({ queryKey: apiQueryKeys.receivers, queryFn: () => fetchJson<ReceiversResponse>('/api/receivers'), initialData: snapshot.receiverData ?? undefined, refetchInterval: 15_000 });
-  const aircraftQuery = useQuery({ queryKey: apiQueryKeys.aircraft, queryFn: () => fetchJson<{ aircraft?: string[]; count?: number }>('/api/aircraft?seconds=300'), initialData: snapshot.aircraftData ?? undefined, refetchInterval: 30_000 });
+  // The shell can hydrate before a streamed workspace. Its background requests
+  // must not change that workspace's server-rendered data or loading state.
+  const modeQuery = useQuery({ queryKey: ['console-shell', ...apiQueryKeys.mode], queryFn: () => fetchJson<ModeData>('/api/system/mode'), initialData: snapshot.modeData ?? undefined, refetchInterval: 20_000 });
+  const healthQuery = useQuery({ queryKey: ['console-shell', ...apiQueryKeys.health], queryFn: () => fetchJson<HealthData>('/api/health'), initialData: snapshot.healthData ?? undefined, refetchInterval: 10_000 });
+  const receiversQuery = useQuery({ queryKey: ['console-shell', ...apiQueryKeys.receivers], queryFn: () => fetchJson<ReceiversResponse>('/api/receivers'), initialData: snapshot.receiverData ?? undefined, refetchInterval: 15_000 });
+  const aircraftQuery = useQuery({ queryKey: ['console-shell', ...apiQueryKeys.aircraft], queryFn: () => fetchJson<{ aircraft?: string[]; count?: number }>('/api/aircraft?seconds=300'), initialData: snapshot.aircraftData ?? undefined, refetchInterval: 30_000 });
   const liveSnapshot: ShellSnapshot = {
     modeData: modeQuery.data ?? null,
     healthData: healthQuery.data ?? null,

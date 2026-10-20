@@ -116,3 +116,22 @@ test('learning and navigation remain available when runtime APIs fail', async ({
   await expect(page.getByRole('heading', { name: 'Settings', level: 1 })).toBeVisible();
   expect(await completions(page)).toEqual(['source']);
 });
+
+test('cold map renders hydrate without text mismatches while page scripts arrive late', async ({ page }) => {
+  const errors = [];
+  page.on('pageerror', (error) => errors.push(error.message));
+  await page.route('**/api/**', async (route) => {
+    await new Promise((resolve) => setTimeout(resolve, 1500));
+    await route.continue();
+  });
+  await page.route('**/_next/static/**/*.js', async (route) => {
+    if (route.request().url().includes('/localization/')) await new Promise((resolve) => setTimeout(resolve, 1500));
+    await route.continue();
+  });
+  for (let attempt = 0; attempt < 3; attempt++) {
+    await page.goto('/app/localization');
+    await expect(page.getByRole('status', { name: 'Map source: SYNTHETIC' })).toBeVisible();
+    await expect(page.getByRole('region', { name: 'Data source: SYNTHETIC' })).toBeVisible();
+  }
+  expect(errors).toEqual([]);
+});
