@@ -95,7 +95,9 @@ test('mission guide supports mobile, keyboard, reduced motion and unavailable st
   });
   await page.goto('/app/guide');
   const correct = page.getByRole('button', { name: /current owner authorized/ });
+  await expect(correct).toBeEnabled();
   await correct.focus();
+  await expect(correct).toBeFocused();
   await page.keyboard.press('Enter');
   await expect(page.getByRole('region', { name: 'Source challenge' })).toContainText('Badge earned');
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
