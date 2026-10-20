@@ -112,6 +112,8 @@ jobs:
           assert 'depends_on "riscv64-elf-binutils"' in source
           path.write_text(source.replace("riscv64-elf-binutils", "mlat/deployment/riscv64-elf-binutils@2.46.0"))
           PY
+          brew trust --formula mlat/deployment/riscv64-elf-binutils@2.46.0
+          brew trust --formula mlat/deployment/riscv64-elf-gcc@16.1.0
           brew install mlat/deployment/riscv64-elf-gcc@16.1.0
       - name: Rebuild the deployed contract from clean source
         run: |
