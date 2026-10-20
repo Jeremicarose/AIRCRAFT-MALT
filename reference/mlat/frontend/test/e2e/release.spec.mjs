@@ -289,7 +289,7 @@ test('visualizes the historical solver benchmark without implying live accuracy'
   await expect(page.getByRole('region', { name: 'Data source: Historical recording' })).toBeVisible();
   await expect(page.getByText('Historical recording', { exact: true }).first()).toBeVisible();
   await expect(page.getByText('Solver only', { exact: true }).first()).toBeVisible();
-  await expect(page.getByText('Not live', { exact: true })).toBeVisible();
+  await expect(page.getByRole('main').getByText('Not live', { exact: true })).toBeVisible();
   await expect(page.getByRole('img', { name: /Median and 95th-percentile horizontal/ })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Solve outcome' })).toBeVisible();
   await expect(page.getByText('270', { exact: true }).first()).toBeVisible();
@@ -308,7 +308,7 @@ test('visualizes the historical solver benchmark without implying live accuracy'
   await page.setViewportSize({ width: 390, height: 844 });
   await page.reload();
   await expect(page.getByRole('heading', { level: 1, name: 'Accuracy benchmark' })).toBeVisible();
-  await expect(page.getByText('Not live', { exact: true })).toBeVisible();
+  await expect(page.getByRole('main').getByText('Not live', { exact: true })).toBeVisible();
   const tableRegion = page.getByRole('region', { name: 'Receiver geometry table, horizontally scrollable' });
   await expect(tableRegion).toBeVisible();
   const tableWidth = await tableRegion.evaluate((element) => ({ client: element.clientWidth, scroll: element.scrollWidth }));
