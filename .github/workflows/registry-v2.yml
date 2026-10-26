@@ -80,7 +80,9 @@ jobs:
 
   deployed-binary-provenance:
     runs-on: macos-15-intel
-    timeout-minutes: 30
+    # The pinned historical GCC build reached target-library compilation at the
+    # old 30-minute cutoff. Allow it to finish; exact contract bytes remain required.
+    timeout-minutes: 45
     permissions:
       attestations: write
       contents: read
