@@ -42,6 +42,12 @@ export interface InvestigationDockState {
 }
 
 export interface Position {
+  data_provenance?: 'SYNTHETIC' | 'HISTORICAL_REPLAY' | 'LIVE' | 'UNKNOWN';
+  source_id?: string;
+  timestamp_ns?: string;
+  source_timestamp_ns?: string;
+  correlation_id?: string;
+  receiver_geometry?: Array<{ receiver_id: string; latitude: number; longitude: number; altitude_m: number }>;
   aircraft_id: string;
   timestamp?: number;
   latitude?: number;
@@ -58,6 +64,8 @@ export interface Position {
     score?: number;
     bucket?: string;
     uncertainty_m?: number;
+    confidence_calibrated?: boolean;
+    interpretation?: string;
   };
   correlation?: {
     receiver_ids?: string[];
@@ -75,7 +83,8 @@ export interface Receiver {
   receiver_id: string;
   receiver_identity?: string | null;
   receiver_label?: string;
-  data_source?: 'ckb_registry' | 'replay' | 'simulation' | 'runtime';
+  data_source?: 'ckb_registry' | 'replay' | 'simulation' | 'runtime' | 'historical_replay';
+  qualification?: { state?: 'QUALIFIED' | 'UNQUALIFIED' | 'REJECTED'; received_at?: number; reason?: string; action?: string; clock_source?: string; clock_uncertainty_ns?: number; maximum_clock_uncertainty_ns?: number; data_provenance?: string };
   latitude?: number;
   longitude?: number;
   altitude?: number;
@@ -121,6 +130,7 @@ export interface RegistryEvidenceData {
   private_keys_included: boolean;
   contract: {
     code_hash: string;
+    hash_type: string;
     deployment_transaction: string;
   };
   receiver: {
@@ -131,6 +141,7 @@ export interface RegistryEvidenceData {
 }
 
 export interface PositionsResponse {
+  data_provenance?: Position['data_provenance'];
   positions: Position[];
   count?: number;
   time_window_seconds?: number;
@@ -165,6 +176,7 @@ export interface ModeData {
 }
 
 export interface HealthData {
+  components?: Array<{ component: string; status: 'HEALTHY' | 'DEGRADED' | 'FAILED' | 'NOT CONFIGURED'; reason: string; action: string }>;
   status?: string;
   freshness?: {
     last_signal_age_s?: number;
@@ -216,4 +228,91 @@ export interface MetricsData {
   reliability?: Record<string, number | string | boolean | null>;
   provenance?: Record<string, JsonValue>;
   [key: string]: unknown;
+}
+
+export interface SolverBenchmarkMetricSummary {
+  count?: number;
+  minimum?: number;
+  median: number;
+  p95: number;
+  mean?: number;
+  maximum: number;
+}
+
+export interface SolverBenchmarkEvent {
+  event_id: string;
+  data_source: 'SIMULATION' | 'HISTORICAL_RECORDING';
+  is_live: false;
+  solved: boolean;
+  errors_m: {
+    horizontal?: number;
+    vertical?: number;
+    three_dimensional?: number;
+  } | null;
+  acceptance?: {
+    passed: boolean;
+    maximum_3d_error_m: number;
+    criterion: string;
+  };
+  ground_truth: {
+    latitude: number;
+    longitude: number;
+    altitude_m: number;
+  };
+  receiver_geometry: Array<{
+    receiver_id: string;
+    latitude: number;
+    longitude: number;
+    altitude_m: number;
+  }>;
+  source?: {
+    dataset?: string;
+    license?: string;
+    original_dataset?: string;
+    upstream_repository?: string;
+    limitations?: string[];
+  };
+}
+
+export interface SolverBenchmarkReport {
+  schema_version: 1;
+  benchmark_id: 'compact-public-solver-v1' | 'compact-public-solver-v2';
+  claim_scope: 'solver_only';
+  is_live: false;
+  synthetic_control: SolverBenchmarkEvent;
+  published_event: SolverBenchmarkEvent;
+  compact_dataset: {
+    data_source: 'HISTORICAL_RECORDING';
+    is_live: false;
+    event_counts: {
+      total: number;
+      solved: number;
+      unsolved: number;
+    };
+    solve_rate: number;
+    residual_m?: SolverBenchmarkMetricSummary;
+    failure_categories?: Record<string, number>;
+    iterations?: { successful?: SolverBenchmarkMetricSummary; definition?: string };
+    accuracy_m: {
+      horizontal: SolverBenchmarkMetricSummary | null;
+      vertical: SolverBenchmarkMetricSummary | null;
+      three_dimensional: SolverBenchmarkMetricSummary | null;
+    };
+    source: {
+      source_id: string;
+      license: string;
+      original_dataset?: string;
+      upstream_repository?: string;
+      upstream_version?: string;
+      limitations: string[];
+    };
+  };
+  interpretation: {
+    solver_numeric_behavior_measured: boolean;
+    production_pipeline_validated: boolean;
+    registry_identity_validated: boolean;
+    live_operation_validated: boolean;
+    clock_attestation_validated?: boolean;
+    physical_receiver_claims_validated?: boolean;
+  };
 }

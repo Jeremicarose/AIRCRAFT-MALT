@@ -1,0 +1,18 @@
+{
+  "record_source": "Observed terminal output from 8 October; preserved here after temporary files expired.",
+  "observations_per_scenario": 2000,
+  "measurements": [
+    {
+      "receivers": 4,
+      "ingest_ms": 204.16146099887555
+    },
+    {
+      "receivers": 5,
+      "ingest_ms": 176.76744600612437
+    },
+    {
+      "receivers": 10,
+      "ingest_ms": 181.92060499859508
+    }
+  ]
+}

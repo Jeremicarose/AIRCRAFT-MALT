@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import * as Tooltip from '@radix-ui/react-tooltip';
 import { useEffect, useState, type ReactNode } from 'react';
 import { useOperatorStore } from '@/lib/operator-store';
+import { useMissionStore } from '@/lib/mission-store';
 
 const testnetClient = new ccc.ClientPublicTestnet();
 
@@ -22,6 +23,9 @@ export default function Providers({ children }: { children: ReactNode }) {
   useEffect(() => {
     void Promise.resolve(useOperatorStore.persist.rehydrate()).finally(() => {
       useOperatorStore.getState().setHasHydrated(true);
+    });
+    void Promise.resolve(useMissionStore.persist.rehydrate()).catch(() => undefined).finally(() => {
+      useMissionStore.getState().setHydrated();
     });
   }, []);
 

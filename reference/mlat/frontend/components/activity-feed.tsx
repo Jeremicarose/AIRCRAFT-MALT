@@ -26,7 +26,7 @@ export function ActivityFeed({ aircraft, receivers, limit = 8 }: { aircraft: Pos
       id: `aircraft-${item.aircraft_id}-${item.timestamp}`,
       timestamp: Number(item.timestamp ?? 0),
       title: `Aircraft ${item.aircraft_id}`,
-      detail: `Position solved at ${percent(item.quality?.score, 0)} confidence`,
+      detail: `Position solved at ${percent(item.quality?.score, 0)} heuristic quality`,
       tone: toneFromScore(item.quality?.score),
       kind: 'aircraft' as const,
       focus: item.aircraft_id,

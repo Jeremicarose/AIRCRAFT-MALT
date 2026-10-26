@@ -14,7 +14,7 @@
   --color-line: #2a3039;
   --color-ink: #f1f4f8;
   --color-ink-secondary: #aab2bd;
-  --color-ink-quiet: #7f8996;
+  --color-ink-quiet: #8f99a6;
   --color-signal-blue: #5b9cff;
   --color-trust-cyan: #68d5e8;
   --color-healthy: #4fd18b;
@@ -41,6 +41,26 @@
   --z-index-modal: 60;
   --z-index-toast: 70;
   --z-index-tooltip: 80;
+}
+
+/* Keep the console frame stable and reveal only the incoming workspace. */
+@keyframes workspace-arrive {
+  from { opacity: 0.72; transform: translateY(3px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.workspace-enter { animation: workspace-arrive 180ms var(--ease-operational); }
+.mission-earned { animation: workspace-arrive 200ms var(--ease-operational); }
+.navigation-pending { animation: navigation-wait 1s ease-in-out infinite alternate; }
+@keyframes navigation-wait { to { opacity: 0.35; } }
+.mission-progress { appearance: none; border: 0; border-radius: 4px; background: var(--color-line); accent-color: var(--color-signal-blue); }
+.mission-progress::-webkit-progress-bar { border-radius: 4px; background: var(--color-line); }
+.mission-progress::-webkit-progress-value { border-radius: 4px; background: var(--color-signal-blue); transition: width 180ms var(--ease-operational); }
+.mission-progress::-moz-progress-bar { border-radius: 4px; background: var(--color-signal-blue); }
+
+@media (prefers-reduced-motion: reduce) {
+  .workspace-enter, .mission-earned, .navigation-pending { animation: none; }
+  .mission-progress::-webkit-progress-value { transition: none; }
 }
 
 * {
@@ -77,6 +97,10 @@ a,
 input,
 [role="button"] {
   -webkit-tap-highlight-color: transparent;
+}
+
+:focus-visible {
+  scroll-margin-block: 96px;
 }
 
 ::selection {
@@ -123,8 +147,8 @@ input,
 
 .maplibregl-ctrl-attrib {
   background: rgba(8, 10, 13, 0.82) !important;
-  color: #7f8996;
-  font-size: 10px;
+  color: #8f99a6;
+  font-size: 11px;
 }
 
 .maplibregl-ctrl-attrib a {
@@ -253,9 +277,9 @@ input,
 
 .recharts-cartesian-axis-tick-value,
 .recharts-legend-item-text {
-  fill: #7f8996;
-  color: #7f8996 !important;
-  font-size: 11px;
+  fill: #8f99a6;
+  color: #8f99a6 !important;
+  font-size: 12px;
 }
 
 .recharts-cartesian-grid line {

@@ -1,0 +1,74 @@
+{
+  "schema_version": 1,
+  "benchmark_id": "mpyc-gps-five-event-5711382",
+  "event_id": "5711382",
+  "claim_scope": "solver_only",
+  "source": {
+    "kind": "historical_recording",
+    "dataset": "MPyC five-receiver GPS-timed LocaRDS example",
+    "upstream_repository": "https://github.com/lschoe/mpyc/tree/v0.11/demos/data/mlat",
+    "upstream_version": "v0.11",
+    "original_dataset": "https://doi.org/10.5281/zenodo.4739276",
+    "license": "CC-BY-SA-4.0",
+    "aircraft_dataset_id": "2742",
+    "time_at_server": 3178.18799996376,
+    "limitations": [
+      "Historical pre-grouped observations, not a live receiver feed.",
+      "No original Mode-S frame is present in this compact source.",
+      "GPS timing is stated by the source, but per-observation clock uncertainty is absent.",
+      "Dataset-local receiver serials are not CKB Registry identities."
+    ]
+  },
+  "ground_truth": {
+    "latitude": 48.5541687011719,
+    "longitude": 9.18773944561298,
+    "altitude_m": 7711.44
+  },
+  "receivers": [
+    {
+      "receiver_id": "locards:263",
+      "latitude": 48.891438,
+      "longitude": 9.177633,
+      "altitude_m": 303.71347,
+      "published_timestamp_ns": 3179163238750,
+      "synthetic_timestamp_ns": 1000000000000127624,
+      "signal_strength": 82
+    },
+    {
+      "receiver_id": "locards:663",
+      "latitude": 49.988205,
+      "longitude": 8.591845,
+      "altitude_m": 134.774994,
+      "published_timestamp_ns": 3179163663390,
+      "synthetic_timestamp_ns": 1000000000000552202,
+      "signal_strength": 54
+    },
+    {
+      "receiver_id": "locards:598",
+      "latitude": 48.711021,
+      "longitude": 9.265381,
+      "altitude_m": 355.447235,
+      "published_timestamp_ns": 3179163177109,
+      "synthetic_timestamp_ns": 1000000000000066002,
+      "signal_strength": 63
+    },
+    {
+      "receiver_id": "locards:141",
+      "latitude": 47.511948,
+      "longitude": 10.280076,
+      "altitude_m": 754.537476,
+      "published_timestamp_ns": 3179163584546,
+      "synthetic_timestamp_ns": 1000000000000473368,
+      "signal_strength": 83
+    },
+    {
+      "receiver_id": "locards:10",
+      "latitude": 47.40017,
+      "longitude": 8.63068,
+      "altitude_m": 430.6824,
+      "published_timestamp_ns": 3179163562125,
+      "synthetic_timestamp_ns": 1000000000000450857,
+      "signal_strength": 72
+    }
+  ]
+}

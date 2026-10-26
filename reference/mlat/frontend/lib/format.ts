@@ -1,6 +1,7 @@
 import type { Position, StatusTone } from '@/lib/types';
 
 export function number(value: unknown, digits = 0, fallback = 'n/a'): string {
+  if (value == null || value === '' || typeof value === 'boolean') return fallback;
   const numeric = Number(value);
   if (!Number.isFinite(numeric)) return fallback;
   return digits > 0 ? numeric.toFixed(digits) : Math.round(numeric).toLocaleString();
@@ -103,7 +104,7 @@ export function formatDistanceMeters(meters: unknown): string {
 export function positionCoordinates(position?: Position | null): [number, number] | null {
   const latitude = Number(position?.position?.latitude ?? position?.latitude);
   const longitude = Number(position?.position?.longitude ?? position?.longitude);
-  return Number.isFinite(latitude) && Number.isFinite(longitude) ? [longitude, latitude] : null;
+  return Number.isFinite(latitude) && Math.abs(latitude) <= 90 && Number.isFinite(longitude) && Math.abs(longitude) <= 180 ? [longitude, latitude] : null;
 }
 
 export function latestPositions(rows: Position[]): Position[] {

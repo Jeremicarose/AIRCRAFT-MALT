@@ -3,6 +3,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$ROOT_DIR"
 
 export API_HOST="${API_HOST:-0.0.0.0}"
 export API_PORT="${API_PORT:-5057}"
@@ -17,7 +18,7 @@ export ENABLE_BACKGROUND_BROADCASTER=false
 export DEMO_MODE=true
 export DEMO_SCENARIO="${DEMO_SCENARIO:-northeast-corridor}"
 export DEMO_READ_ONLY=true
-export DEMO_LABEL="${DEMO_LABEL:-Hosted demo - Northeast replay}"
+export DEMO_LABEL="${DEMO_LABEL:-Hosted demo - Synthetic Northeast scenario}"
 export DEMO_AUTO_CONNECT=true
 export STATS_INTERVAL_SECONDS="${STATS_INTERVAL_SECONDS:-15}"
 

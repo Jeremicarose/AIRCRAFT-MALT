@@ -34,7 +34,9 @@ def row_value(row: sqlite3.Row, field: str, default):
 
 def main() -> int:
     args = parse_args()
-    conn = sqlite3.connect(args.db)
+    if args.seconds <= 0 or not 1 <= args.limit <= 1_000_000:
+        raise SystemExit("seconds must be positive and limit must be within 1..1000000")
+    conn = sqlite3.connect(Path(args.db).resolve().as_uri() + "?mode=ro", uri=True)
     conn.row_factory = sqlite3.Row
     try:
         cursor = conn.cursor()
@@ -58,6 +60,14 @@ def main() -> int:
         for position in positions:
             record = {
                 "aircraft_id": position["aircraft_id"],
+                "data_provenance": row_value(position, "data_provenance", "UNKNOWN"),
+                "source_id": row_value(position, "source_id", ""),
+                "timestamp_ns": row_value(position, "timestamp_ns", None),
+                "correlation_id": row_value(position, "correlation_id", ""),
+                "receiver_geometry": json.loads(row_value(position, "receiver_geometry", "[]")),
+                "observation_evidence": json.loads(
+                    row_value(position, "observation_evidence", "{}")
+                ),
                 "timestamp": position["timestamp"],
                 "latitude": position["latitude"],
                 "longitude": position["longitude"],

@@ -46,6 +46,18 @@ See [Project Status](docs/PROJECT_STATUS.md) for the complete status matrix and
 readiness scores. The exact old-to-new path decisions are in the
 [File Disposition Ledger](docs/audit/FILE_DISPOSITION.md).
 
+The [October production-readiness review](docs/audit/2026-10-08-production-readiness.md)
+records the current hardening work, executed checks, benchmark results, and
+remaining validation limits. Run `python tools/mlat/run_compact_solver_benchmark.py`
+for the bundled 362-event benchmark, or `./run-replay.sh` for isolated historical
+inspection at `/app/replay`. `./run-demo.sh` generates explicitly synthetic data.
+
+The [19 October readiness audit](docs/production-readiness/audit.md) records the
+latest baseline, security repairs and separate internal/external/production gates.
+Start with the [controlled tester guide](docs/production-readiness/external-tester-guide.md)
+for offline testing; see the [release checklist](docs/production-readiness/release-checklist.md)
+for evidence still required before external release or production consideration.
+
 ## Architecture
 
 ```text

@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-10-20T06:50:39.632Z",
+  "source_commit": "df82f6cfa23be85eed7ca0f2da61db2fb8409889",
+  "source_tree": "3ea67ec65e85a85e07d02d04471e56ec37b44b37",
+  "worktree_clean": false,
+  "route": "/app/registry",
+  "accessibility_standard": "WCAG 2 A/AA serious and critical axe findings",
+  "total_tests": 36,
+  "completed_tests": 36,
+  "passed_tests": 33,
+  "failed_tests": 3,
+  "failures": [
+    {
+      "id": "5f63e3e25d4e0be7a04a-16329ddf7397f32f19fb",
+      "title": " > chromium > explorer-missions.spec.mjs > real receiver and pipeline inspections earn their missions, mere visits do not",
+      "status": "timedOut",
+      "error": "\u001b[31mTest timeout of 60000ms exceeded.\u001b[39m"
+    },
+    {
+      "id": "2db8d424d38564b5ab90-4816a1e7eb4962f6dbfc",
+      "title": " > chromium > release.spec.mjs > moves from an aircraft to a receiver and back to related aircraft",
+      "status": "failed",
+      "error": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: getByRole('heading', { name: 'RECV_NYC_001', exact: true, level: 2 })\nExpected: visible\nError: strict mode violation: getByRole('heading', { name: 'RECV_NYC_001', exact: true, level: 2 }) resolved to 2 elements:\n    1) <h2 class=\"truncate text-base font-semibold text-ink\">RECV_NYC_001</h2> aka locator('#main-content').getByRole('heading', { name: 'RECV_NYC_001' })\n    2) <h2 class=\"mt-1 break-words text-sm font-semibold text-ink\">RECV_NYC_001</h2> aka locator('#radix-_R_mbtb_').getByRole('heading', { name: 'RECV_NYC_001' })\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" getByRole('heading', { name: 'RECV_NYC_001', exact: true, level: 2 }) with timeout 15000ms\u001b[22m\n\u001b[2m  - waiting for getByRole('heading', { name: 'RECV_NYC_001', exact: true, level: 2 })\u001b[22m\n"
+    },
+    {
+      "id": "2db8d424d38564b5ab90-73c8202292b6b0b1cb18",
+      "title": " > chromium > release.spec.mjs > explains Registry contract configuration without claiming a live verification",
+      "status": "failed",
+      "error": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: getByText('SAVED EVIDENCE', { exact: true })\nExpected: visible\nTimeout: 15000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" getByText('SAVED EVIDENCE', { exact: true }) with timeout 15000ms\u001b[22m\n\u001b[2m  - waiting for getByText('SAVED EVIDENCE', { exact: true })\u001b[22m\n"
+    }
+  ],
+  "accessibility_violations": 0,
+  "pass": false
+}

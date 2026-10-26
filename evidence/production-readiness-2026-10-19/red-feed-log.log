@@ -1,0 +1,22 @@
+F                                                                        [100%]
+=================================== FAILURES ===================================
+____________ test_unassigned_feed_identity_is_not_copied_into_logs _____________
+
+caplog = <_pytest.logging.LogCaptureFixture object at 0x1039d77a0>
+
+    def test_unassigned_feed_identity_is_not_copied_into_logs(caplog):
+        secret = "wss://private.invalid/feed?token=DO-NOT-LOG"
+        parser = JsonFeedParsingMixin()
+        assert parser.normalize_feed_records(record(receiver_id=secret), allowed_receiver_ids={"R1"}) == []
+>       assert secret not in caplog.text
+E       AssertionError: assert 'wss://priva...n=DO-NOT-LOG' not in 'WARNING  ml...DO-NOT-LOG\n'
+E         
+E         'wss://private.inva...ed?token=DO-NOT-LOG' is contained here:
+E            receiver wss://private.invalid/feed?token=DO-NOT-LOG
+
+tests/mlat/test_input_security.py:23: AssertionError
+------------------------------ Captured log call -------------------------------
+WARNING  mlat_reference.ingest.feed_transports:feed_transports.py:257 Dropping feed payload for unassigned receiver wss://private.invalid/feed?token=DO-NOT-LOG
+=========================== short test summary info ============================
+FAILED tests/mlat/test_input_security.py::test_unassigned_feed_identity_is_not_copied_into_logs
+1 failed in 0.30s

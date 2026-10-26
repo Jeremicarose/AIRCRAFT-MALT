@@ -1,0 +1,5 @@
+{
+  "action": "Publish candidate branch to public GitHub repository Jeremicarose/AIRCRAFT-MALT",
+  "reason": "Automatic approval review requires explicit authorization to export the full source, evidence and project-file payload to this public destination. Local validation remains available.",
+  "bypass_attempted": false
+}

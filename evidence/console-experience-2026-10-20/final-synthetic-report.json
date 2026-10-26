@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-10-20T07:16:38.562Z",
+  "source_commit": "34674e3f471f74289aad885636cd3d5c96669978",
+  "source_tree": "6139f2fc437308549683d66a421b0b3f0a84dabb",
+  "worktree_clean": true,
+  "route": "/app/registry",
+  "accessibility_standard": "WCAG 2 A/AA serious and critical axe findings",
+  "total_tests": 37,
+  "completed_tests": 37,
+  "passed_tests": 35,
+  "failed_tests": 2,
+  "failures": [
+    {
+      "id": "5f63e3e25d4e0be7a04a-bea3bdc703fc43a8dbd8",
+      "title": " > chromium > explorer-missions.spec.mjs > mission guide supports mobile, keyboard, reduced motion and unavailable storage",
+      "status": "failed",
+      "error": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoContainText\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m failed\n\nLocator: getByRole('region', { name: 'Source challenge' })\nExpected substring: \u001b[32m\"Badge earned\"\u001b[39m\nReceived string:    \u001b[31m\"What does a CKB Registry record verify?25 XP challengeChoose the accurate interpretationThe receiver is physically present with an accurate clock.The current owner authorized the recorded lifecycle state.Every observation from the receiver is accurate.\"\u001b[39m\nTimeout: 15000ms\n\nCall log:\n\u001b[2m  - Expect \"toContainText\" getByRole('region', { name: 'Source challenge' }) with timeout 15000ms\u001b[22m\n\u001b[2m  - waiting for getByRole('region', { name: 'Source challenge' })\u001b[22m\n\u001b[2m    33 × locator resolved to <section id=\"source-challenge\" aria-label=\"Source challenge\" class=\"scroll-mt-36 rounded-lg border border-line bg-graphite p-4 sm:p-5\">…</section>\u001b[22m\n\u001b[2m       - unexpected value \"What does a CKB Registry record verify?25 XP challengeChoose the accurate interpretationThe receiver is physically present with an accurate clock.The current owner authorized the recorded lifecycle state.Every observation from the receiver is accurate.\"\u001b[22m\n"
+    },
+    {
+      "id": "2db8d424d38564b5ab90-695d883059771ac471be",
+      "title": " > chromium > release.spec.mjs > shows the selected aircraft contributing receivers with explicit synthetic provenance",
+      "status": "failed",
+      "error": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoEqual\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // deep equality\u001b[22m\n\n\u001b[32m- Expected  - 1\u001b[39m\n\u001b[31m+ Received  + 3\u001b[39m\n\n\u001b[32m- Array []\u001b[39m\n\u001b[31m+ Array [\u001b[39m\n\u001b[31m+   \"Minified React error #418; visit https://react.dev/errors/418?args[]=text&args[]= for the full message or use the non-minified dev environment for full errors and additional helpful warnings.\",\u001b[39m\n\u001b[31m+ ]\u001b[39m"
+    }
+  ],
+  "accessibility_violations": 0,
+  "pass": false
+}

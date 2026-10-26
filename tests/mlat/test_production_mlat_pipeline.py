@@ -188,6 +188,8 @@ def test_registry_transfer_refresh_updates_running_inventory_owner(monkeypatch, 
     )
     system.network_client.active_receivers[identity] = owner_a
     system._cache_receiver_positions()
+    system.receiver_clock_status[identity] = True
+    system.correlator.add_signal(RawSignal(identity, 1_700_000_001, "old-owner-frame"))
 
     async def refreshed_receivers():
         return [owner_b]
@@ -202,6 +204,8 @@ def test_registry_transfer_refresh_updates_running_inventory_owner(monkeypatch, 
         assert asyncio.run(system.network_client.refresh_registry_receivers()) is True
         system._cache_receiver_positions()
         stored = system.database.get_receivers()
+        assert identity not in system.receiver_clock_status
+        assert system.correlator.signal_buffer == []
     finally:
         system.database.close()
 

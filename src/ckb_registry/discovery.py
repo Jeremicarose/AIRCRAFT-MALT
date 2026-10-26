@@ -76,6 +76,8 @@ class CKBConfig:
     registry_max_pages: int = 1000
     registry_max_cells: int = 10_000
     max_record_bytes: int = DEFAULT_MAX_RECORD_BYTES
+    max_rpc_response_bytes: int = 8 * 1024 * 1024
+    discovery_timeout_seconds: float = 30.0
     time_provider: Callable[[], float] = time.time
 
 
@@ -133,6 +135,16 @@ class CKBPeerDiscovery:
         include_inactive: bool = False,
         include_revoked: bool = False,
     ) -> List[ReceiverInfo]:
+        # Bound the whole snapshot, including pagination and node verification.
+        # Per-request timeouts alone can leave old runtime state eligible for hours.
+        async with asyncio.timeout(self.config.discovery_timeout_seconds):
+            return await self._discover_peers(
+                include_inactive=include_inactive, include_revoked=include_revoked
+            )
+
+    async def _discover_peers(
+        self, *, include_inactive: bool, include_revoked: bool
+    ) -> List[ReceiverInfo]:
         """
         Discover active Mode-S receivers from CKB blockchain.
 
@@ -155,6 +167,15 @@ class CKBPeerDiscovery:
         for cell in cells:
             try:
                 receiver_identity = self._receiver_identity_from_cell(cell)
+            except (ValueError, TypeError, AttributeError):
+                logger.warning("Ignoring a registry candidate with an invalid type script")
+                continue
+
+            # RPC failures invalidate the snapshot. Never fall back to indexer
+            # metadata or a previous cached record when the node cannot verify it.
+            if not await self._node_confirms_cell(cell):
+                continue
+            try:
                 if receiver_identity in duplicate_identities:
                     continue
                 if receiver_identity in seen_identities:
@@ -171,7 +192,7 @@ class CKBPeerDiscovery:
                 if receiver is not None:
                     receivers_by_identity[receiver_identity] = receiver
             except Exception as exc:
-                logger.warning("Failed to parse receiver cell: %s", exc)
+                logger.warning("Failed to parse receiver cell (%s)", type(exc).__name__)
 
         active_receivers = [
             receiver
@@ -191,6 +212,29 @@ class CKBPeerDiscovery:
         receivers = sorted(active_receivers, key=lambda receiver: receiver.receiver_identity or "")
         logger.info("Discovered %d valid receivers", len(receivers))
         return receivers
+
+    async def _node_confirms_cell(self, cell: Dict) -> bool:
+        out_point = cell.get("out_point")
+        if not isinstance(out_point, dict):
+            raise RuntimeError("Registry candidate is missing its node out point")
+        response = await self._rpc_call("get_live_cell", [out_point, True])
+        if not isinstance(response, dict) or response.get("status") not in {
+            "live",
+            "dead",
+            "unknown",
+        }:
+            raise RuntimeError("CKB node returned an invalid live-cell response")
+        if response["status"] != "live":
+            return False
+        verified = response.get("cell")
+        if (
+            not isinstance(verified, dict)
+            or verified.get("output") != cell.get("output")
+            or not isinstance(verified.get("data"), dict)
+            or verified["data"].get("content") != cell.get("output_data")
+        ):
+            raise RuntimeError("Registry indexer candidate does not match the trusted node")
+        return True
 
     async def _search_receiver_cells(self) -> List[Dict]:
         """
@@ -212,6 +256,7 @@ class CKBPeerDiscovery:
         page_size = max(1, min(self.config.registry_page_size, 1000))
         cells: List[Dict] = []
         cursor: Optional[str] = None
+        seen_cursors: set[str] = set()
         for _ in range(max(1, self.config.registry_max_pages)):
             params: List[Any] = [search_key, "asc", hex(page_size)]
             if cursor is not None:
@@ -223,7 +268,7 @@ class CKBPeerDiscovery:
             )
             if not isinstance(cells_response, dict):
                 raise RuntimeError("CKB indexer returned a non-object get_cells result")
-            page = cells_response.get("objects", [])
+            page = cells_response.get("objects")
             if not isinstance(page, list):
                 raise RuntimeError("CKB indexer get_cells objects must be a list")
             cells.extend(page)
@@ -234,8 +279,9 @@ class CKBPeerDiscovery:
                 return cells
             if not isinstance(next_cursor, str) or not next_cursor:
                 raise RuntimeError("CKB indexer omitted last_cursor after a non-empty page")
-            if next_cursor == cursor:
+            if next_cursor in seen_cursors:
                 raise RuntimeError("CKB indexer repeated last_cursor after a non-empty page")
+            seen_cursors.add(next_cursor)
             cursor = next_cursor
 
         raise RuntimeError("Receiver registry pagination exceeded registry_max_pages")
@@ -283,9 +329,25 @@ class CKBPeerDiscovery:
                 timeout=self.config.api_timeout,
                 context=ssl_context,
             ) as response:
-                body = json.loads(response.read().decode("utf-8"))
+                raw = response.read(self.config.max_rpc_response_bytes + 1)
+                if len(raw) > self.config.max_rpc_response_bytes:
+                    raise RuntimeError("CKB RPC response exceeds configured byte limit")
+
+                def unique_fields(pairs):
+                    parsed = {}
+                    for key, value in pairs:
+                        if key in parsed:
+                            raise RuntimeError("CKB RPC returned duplicate JSON fields")
+                        parsed[key] = value
+                    return parsed
+
+                body = json.loads(raw.decode("utf-8"), object_pairs_hook=unique_fields)
+            if not isinstance(body, dict) or ("result" not in body and "error" not in body):
+                raise RuntimeError("CKB RPC returned an invalid JSON-RPC object")
+            if body.get("jsonrpc") != "2.0" or body.get("id") != payload["id"]:
+                raise RuntimeError("CKB RPC response does not match the request")
             if "error" in body:
-                raise RuntimeError(body["error"])
+                raise RuntimeError("CKB RPC returned an error response")
             return body["result"]
 
         return await asyncio.to_thread(_do_request)
@@ -334,6 +396,8 @@ class CKBPeerDiscovery:
                 return None
             if not output_data.startswith("0x") or len(output_data) % 2 != 0:
                 raise ValueError("registry cell data must be 0x-prefixed hexadecimal")
+            if len(output_data) > 2 + self.config.max_record_bytes * 2:
+                raise ValueError("registry cell data exceeds the configured byte limit")
 
             data_bytes = bytes.fromhex(output_data[2:])
             record = decode_registry_v2_record(
@@ -375,7 +439,7 @@ class CKBPeerDiscovery:
             return receiver
 
         except Exception as e:
-            logger.warning(f"Failed to parse cell: {e}")
+            logger.warning("Failed to parse cell (%s)", type(e).__name__)
             return None
 
     def _is_receiver_valid(

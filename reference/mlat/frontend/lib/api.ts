@@ -15,6 +15,7 @@ export const apiQueryKeys = {
   readiness: ['readiness'] as const,
   receivers: ['receivers'] as const,
   reliabilityEvidence: ['reliability-evidence'] as const,
+  solverBenchmark: ['solver-benchmark'] as const,
 };
 
 function normalizeApiBase(value: string): string {

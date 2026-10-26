@@ -1,0 +1,15 @@
+{
+  "dimensions": {
+    "freshness": {
+      "last_store_age_s": 0.5,
+      "ready": true
+    },
+    "reliability": {
+      "active_receivers": 4,
+      "failed_solves": 0,
+      "ready": true
+    }
+  },
+  "generated_at": "2024-03-09T16:00:03Z",
+  "ready": true
+}

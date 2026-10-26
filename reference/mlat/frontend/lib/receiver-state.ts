@@ -12,7 +12,8 @@ import type { InvestigationDockState, Position, Receiver, StatusTone } from '@/l
 export { RECEIVER_IDENTITY_PATTERN, receiverIdentity };
 
 export type RegistryIdentityStatus = 'active' | 'revoked' | 'not_registered' | 'conflict' | 'invalid';
-export type MlatOperationalStatus = 'available' | 'contributing' | 'stale' | 'offline' | 'excluded' | 'unavailable';
+export type ReceiverOperationalStatus = 'online' | 'offline' | 'stale' | 'degraded' | 'unavailable';
+export type MlatOperationalStatus = 'available' | 'contributing' | 'stale' | 'offline' | 'excluded' | 'unavailable' | 'unqualified';
 
 export interface UnifiedReceiver {
   key: string;
@@ -22,9 +23,13 @@ export interface UnifiedReceiver {
   runtime: Receiver | null;
   registryStatus: RegistryIdentityStatus;
   registryRecordStatus: string | null;
+  operationalStatus: ReceiverOperationalStatus;
+  operationalReason: string;
   mlatStatus: MlatOperationalStatus;
   mlatReason: string;
   mlatEligible: boolean;
+  registryEligible: boolean;
+  qualificationState: 'QUALIFIED' | 'UNQUALIFIED' | 'REJECTED';
   identityConflict: boolean;
   ownerLockArgs: string | null;
   capabilities: string[];
@@ -32,6 +37,39 @@ export interface UnifiedReceiver {
   lastRegistryUpdateAt: string | null;
   relatedAircraftIds: string[];
   source: Receiver['data_source'] | null;
+}
+
+function receiverOperationalState({
+  runtime,
+  observationFreshness,
+  runtimeInventoryAvailable,
+}: {
+  runtime: Receiver | null;
+  observationFreshness: ReceiverObservationFreshness | null;
+  runtimeInventoryAvailable: boolean;
+}): Pick<UnifiedReceiver, 'operationalStatus' | 'operationalReason'> {
+  if (!runtimeInventoryAvailable) {
+    return { operationalStatus: 'unavailable', operationalReason: 'The MLAT receiver inventory could not be loaded.' };
+  }
+  if (!runtime) {
+    return { operationalStatus: 'offline', operationalReason: 'The receiver is not present in the current MLAT runtime inventory.' };
+  }
+  if (runtime.status === 'degraded') {
+    return { operationalStatus: 'degraded', operationalReason: 'The runtime reports a degraded receiver feed.' };
+  }
+  if (runtime.status === 'offline') {
+    return { operationalStatus: 'offline', operationalReason: 'The runtime reports that the receiver feed is offline.' };
+  }
+  if (observationFreshness === 'stale') {
+    return { operationalStatus: 'stale', operationalReason: 'The latest receiver observation is outside the freshness window.' };
+  }
+  if (observationFreshness === 'invalid' || observationFreshness === 'future') {
+    return { operationalStatus: 'unavailable', operationalReason: 'The latest observation time is missing or cannot be trusted.' };
+  }
+  if (observationFreshness === 'fresh') {
+    return { operationalStatus: 'online', operationalReason: 'The runtime has a fresh observation from this receiver.' };
+  }
+  return { operationalStatus: 'unavailable', operationalReason: 'The runtime did not provide enough evidence to determine receiver availability.' };
 }
 
 export interface ReceiverDirectorySummary {
@@ -159,6 +197,9 @@ function operationalState({
   if (observationFreshness === 'stale') {
     return { mlatStatus: 'stale', mlatReason: 'The receiver is known to MLAT, but its latest observation is stale.' };
   }
+  if (runtime.qualification?.state !== 'QUALIFIED') {
+    return { mlatStatus: 'unqualified', mlatReason: runtime.qualification?.action ?? 'The feed is online, but clock qualification is missing. Verify timing source, synchronization, and uncertainty.' };
+  }
   if (contributing) {
     return { mlatStatus: 'contributing', mlatReason: 'Recent aircraft localizations include observations from this receiver.' };
   }
@@ -204,7 +245,7 @@ export function reconcileReceivers({
             ? 'revoked'
             : 'active';
     const capabilities = [...new Set([...(registry?.capabilities ?? []), ...(runtime?.capabilities ?? [])])];
-    const mlatEligible = registryDirectoryAvailable
+    const registryEligible = registryDirectoryAvailable
       && registryStatus === 'active'
       && registryRecordStatus === 'online'
       && capabilities.includes('mlat');
@@ -214,6 +255,9 @@ export function reconcileReceivers({
     const observationFreshness = runtime
       ? classifyReceiverObservation(runtime.last_seen, nowSeconds, staleAfterSeconds)
       : null;
+    const qualificationFresh = classifyReceiverObservation(runtime?.qualification?.received_at, nowSeconds, staleAfterSeconds) === 'fresh';
+    const qualificationState = runtime?.qualification?.state === 'REJECTED' ? 'REJECTED' : runtime?.qualification?.state === 'QUALIFIED' && qualificationFresh ? 'QUALIFIED' : 'UNQUALIFIED';
+    const mlatEligible = registryEligible && qualificationState === 'QUALIFIED' && observationFreshness === 'fresh' && runtimeInventoryAvailable && runtime?.qualification?.data_provenance === 'LIVE';
     const references = receiverReferenceIds(key, identity, runtime?.receiver_id);
     const isContributing = positions.some((position) =>
       position.correlation?.receiver_ids?.some(
@@ -223,13 +267,14 @@ export function reconcileReceivers({
     const mlat = operationalState({
       registryStatus,
       recordStatus: registryRecordStatus,
-      eligible: identity === null ? Boolean(runtime) : mlatEligible,
+      eligible: identity === null ? Boolean(runtime) : registryEligible,
       runtime,
       contributing: isContributing,
       observationFreshness,
       runtimeInventoryAvailable,
       registryDirectoryAvailable,
     });
+    const operational = receiverOperationalState({ runtime, observationFreshness, runtimeInventoryAvailable });
 
     return {
       key,
@@ -239,9 +284,13 @@ export function reconcileReceivers({
       runtime,
       registryStatus,
       registryRecordStatus,
+      operationalStatus: operational.operationalStatus,
+      operationalReason: operational.operationalReason,
       mlatStatus: mlat.mlatStatus,
       mlatReason: mlat.mlatReason,
       mlatEligible,
+      registryEligible,
+      qualificationState,
       identityConflict,
       ownerLockArgs: registry?.registry?.owner_lock_args ?? runtime?.registry?.owner_lock_args ?? null,
       capabilities,
@@ -273,20 +322,28 @@ export function summarizeReceiverDirectory(receivers: UnifiedReceiver[]): Receiv
 }
 
 export function registryStatusPresentation(status: RegistryIdentityStatus): { label: string; tone: StatusTone } {
-  if (status === 'active') return { label: 'Active identity', tone: 'trust' };
-  if (status === 'revoked') return { label: 'Revoked identity', tone: 'failure' };
+  if (status === 'active') return { label: 'Active', tone: 'trust' };
+  if (status === 'revoked') return { label: 'Revoked', tone: 'failure' };
   if (status === 'conflict') return { label: 'Identity conflict', tone: 'failure' };
   if (status === 'invalid') return { label: 'Invalid identity', tone: 'failure' };
   return { label: 'Not registered', tone: 'neutral' };
 }
 
-export function mlatStatusPresentation(status: MlatOperationalStatus): { label: string; tone: StatusTone } {
-  if (status === 'contributing') return { label: 'Contributing', tone: 'healthy' };
-  if (status === 'available') return { label: 'Available', tone: 'selection' };
+export function operationalStatusPresentation(status: ReceiverOperationalStatus): { label: string; tone: StatusTone } {
+  if (status === 'online') return { label: 'Online', tone: 'healthy' };
   if (status === 'stale') return { label: 'Stale', tone: 'attention' };
+  if (status === 'degraded') return { label: 'Degraded', tone: 'attention' };
   if (status === 'offline') return { label: 'Offline', tone: 'neutral' };
-  if (status === 'unavailable') return { label: 'Status unavailable', tone: 'attention' };
-  return { label: 'Excluded', tone: 'failure' };
+  return { label: 'Unavailable', tone: 'attention' };
+}
+
+export function mlatStatusPresentation(status: MlatOperationalStatus): { label: string; tone: StatusTone } {
+  if (status === 'unqualified') return { label: 'Unqualified', tone: 'attention' };
+  if (status === 'contributing') return { label: 'Contributing', tone: 'healthy' };
+  if (status === 'unavailable') return { label: 'Unavailable', tone: 'attention' };
+  if (status === 'excluded') return { label: 'Not contributing', tone: 'failure' };
+  if (status === 'stale') return { label: 'Not contributing', tone: 'attention' };
+  return { label: 'Not contributing', tone: 'neutral' };
 }
 
 export function receiverDockState(
@@ -320,8 +377,9 @@ export function receiverDockState(
       { label: 'Canonical identity', value: receiver.identity ? truncateMiddle(receiver.identity, 10, 8) : 'Not registered', mono: Boolean(receiver.identity), tone: registryState.tone },
       { label: 'Owner', value: receiver.ownerLockArgs ? truncateMiddle(receiver.ownerLockArgs, 9, 7) : 'Not available', mono: Boolean(receiver.ownerLockArgs) },
       { label: 'Registry', value: registryState.label, tone: registryState.tone },
+      { label: 'Operational', value: operationalStatusPresentation(receiver.operationalStatus).label, tone: operationalStatusPresentation(receiver.operationalStatus).tone },
       { label: 'MLAT', value: mlatState.label, tone: mlatState.tone },
-      { label: 'Published state', value: receiver.registryRecordStatus ?? 'Not published' },
+      { label: 'Registry declaration', value: receiver.registryRecordStatus ?? 'Not published' },
       { label: 'Related aircraft', value: String(receiver.relatedAircraftIds.length) },
     ],
     timeline: [

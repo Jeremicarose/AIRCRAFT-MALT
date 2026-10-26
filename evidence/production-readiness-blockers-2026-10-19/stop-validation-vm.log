@@ -1,0 +1,8 @@
+time="2026-10-19T19:28:59+03:00" level=info msg="Sending SIGINT to hostagent process 33031"
+time="2026-10-19T19:28:59+03:00" level=info msg="Waiting for the host agent and the driver processes to shut down"
+time="2026-10-19T19:28:59+03:00" level=info msg="[hostagent] Received SIGINT, shutting down the host agent"
+time="2026-10-19T19:28:59+03:00" level=info msg="[hostagent] Shutting down the host agent"
+time="2026-10-19T19:28:59+03:00" level=info msg="[hostagent] Stopping forwarding `/run/user/501/docker.sock` (guest) to `/private/tmp/mlat-readiness-lima/mlat-readiness/sock/docker.sock` (host)"
+time="2026-10-19T19:28:59+03:00" level=info msg="[hostagent] Shutting down VZ"
+time="2026-10-19T19:29:29+03:00" level=info msg="Waiting for the instance to shut down"
+time="2026-10-19T19:29:30+03:00" level=info msg="The instance mlat-readiness has shut down"

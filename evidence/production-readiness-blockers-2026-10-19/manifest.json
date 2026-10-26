@@ -1,0 +1,18 @@
+{
+  "candidate_commit": "57a0c7f17fd0a1cac8681ed860c5cfb1aafcecfa",
+  "advisory_snapshot": "999ec89d5d3f10f20be14750ec8c2d8b44e0ac9b",
+  "source_archive": {
+    "path": "artifacts/blockers-2026-10-19/candidate-57a0c7f.tar.gz",
+    "sha256": "8bede2f7dc5e2c4ba0b5a44d8c6470081a9d3fa27fc672ec826cb6b933e6df70"
+  },
+  "git_bundle": {
+    "path": "artifacts/blockers-2026-10-19/candidate-57a0c7f.bundle",
+    "sha256": "9b1aa121bbd32c8b3d07b049355e4a850d1950efdec33fc452a21fb5a05fe078",
+    "verification": "git bundle verify passed"
+  },
+  "candidate_worktree_clean": true,
+  "public_push_completed": false,
+  "independent_review_completed": false,
+  "wallet_transactions": 0,
+  "physical_receiver_campaign_completed": false
+}

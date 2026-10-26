@@ -14,16 +14,19 @@ import os
 import threading
 from typing import Any, List, Optional, Dict
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
+import math
+import re
 import json
 import logging
 import queue
+from collections import OrderedDict
+from mlat_reference.provenance import validate_provenance
 
 logger = logging.getLogger(__name__)
 
 _SCHEMA_LOCK = threading.Lock()
-_SCHEMA_READY_PATHS = set()
-_EVENT_QUEUES: Dict[str, queue.Queue] = {}
+_EVENT_QUEUES: Dict[str, queue.Queue] = OrderedDict()
 
 
 @dataclass
@@ -48,6 +51,14 @@ class StoredPosition:
     correlation_time_span_s: float
     receiver_count: int
     created_at: str
+    data_provenance: str = "UNKNOWN"
+    source_id: str = ""
+    timestamp_ns: str | None = None
+    source_timestamp_ns: str | None = None
+    receiver_geometry: str = "[]"
+    correlation_id: str = ""
+    replay_run_id: str = ""
+    observation_evidence: str = "{}"
 
 
 @dataclass
@@ -82,6 +93,7 @@ class StoredReceiver:
     owner_lock: str = ""
     registry_out_point: str = ""
     metadata_hash: str = ""
+    qualification: str = "{}"
 
 
 @dataclass
@@ -142,14 +154,24 @@ class MLATDatabase:
 
     def __init__(self, db_path: str = "data/mlat_data.db"):
         self.db_path = db_path
-        self.conn = None
+        self._conn: sqlite3.Connection | None = None
+
+    @property
+    def connected(self) -> bool:
+        return self._conn is not None
+
+    @property
+    def conn(self) -> sqlite3.Connection:
+        if self._conn is None:
+            raise RuntimeError("Database is not connected; call connect() before accessing storage")
+        return self._conn
 
     def connect(self, *, initialize_schema: bool = True):
         """Connect to SQLite and optionally initialize the application schema."""
         db_dir = os.path.dirname(self.db_path)
         if db_dir:
             os.makedirs(db_dir, exist_ok=True)
-        self.conn = sqlite3.connect(self.db_path, timeout=30.0, check_same_thread=False)
+        self._conn = sqlite3.connect(self.db_path, timeout=30.0, check_same_thread=False)
         self.conn.row_factory = sqlite3.Row
         self.conn.execute("PRAGMA busy_timeout=30000")
         journal_mode = self.conn.execute("PRAGMA journal_mode").fetchone()[0]
@@ -162,15 +184,13 @@ class MLATDatabase:
 
     def _ensure_schema(self):
         """Create the database schema once per database path for this process."""
-        normalized_path = os.path.abspath(self.db_path)
-        if normalized_path in _SCHEMA_READY_PATHS:
-            return
-
         with _SCHEMA_LOCK:
-            if normalized_path in _SCHEMA_READY_PATHS:
-                return
-            self._create_tables()
-            _SCHEMA_READY_PATHS.add(normalized_path)
+            try:
+                self.conn.execute("BEGIN IMMEDIATE")
+                self._create_tables()
+            except Exception:
+                self.conn.rollback()
+                raise
             logger.info("Database tables created/verified for %s", self.db_path)
 
     def _create_tables(self):
@@ -342,8 +362,142 @@ class MLATDatabase:
             )
         """)
 
+        position_columns = {row[1] for row in cursor.execute("PRAGMA table_info(positions)")}
+        for name, definition in {
+            "data_provenance": "TEXT NOT NULL DEFAULT 'UNKNOWN'",
+            "source_id": "TEXT NOT NULL DEFAULT ''",
+            "timestamp_ns": "TEXT",
+            "source_timestamp_ns": "TEXT",
+            "receiver_geometry": "TEXT NOT NULL DEFAULT '[]'",
+            "correlation_id": "TEXT NOT NULL DEFAULT ''",
+            "replay_run_id": "TEXT NOT NULL DEFAULT ''",
+            "observation_evidence": "TEXT NOT NULL DEFAULT '{}'",
+        }.items():
+            if name not in position_columns:
+                cursor.execute(f"ALTER TABLE positions ADD COLUMN {name} {definition}")
+        # Older schemas collapse distinct events sharing aircraft + float time.
+        # Rebuild atomically, preserving every existing row and its primary key.
+        schema = cursor.execute(
+            "SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'positions'"
+        ).fetchone()[0]
+        migrated_schema, changed = re.subn(
+            r"UNIQUE\s*\(\s*aircraft_id\s*,\s*timestamp\s*\)",
+            "UNIQUE(aircraft_id, timestamp, data_provenance, source_id, correlation_id)",
+            schema,
+        )
+        if changed:
+            cursor.execute("ALTER TABLE positions RENAME TO positions_legacy")
+            cursor.execute(migrated_schema)
+            cursor.execute("INSERT INTO positions SELECT * FROM positions_legacy")
+            cursor.execute("DROP TABLE positions_legacy")
+            cursor.execute("CREATE INDEX idx_aircraft_time ON positions(aircraft_id, timestamp)")
+            cursor.execute("CREATE INDEX idx_timestamp ON positions(timestamp)")
+        receiver_columns = {row[1] for row in cursor.execute("PRAGMA table_info(receivers)")}
+        if "qualification" not in receiver_columns:
+            cursor.execute(
+                "ALTER TABLE receivers ADD COLUMN qualification TEXT NOT NULL DEFAULT '{}'"
+            )
+        cursor.execute(
+            "CREATE INDEX IF NOT EXISTS idx_position_provenance_time ON positions(data_provenance, timestamp)"
+        )
+        cursor.execute(
+            "CREATE TABLE IF NOT EXISTS runtime_context (id INTEGER PRIMARY KEY CHECK(id = 1), data_provenance TEXT NOT NULL, source_id TEXT NOT NULL, context_json TEXT NOT NULL DEFAULT '{}')"
+        )
+        cursor.execute(
+            "CREATE TABLE IF NOT EXISTS runtime_snapshot (id INTEGER PRIMARY KEY CHECK(id = 1), recorded_at REAL NOT NULL, state_json TEXT NOT NULL)"
+        )
+        cursor.execute(
+            "CREATE TABLE IF NOT EXISTS replay_events (event_id TEXT PRIMARY KEY, ordinal INTEGER NOT NULL UNIQUE, result_json TEXT NOT NULL)"
+        )
         self._seed_default_plans(cursor)
+        cursor.execute("PRAGMA user_version=2")
         self.conn.commit()
+
+    def bind_runtime_provenance(self, data_provenance: str, source_id: str, context=None):
+        """One database belongs to one runtime mode; legacy rows stay UNKNOWN."""
+        validate_provenance(data_provenance)
+        with self.conn:
+            self.conn.execute(
+                "INSERT OR IGNORE INTO runtime_context (id, data_provenance, source_id) VALUES (1, ?, ?)",
+                (data_provenance, source_id),
+            )
+            existing = self.conn.execute("SELECT * FROM runtime_context WHERE id = 1").fetchone()
+            previous_context = json.loads(existing["context_json"])
+            if (
+                data_provenance == "HISTORICAL_REPLAY"
+                and previous_context.get("replay_run_id")
+                and (context or {}).get("replay_run_id") != previous_context["replay_run_id"]
+            ):
+                raise ValueError(
+                    "Historical dataset or solver changed; use a separate database for this replay version"
+                )
+            conflicting = self.conn.execute(
+                "SELECT 1 FROM positions WHERE data_provenance NOT IN (?, 'UNKNOWN') LIMIT 1",
+                (data_provenance,),
+            ).fetchone()
+            if (
+                existing["data_provenance"] != data_provenance
+                or conflicting
+                or (data_provenance == "HISTORICAL_REPLAY" and existing["source_id"] != source_id)
+            ):
+                raise ValueError(
+                    "Runtime provenance differs; use a separate database for each data source and mode"
+                )
+            self.conn.execute(
+                "UPDATE runtime_context SET source_id = ?, context_json = ? WHERE id = 1",
+                (source_id, json.dumps(context or {}, allow_nan=False)),
+            )
+
+    def get_runtime_context(self) -> dict:
+        row = self.conn.execute("SELECT * FROM runtime_context WHERE id = 1").fetchone()
+        return (
+            {
+                "data_provenance": row["data_provenance"],
+                "source_id": row["source_id"],
+                **json.loads(row["context_json"]),
+            }
+            if row
+            else {"data_provenance": "UNKNOWN", "source_id": ""}
+        )
+
+    def store_runtime_snapshot(self, state: dict):
+        import time
+
+        with self.conn:
+            self.conn.execute(
+                "INSERT INTO runtime_snapshot VALUES (1, ?, ?) ON CONFLICT(id) DO UPDATE SET recorded_at = excluded.recorded_at, state_json = excluded.state_json",
+                (time.time(), json.dumps(state, allow_nan=False)),
+            )
+
+    def get_runtime_snapshot(self) -> dict | None:
+        row = self.conn.execute("SELECT * FROM runtime_snapshot WHERE id = 1").fetchone()
+        return (
+            {"recorded_at": row["recorded_at"], "state": json.loads(row["state_json"])}
+            if row
+            else None
+        )
+
+    def store_replay_event(self, event_id: str, ordinal: int, result: dict):
+        with self.conn:
+            self.conn.execute(
+                "INSERT INTO replay_events VALUES (?, ?, ?) ON CONFLICT(event_id) DO UPDATE SET result_json = excluded.result_json",
+                (event_id, ordinal, json.dumps(result, allow_nan=False)),
+            )
+
+    def get_replay_events(self, limit: int = 50, offset: int = 0) -> list:
+        return [
+            json.loads(row[0])
+            for row in self.conn.execute(
+                "SELECT result_json FROM replay_events ORDER BY ordinal LIMIT ? OFFSET ?",
+                (limit, offset),
+            )
+        ]
+
+    def get_replay_event(self, event_id: str) -> dict | None:
+        row = self.conn.execute(
+            "SELECT result_json FROM replay_events WHERE event_id = ?", (event_id,)
+        ).fetchone()
+        return json.loads(row[0]) if row else None
 
     def _seed_default_plans(self, cursor: sqlite3.Cursor):
         created_at = datetime.now().isoformat()
@@ -410,103 +564,100 @@ class MLATDatabase:
         solver_iterations: int = 0,
         correlation_time_span_s: float = 0.0,
         receiver_count: int = 0,
+        *,
+        data_provenance: str = "UNKNOWN",
+        source_id: str = "",
+        timestamp_ns: int | None = None,
+        source_timestamp_ns: int | None = None,
+        receiver_geometry: list | None = None,
+        correlation_id: str = "",
+        replay_run_id: str = "",
+        observation_evidence: dict | None = None,
     ) -> int:
-        """
-        Store a single aircraft position.
-
-        Returns: position ID
-        """
-        cursor = self.conn.cursor()
-
-        created_at = datetime.now().isoformat()
-        receiver_ids_json = json.dumps(receiver_ids)
-
-        try:
-            cursor.execute(
-                """
-                INSERT INTO positions (
-                    aircraft_id, timestamp, latitude, longitude, altitude,
-                    uncertainty, num_receivers, receiver_ids, residual,
-                    quality_score, quality_bucket, solver_method, solver_residual_m,
-                    solver_iterations, correlation_time_span_s, receiver_count, created_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """,
-                (
-                    aircraft_id,
-                    timestamp,
-                    latitude,
-                    longitude,
-                    altitude,
-                    uncertainty,
-                    num_receivers,
-                    receiver_ids_json,
-                    residual,
-                    quality_score,
-                    quality_bucket,
-                    solver_method,
-                    solver_residual_m,
-                    solver_iterations,
-                    correlation_time_span_s,
-                    receiver_count,
-                    created_at,
-                ),
+        """Idempotent write that never overwrites another source's position."""
+        validate_provenance(data_provenance)
+        values = {
+            "aircraft_id": aircraft_id,
+            "timestamp": timestamp,
+            "latitude": latitude,
+            "longitude": longitude,
+            "altitude": altitude,
+            "uncertainty": uncertainty,
+            "num_receivers": num_receivers,
+            "receiver_ids": json.dumps(receiver_ids),
+            "residual": residual,
+            "quality_score": quality_score,
+            "quality_bucket": quality_bucket,
+            "solver_method": solver_method,
+            "solver_residual_m": solver_residual_m,
+            "solver_iterations": solver_iterations,
+            "correlation_time_span_s": correlation_time_span_s,
+            "receiver_count": receiver_count,
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "data_provenance": data_provenance,
+            "source_id": source_id,
+            "timestamp_ns": str(timestamp_ns) if timestamp_ns is not None else None,
+            "source_timestamp_ns": (
+                str(source_timestamp_ns) if source_timestamp_ns is not None else None
+            ),
+            "receiver_geometry": json.dumps(receiver_geometry or [], allow_nan=False),
+            "correlation_id": correlation_id,
+            "replay_run_id": replay_run_id,
+            "observation_evidence": json.dumps(observation_evidence or {}, allow_nan=False),
+        }
+        numeric = (
+            timestamp,
+            latitude,
+            longitude,
+            altitude,
+            uncertainty,
+            residual,
+            quality_score,
+            solver_residual_m,
+            correlation_time_span_s,
+        )
+        if any(
+            isinstance(value, bool)
+            or not isinstance(value, (int, float))
+            or not math.isfinite(value)
+            for value in numeric
+        ):
+            raise ValueError("Position fields must be finite numbers")
+        if not (-90 <= latitude <= 90 and -180 <= longitude <= 180):
+            raise ValueError("Position coordinates are outside geographic bounds")
+        columns = ", ".join(values)
+        parameters = ", ".join("?" for _ in values)
+        updates = ", ".join(
+            f"{key} = excluded.{key}"
+            for key in values
+            if key not in {"aircraft_id", "timestamp", "data_provenance", "source_id"}
+        )
+        with self.conn:
+            conflicting = self.conn.execute(
+                "SELECT 1 FROM positions WHERE aircraft_id = ? AND timestamp = ? AND (data_provenance != ? OR source_id != ?) LIMIT 1",
+                (aircraft_id, timestamp, data_provenance, source_id),
+            ).fetchone()
+            if conflicting:
+                raise ValueError(
+                    "Position provenance conflict; refusing to overwrite another source"
+                )
+            cursor = self.conn.execute(
+                f"INSERT INTO positions ({columns}) VALUES ({parameters}) "
+                f"ON CONFLICT(aircraft_id, timestamp, data_provenance, source_id, correlation_id) DO UPDATE SET {updates} "
+                "WHERE positions.data_provenance = excluded.data_provenance AND positions.source_id = excluded.source_id",
+                tuple(values.values()),
             )
-
-            self.conn.commit()
-            position_id = cursor.lastrowid
-            self.publish_position_event(position_id)
-
-            logger.debug(f"Stored position {position_id} for aircraft {aircraft_id}")
-            return position_id
-
-        except sqlite3.IntegrityError:
-            # Duplicate position - update instead
-            cursor.execute(
-                """
-                SELECT id FROM positions
-                WHERE aircraft_id = ? AND timestamp = ?
-            """,
-                (aircraft_id, timestamp),
-            )
-            existing_row = cursor.fetchone()
-            existing_id = existing_row["id"] if existing_row else None
-
-            cursor.execute(
-                """
-                UPDATE positions SET
-                    latitude = ?, longitude = ?, altitude = ?,
-                    uncertainty = ?, num_receivers = ?, receiver_ids = ?,
-                    residual = ?, quality_score = ?, quality_bucket = ?,
-                    solver_method = ?, solver_residual_m = ?, solver_iterations = ?,
-                    correlation_time_span_s = ?, receiver_count = ?, created_at = ?
-                WHERE aircraft_id = ? AND timestamp = ?
-            """,
-                (
-                    latitude,
-                    longitude,
-                    altitude,
-                    uncertainty,
-                    num_receivers,
-                    receiver_ids_json,
-                    residual,
-                    quality_score,
-                    quality_bucket,
-                    solver_method,
-                    solver_residual_m,
-                    solver_iterations,
-                    correlation_time_span_s,
-                    receiver_count,
-                    created_at,
-                    aircraft_id,
-                    timestamp,
-                ),
-            )
-
-            self.conn.commit()
-            if existing_id is not None:
-                self.publish_position_event(existing_id)
-            logger.debug(f"Updated position for aircraft {aircraft_id}")
-            return existing_id
+            if cursor.rowcount != 1:
+                raise ValueError(
+                    "Position provenance conflict; refusing to overwrite another source"
+                )
+            row = self.conn.execute(
+                "SELECT id FROM positions WHERE aircraft_id = ? AND timestamp = ? AND data_provenance = ? AND source_id = ? AND correlation_id = ?",
+                (aircraft_id, timestamp, data_provenance, source_id, correlation_id),
+            ).fetchone()
+            position_id = row["id"]
+        self.publish_position_event(position_id)
+        return position_id
 
     def get_aircraft_track(
         self,
@@ -530,7 +681,7 @@ class MLATDatabase:
         cursor = self.conn.cursor()
 
         query = "SELECT * FROM positions WHERE aircraft_id = ?"
-        params = [aircraft_id]
+        params: list[str | int | float] = [aircraft_id]
 
         if start_time is not None:
             query += " AND timestamp >= ?"
@@ -551,29 +702,7 @@ class MLATDatabase:
                 aircraft_id=aircraft_id, start_time=0, end_time=0, num_positions=0, positions=[]
             )
 
-        positions = [
-            StoredPosition(
-                id=row["id"],
-                aircraft_id=row["aircraft_id"],
-                timestamp=row["timestamp"],
-                latitude=row["latitude"],
-                longitude=row["longitude"],
-                altitude=row["altitude"],
-                uncertainty=row["uncertainty"],
-                num_receivers=row["num_receivers"],
-                receiver_ids=row["receiver_ids"],
-                residual=row["residual"],
-                quality_score=row["quality_score"],
-                quality_bucket=row["quality_bucket"],
-                solver_method=row["solver_method"],
-                solver_residual_m=row["solver_residual_m"],
-                solver_iterations=row["solver_iterations"],
-                correlation_time_span_s=row["correlation_time_span_s"],
-                receiver_count=row["receiver_count"],
-                created_at=row["created_at"],
-            )
-            for row in rows
-        ]
+        positions = [self._row_to_stored_position(row) for row in rows]
 
         return AircraftTrack(
             aircraft_id=aircraft_id,
@@ -607,29 +736,7 @@ class MLATDatabase:
 
         rows = cursor.fetchall()
 
-        return [
-            StoredPosition(
-                id=row["id"],
-                aircraft_id=row["aircraft_id"],
-                timestamp=row["timestamp"],
-                latitude=row["latitude"],
-                longitude=row["longitude"],
-                altitude=row["altitude"],
-                uncertainty=row["uncertainty"],
-                num_receivers=row["num_receivers"],
-                receiver_ids=row["receiver_ids"],
-                residual=row["residual"],
-                quality_score=row["quality_score"],
-                quality_bucket=row["quality_bucket"],
-                solver_method=row["solver_method"],
-                solver_residual_m=row["solver_residual_m"],
-                solver_iterations=row["solver_iterations"],
-                correlation_time_span_s=row["correlation_time_span_s"],
-                receiver_count=row["receiver_count"],
-                created_at=row["created_at"],
-            )
-            for row in rows
-        ]
+        return [self._row_to_stored_position(row) for row in rows]
 
     def get_active_aircraft(self, seconds: int = 300) -> List[str]:
         """
@@ -890,6 +997,7 @@ class MLATDatabase:
                     row["registry_out_point"] if "registry_out_point" in row.keys() else ""
                 ),
                 metadata_hash=row["metadata_hash"] if "metadata_hash" in row.keys() else "",
+                qualification=row["qualification"],
             )
             for row in rows
         ]
@@ -936,27 +1044,15 @@ class MLATDatabase:
         self.conn.commit()
         return cursor.rowcount > 0
 
+    def store_receiver_qualification(self, receiver_id: str, qualification: dict):
+        with self.conn:
+            self.conn.execute(
+                "UPDATE receivers SET qualification = ? WHERE receiver_id = ?",
+                (json.dumps(qualification, allow_nan=False), receiver_id),
+            )
+
     def _row_to_stored_position(self, row: sqlite3.Row) -> StoredPosition:
-        return StoredPosition(
-            id=row["id"],
-            aircraft_id=row["aircraft_id"],
-            timestamp=row["timestamp"],
-            latitude=row["latitude"],
-            longitude=row["longitude"],
-            altitude=row["altitude"],
-            uncertainty=row["uncertainty"],
-            num_receivers=row["num_receivers"],
-            receiver_ids=row["receiver_ids"],
-            residual=row["residual"],
-            quality_score=row["quality_score"],
-            quality_bucket=row["quality_bucket"],
-            solver_method=row["solver_method"],
-            solver_residual_m=row["solver_residual_m"],
-            solver_iterations=row["solver_iterations"],
-            correlation_time_span_s=row["correlation_time_span_s"],
-            receiver_count=row["receiver_count"],
-            created_at=row["created_at"],
-        )
+        return StoredPosition(**{name: row[name] for name in StoredPosition.__dataclass_fields__})
 
     def get_positions_after_id(self, last_id: int, limit: int = 100) -> List[StoredPosition]:
         """Return positions with id greater than last_id in ascending order."""
@@ -991,11 +1087,20 @@ class MLATDatabase:
     def get_or_create_position_queue(self) -> queue.Queue:
         """Return a process-local queue for immediate position events."""
         normalized_path = os.path.abspath(self.db_path)
-        return _EVENT_QUEUES.setdefault(normalized_path, queue.Queue())
+        with _SCHEMA_LOCK:
+            if normalized_path not in _EVENT_QUEUES:
+                if len(_EVENT_QUEUES) >= 64:
+                    _EVENT_QUEUES.pop(next(iter(_EVENT_QUEUES)))
+                _EVENT_QUEUES[normalized_path] = queue.Queue(maxsize=1024)
+            return _EVENT_QUEUES[normalized_path]
 
     def publish_position_event(self, position_id: int):
         """Publish a new or updated position id to the local event queue."""
-        self.get_or_create_position_queue().put(position_id)
+        try:
+            self.get_or_create_position_queue().put_nowait(position_id)
+        except queue.Full:
+            # Notifications are hints; the broadcaster polls durable rows by id.
+            pass
 
     def create_account(self, account_name: str, contact_email: str, status: str = "active") -> int:
         cursor = self.conn.cursor()
@@ -1008,6 +1113,7 @@ class MLATDatabase:
             (account_name, contact_email, status, now, now),
         )
         self.conn.commit()
+        assert cursor.lastrowid is not None
         return cursor.lastrowid
 
     def get_account_by_name(self, account_name: str) -> Optional[Account]:
@@ -1051,6 +1157,7 @@ class MLATDatabase:
             (account_id, key_name, key_prefix, key_hash, status, plan_id, created_at, None),
         )
         self.conn.commit()
+        assert cursor.lastrowid is not None
         return cursor.lastrowid
 
     def create_entitlement(
@@ -1082,11 +1189,20 @@ class MLATDatabase:
             ),
         )
         self.conn.commit()
+        assert cursor.lastrowid is not None
         return cursor.lastrowid
 
     def authenticate_api_key(self, raw_key: str) -> Optional[Dict[str, Any]]:
+        return self._lookup_api_key_access(self._hash_api_key(raw_key), None)
+
+    def get_api_key_access(self, api_key_id: int) -> Optional[Dict[str, Any]]:
+        """Revalidate an already-authenticated session without retaining its secret."""
+        return self._lookup_api_key_access(None, api_key_id)
+
+    def _lookup_api_key_access(
+        self, key_hash: Optional[str], api_key_id: Optional[int]
+    ) -> Optional[Dict[str, Any]]:
         cursor = self.conn.cursor()
-        key_hash = self._hash_api_key(raw_key)
         cursor.execute(
             """
             SELECT
@@ -1108,9 +1224,9 @@ class MLATDatabase:
             FROM api_keys
             JOIN accounts ON accounts.id = api_keys.account_id
             JOIN plans ON plans.id = api_keys.plan_id
-            WHERE api_keys.key_hash = ?
+            WHERE api_keys.key_hash = ? OR api_keys.id = ?
             """,
-            (key_hash,),
+            (key_hash, api_key_id),
         )
         row = cursor.fetchone()
         if row is None:
@@ -1178,6 +1294,7 @@ class MLATDatabase:
             ),
         )
         self.conn.commit()
+        assert cursor.lastrowid is not None
         return cursor.lastrowid
 
     def get_usage_summary(self, account_id: int) -> List[Dict[str, Any]]:
@@ -1257,10 +1374,16 @@ class MLATDatabase:
         position_cutoff = datetime.now().timestamp() - (position_hours * 3600)
         statistics_cutoff = datetime.now().timestamp() - (statistics_days * 86400)
 
-        cursor.execute("DELETE FROM positions WHERE timestamp < ?", (position_cutoff,))
+        cursor.execute(
+            "DELETE FROM positions WHERE timestamp < ? AND data_provenance = 'SYNTHETIC'",
+            (position_cutoff,),
+        )
         positions_deleted = cursor.rowcount
 
-        cursor.execute("DELETE FROM statistics WHERE timestamp < ?", (statistics_cutoff,))
+        cursor.execute(
+            "DELETE FROM statistics WHERE timestamp < ? AND synthetic_feed_mode = 1",
+            (statistics_cutoff,),
+        )
         stats_deleted = cursor.rowcount
 
         self.conn.commit()
@@ -1274,7 +1397,7 @@ class MLATDatabase:
                 position_hours,
                 statistics_days,
             )
-            cursor.execute("VACUUM")
+            # VACUUM belongs to an explicit maintenance window, not the ingest loop.
 
     def get_database_stats(self) -> Dict:
         """Get database statistics"""
@@ -1314,47 +1437,7 @@ class MLATDatabase:
 
     def close(self):
         """Close database connection"""
-        if self.conn:
-            self.conn.close()
-            self.conn = None
+        if self._conn is not None:
+            self._conn.close()
+            self._conn = None
             logger.debug("Database connection closed")
-
-
-# Example usage
-if __name__ == "__main__":
-    import time
-
-    # Create database
-    db = MLATDatabase("test_mlat.db")
-    db.connect()
-
-    # Store some test positions
-    print("Storing test positions...")
-
-    for i in range(5):
-        db.store_position(
-            aircraft_id="TEST123",
-            timestamp=time.time() + i,
-            latitude=40.5 + i * 0.01,
-            longitude=-74.0 + i * 0.01,
-            altitude=9000 + i * 100,
-            uncertainty=150.0,
-            num_receivers=5,
-            receiver_ids=["RCV1", "RCV2", "RCV3", "RCV4", "RCV5"],
-            residual=45.2,
-        )
-
-    # Get track
-    print("\nRetrieving track...")
-    track = db.get_aircraft_track("TEST123")
-    print(f"Track: {track.num_positions} positions")
-    print(f"From: {datetime.fromtimestamp(track.start_time)}")
-    print(f"To: {datetime.fromtimestamp(track.end_time)}")
-
-    # Get stats
-    print("\nDatabase stats:")
-    stats = db.get_database_stats()
-    for key, value in stats.items():
-        print(f"  {key}: {value}")
-
-    db.close()

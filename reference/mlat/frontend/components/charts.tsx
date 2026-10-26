@@ -1,6 +1,6 @@
 'use client';
 
-import { Area, AreaChart, Bar, BarChart, CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { Area, AreaChart, Bar, BarChart, CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { useId } from 'react';
 import { useReducedMotion } from 'framer-motion';
 
@@ -22,6 +22,11 @@ export function MultiLineChart({ data, series, height = 240, ariaLabel }: { data
 export function DistributionChart({ data, dataKey, color = '#4bb6a3', height = 220, ariaLabel }: { data: ChartRow[]; dataKey: string; color?: string; height?: number; ariaLabel?: string }) {
   const reduceMotion = useReducedMotion();
   return <div style={{ height }} className="w-full" role="img" aria-label={ariaLabel ?? `${dataKey.replaceAll('_', ' ')} distribution`}><ResponsiveContainer width="100%" height="100%"><BarChart data={data} margin={{ top: 12, right: 12, left: -18, bottom: 0 }}><CartesianGrid vertical={false} strokeDasharray="2 4" /><XAxis dataKey="label" axisLine={false} tickLine={false} /><YAxis axisLine={false} tickLine={false} width={52} /><Tooltip contentStyle={tooltipStyle} /><Bar dataKey={dataKey} fill={color} radius={[3, 3, 0, 0]} isAnimationActive={!reduceMotion} animationDuration={180} /></BarChart></ResponsiveContainer></div>;
+}
+
+export function ComparisonBarChart({ data, series, height = 260, unit = '', ariaLabel }: { data: ChartRow[]; series: Array<{ key: string; color: string; label: string }>; height?: number; unit?: string; ariaLabel?: string }) {
+  const reduceMotion = useReducedMotion();
+  return <div style={{ height }} className="w-full" role="img" aria-label={ariaLabel ?? `${series.map((item) => item.label).join(' and ')} comparison`}><ResponsiveContainer width="100%" height="100%"><BarChart data={data} layout="vertical" margin={{ top: 12, right: 24, left: 12, bottom: 0 }}><CartesianGrid horizontal={false} strokeDasharray="2 4" /><XAxis type="number" axisLine={false} tickLine={false} tickFormatter={(value) => `${value}${unit}`} /><YAxis type="category" dataKey="label" axisLine={false} tickLine={false} width={72} /><Tooltip contentStyle={tooltipStyle} formatter={(value, name) => [`${value}${unit}`, name]} /><Legend />{series.map((item) => <Bar key={item.key} dataKey={item.key} name={item.label} fill={item.color} radius={[0, 3, 3, 0]} isAnimationActive={!reduceMotion} animationDuration={180} />)}</BarChart></ResponsiveContainer></div>;
 }
 
 export function Sparkline({ data, dataKey, color = '#5b9cff' }: { data: ChartRow[]; dataKey: string; color?: string }) {

@@ -1,0 +1,289 @@
+{
+  "errors": [
+    "Minified React error #418; visit https://react.dev/errors/418?args[]=text&args[]= for the full message or use the non-minified dev environment for full errors and additional helpful warnings."
+  ],
+  "frames": [
+    {
+      "functionName": "r1",
+      "location": {
+        "scriptId": "7",
+        "lineNumber": 0,
+        "columnNumber": 37151
+      },
+      "locals": [
+        {
+          "name": "e",
+          "value": {
+            "type": "object",
+            "className": "rE",
+            "description": "rE",
+            "objectId": "5599450237342371839.3.8031"
+          },
+          "writable": true,
+          "configurable": true,
+          "enumerable": true,
+          "isOwn": true
+        },
+        {
+          "name": "n",
+          "value": {
+            "type": "object",
+            "subtype": "error",
+            "className": "Error",
+            "description": "Error: Minified React error #418; visit https://react.dev/errors/418?args[]=text&args[]= for the full message or use the non-minified dev environment for full errors and additional helpful warnings.\n    at r1 (http://127.0.0.1:4346/_next/static/chunks/4bd1b696-8a4ab4fdf0ae305a.js:1:37065)\n    at http://127.0.0.1:4346/_next/static/chunks/4bd1b696-8a4ab4fdf0ae305a.js:1:134566\n    at sk (http://127.0.0.1:4346/_next/static/chunks/4bd1b696-8a4ab4fdf0ae305a.js:1:138133)\n    at sy (http://127.0.0.1:4346/_next/static/chunks/4bd1b696-8a4ab4fdf0ae305a.js:1:129383)\n    at http://127.0.0.1:4346/_next/static/chunks/4bd1b696-8a4ab4fdf0ae305a.js:1:129167\n    at sv (http://127.0.0.1:4346/_next/static/chunks/4bd1b696-8a4ab4fdf0ae305a.js:1:129175)\n    at so (http://127.0.0.1:4346/_next/static/chunks/4bd1b696-8a4ab4fdf0ae305a.js:1:124308)\n    at sX (http://127.0.0.1:4346/_next/static/chunks/4bd1b696-8a4ab4fdf0ae305a.js:1:151010)\n    at sW (http://127.0.0.1:4346/_next/static/chunks/4bd1b696-8a4ab4fdf0ae305a.js:1:149223)\n    at sP (http://127.0.0.1:4346/_next/static/chunks/4bd1b696-8a4ab4fdf0ae305a.js:1:146867)",
+            "objectId": "5599450237342371839.3.8032"
+          },
+          "writable": true,
+          "configurable": true,
+          "enumerable": true,
+          "isOwn": true
+        },
+        {
+          "name": "arguments",
+          "value": {
+            "type": "object",
+            "subtype": "array",
+            "className": "Arguments",
+            "description": "Arguments(2)",
+            "objectId": "5599450237342371839.3.8033"
+          },
+          "writable": true,
+          "configurable": true,
+          "enumerable": true,
+          "isOwn": true
+        }
+      ]
+    },
+    {
+      "variable": "e",
+      "details": {
+        "type": "object",
+        "value": {
+          "pendingProps": "Refreshing",
+          "memoizedProps": "Refreshing",
+          "text": "Refresh map"
+        }
+      }
+    },
+    {
+      "variable": "n",
+      "details": {
+        "type": "object",
+        "value": {}
+      }
+    },
+    {
+      "variable": "arguments",
+      "details": {
+        "type": "object",
+        "value": {}
+      }
+    },
+    {
+      "functionName": "",
+      "location": {
+        "scriptId": "7",
+        "lineNumber": 0,
+        "columnNumber": 134565
+      },
+      "locals": [
+        {
+          "name": "e",
+          "value": {
+            "type": "boolean",
+            "value": false
+          },
+          "writable": true,
+          "configurable": true,
+          "enumerable": true,
+          "isOwn": true
+        },
+        {
+          "name": "n",
+          "value": {
+            "type": "object",
+            "className": "rE",
+            "description": "rE",
+            "objectId": "5599450237342371839.3.8034"
+          },
+          "writable": true,
+          "configurable": true,
+          "enumerable": true,
+          "isOwn": true
+        },
+        {
+          "name": "t",
+          "value": {
+            "type": "string",
+            "value": "Refreshing"
+          },
+          "writable": true,
+          "configurable": true,
+          "enumerable": true,
+          "isOwn": true
+        },
+        {
+          "name": "r",
+          "value": {
+            "type": "object",
+            "className": "Object",
+            "description": "Object",
+            "objectId": "5599450237342371839.3.8035"
+          },
+          "writable": true,
+          "configurable": true,
+          "enumerable": true,
+          "isOwn": true
+        },
+        {
+          "name": "l",
+          "value": {
+            "type": "object",
+            "className": "rE",
+            "description": "rE",
+            "objectId": "5599450237342371839.3.8036"
+          },
+          "writable": true,
+          "configurable": true,
+          "enumerable": true,
+          "isOwn": true
+        },
+        {
+          "name": "a",
+          "value": {
+            "type": "undefined"
+          },
+          "writable": true,
+          "configurable": true,
+          "enumerable": true,
+          "isOwn": true
+        },
+        {
+          "name": "o",
+          "value": {
+            "type": "undefined"
+          },
+          "writable": true,
+          "configurable": true,
+          "enumerable": true,
+          "isOwn": true
+        }
+      ]
+    },
+    {
+      "variable": "n",
+      "details": {
+        "type": "object",
+        "value": {
+          "pendingProps": "Refreshing",
+          "memoizedProps": "Refreshing",
+          "text": "Refresh map"
+        }
+      }
+    },
+    {
+      "variable": "r",
+      "details": {
+        "type": "object",
+        "value": {
+          "type": "button"
+        }
+      }
+    },
+    {
+      "variable": "l",
+      "details": {
+        "type": "object",
+        "value": {
+          "type": "button",
+          "pendingProps": {
+            "type": "button",
+            "disabled": true,
+            "className": "ui-button inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-md px-3 text-[13px] font-semibold transition-[background-color,color,transform,border-color] duration-standard ease-operational focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal-blue focus-visible:ring-offset-2 focus-visible:ring-offset-graphite-deep disabled:pointer-events-none disabled:opacity-45 active:scale-[0.98] bg-signal-blue text-graphite-deep hover:bg-[#78adff] h-8 px-2.5 text-xs"
+          },
+          "memoizedProps": {
+            "type": "button",
+            "disabled": true,
+            "className": "ui-button inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-md px-3 text-[13px] font-semibold transition-[background-color,color,transform,border-color] duration-standard ease-operational focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal-blue focus-visible:ring-offset-2 focus-visible:ring-offset-graphite-deep disabled:pointer-events-none disabled:opacity-45 active:scale-[0.98] bg-signal-blue text-graphite-deep hover:bg-[#78adff] h-8 px-2.5 text-xs"
+          },
+          "dom": "<button type=\"button\" class=\"ui-button inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-md px-3 text-[13px] font-semibold transition-[background-color,color,transform,border-color] duration-standard ease-operational focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal-blue focus-visible:ring-offset-2 focus-visible:ring-offset-graphite-deep disabled:pointer-events-none disabled:opacity-45 active:scale-[0.98] bg-signal-blue text-graphite-deep hover:bg-[#78adff] h-8 px-2.5 text-xs\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-refresh-cw size-3.5\" aria-hidden=\"true\"><path d=\"M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8\"></path><path d=\"M21 3v5h-5\"></path><path d=\"M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16\"></path><path d=\"M8 16H3v5\"></path></svg>Refresh map</button>",
+          "text": "Refresh map"
+        }
+      }
+    },
+    {
+      "functionName": "sk",
+      "location": {
+        "scriptId": "7",
+        "lineNumber": 0,
+        "columnNumber": 138132
+      },
+      "locals": [
+        {
+          "name": "e",
+          "value": {
+            "type": "object",
+            "className": "rE",
+            "description": "rE",
+            "objectId": "5599450237342371839.3.8037"
+          },
+          "writable": true,
+          "configurable": true,
+          "enumerable": true,
+          "isOwn": true
+        },
+        {
+          "name": "n",
+          "value": {
+            "type": "object",
+            "className": "rE",
+            "description": "rE",
+            "objectId": "5599450237342371839.3.8038"
+          },
+          "writable": true,
+          "configurable": true,
+          "enumerable": true,
+          "isOwn": true
+        },
+        {
+          "name": "t",
+          "configurable": true,
+          "enumerable": true,
+          "isOwn": true
+        }
+      ]
+    },
+    {
+      "variable": "e",
+      "details": {
+        "type": "object",
+        "value": {
+          "type": "button",
+          "pendingProps": {
+            "type": "button",
+            "disabled": true,
+            "className": "ui-button inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-md px-3 text-[13px] font-semibold transition-[background-color,color,transform,border-color] duration-standard ease-operational focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal-blue focus-visible:ring-offset-2 focus-visible:ring-offset-graphite-deep disabled:pointer-events-none disabled:opacity-45 active:scale-[0.98] bg-signal-blue text-graphite-deep hover:bg-[#78adff] h-8 px-2.5 text-xs"
+          },
+          "memoizedProps": {
+            "type": "button",
+            "disabled": true,
+            "className": "ui-button inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-md px-3 text-[13px] font-semibold transition-[background-color,color,transform,border-color] duration-standard ease-operational focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal-blue focus-visible:ring-offset-2 focus-visible:ring-offset-graphite-deep disabled:pointer-events-none disabled:opacity-45 active:scale-[0.98] bg-signal-blue text-graphite-deep hover:bg-[#78adff] h-8 px-2.5 text-xs"
+          },
+          "dom": "<button type=\"button\" class=\"ui-button inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-md px-3 text-[13px] font-semibold transition-[background-color,color,transform,border-color] duration-standard ease-operational focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal-blue focus-visible:ring-offset-2 focus-visible:ring-offset-graphite-deep disabled:pointer-events-none disabled:opacity-45 active:scale-[0.98] bg-signal-blue text-graphite-deep hover:bg-[#78adff] h-8 px-2.5 text-xs\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-refresh-cw size-3.5\" aria-hidden=\"true\"><path d=\"M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8\"></path><path d=\"M21 3v5h-5\"></path><path d=\"M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16\"></path><path d=\"M8 16H3v5\"></path></svg>Refresh map</button>",
+          "text": "Refresh map"
+        }
+      }
+    },
+    {
+      "variable": "n",
+      "details": {
+        "type": "object",
+        "value": {
+          "pendingProps": "Refreshing",
+          "memoizedProps": "Refreshing",
+          "text": "Refresh map"
+        }
+      }
+    }
+  ]
+}

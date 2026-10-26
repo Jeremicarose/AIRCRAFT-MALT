@@ -122,6 +122,9 @@ function registryCell(
 function fakeClient(pages: ccc.Cell[][]): ccc.Client & { calls: number } {
   const client = {
     calls: 0,
+    async getCellLive(outPoint: ccc.OutPointLike) {
+      return pages.flat().find((cell) => cell.outPoint.eq(outPoint));
+    },
     async findCellsPaged() {
       const cells = pages[this.calls] ?? [];
       this.calls += 1;
@@ -130,6 +133,47 @@ function fakeClient(pages: ccc.Cell[][]): ccc.Client & { calls: number } {
   };
   return client as unknown as ccc.Client & { calls: number };
 }
+
+test("node liveness excludes stale indexer cells from enumeration and identity lookup", async () => {
+  const candidate = registryCell("0x" + "11".repeat(32), corpus.record_cases.find((item) => item.creation_valid)!.payload);
+  for (const lookup of [false, true]) {
+    const client = fakeClient([[candidate], []]);
+    client.getCellLive = async () => undefined;
+    const discovery = new RegistryV2Discovery(client, deployment);
+    if (lookup) assert.equal(await discovery.findByIdentity(candidate.cellOutput.type!.args), undefined);
+    else assert.deepEqual((await discovery.discover()).receivers, []);
+  }
+});
+
+test("node RPC failure cannot return an indexer-only receiver", async () => {
+  const candidate = registryCell("0x" + "11".repeat(32), corpus.record_cases.find((item) => item.creation_valid)!.payload);
+  const client = fakeClient([[candidate], []]);
+  client.getCellLive = async () => { throw new Error("node unavailable"); };
+  await assert.rejects(new RegistryV2Discovery(client, deployment).discover(), /node unavailable/);
+});
+
+test("discovery and identity lookup expire while the indexer is unresponsive", async () => {
+  for (const lookup of [false, true]) {
+    const client = fakeClient([]);
+    client.findCellsPaged = async () => new Promise(() => {});
+    const discovery = new RegistryV2Discovery(client, deployment);
+    await assert.rejects(
+      lookup
+        ? discovery.findByIdentity("0x" + "11".repeat(32), { timeoutMs: 10 })
+        : discovery.discover({ timeoutMs: 10 }),
+      /deadline/,
+    );
+  }
+});
+
+test("indexer owner lock must match the trusted node", async () => {
+  const candidate = registryCell("0x" + "11".repeat(32), corpus.record_cases.find((item) => item.creation_valid)!.payload);
+  const verified = candidate.clone();
+  verified.cellOutput.lock.args = "0xabcd";
+  const client = fakeClient([[candidate], []]);
+  client.getCellLive = async () => verified;
+  await assert.rejects(new RegistryV2Discovery(client, deployment).discover(), /node/);
+});
 
 test("all languages consume conformance corpus version 2", () => {
   assert.equal(corpus.schema_version, 2);
@@ -305,6 +349,27 @@ test("discovery fails closed when pagination does not finish", async () => {
 
   const result = await new RegistryV2Discovery(client, deployment).discover({ maxPages: 1 });
 
+  assert.deepEqual(result.receivers, []);
+  assert.equal(result.failures.some((failure) => failure.code === "pagination_limit"), true);
+});
+
+test("discovery stops a nonconsecutive cursor cycle without selecting partial state", async () => {
+  const record = recordCases.get("valid_creation_with_stream")!;
+  let calls = 0;
+  const client = {
+    async getCellLive() {
+      return registryCell("0x" + calls.toString(16).padStart(64, "0"), record.payload, {}, calls);
+    },
+    async findCellsPaged() {
+      calls += 1;
+      return {
+        cells: [registryCell("0x" + calls.toString(16).padStart(64, "0"), record.payload, {}, calls)],
+        lastCursor: calls % 2 ? "0xA" : "0xB",
+      };
+    },
+  } as unknown as ccc.Client;
+  const result = await new RegistryV2Discovery(client, deployment).discover({ maxPages: 10 });
+  assert.equal(calls, 3);
   assert.deepEqual(result.receivers, []);
   assert.equal(result.failures.some((failure) => failure.code === "pagination_limit"), true);
 });

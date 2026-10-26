@@ -11,19 +11,39 @@ from typing import Any, Awaitable, Callable, Dict, List, Optional, Set
 import asyncio
 import contextlib
 from datetime import datetime
-import json
 import logging
 import math
 import random
 import shlex
 import time
+from collections import Counter
+from urllib.parse import urlsplit
+from websockets.legacy.client import Connect
+from websockets.exceptions import SecurityError
 
 from mlat_reference.demo import scenario_aircraft_states
 from ckb_registry.discovery import ReceiverInfo
 from ckb_registry.record import normalize_receiver_identity
+from mlat_reference.diagnostics import event
+from mlat_reference.ingest.validation import (
+    MAX_BATCH_RECORDS,
+    MAX_NESTING,
+    MAX_PAYLOAD_BYTES,
+    integer_nanoseconds,
+    mode_s_crc,
+    mode_s_frame,
+    strict_json,
+)
 
 logger = logging.getLogger(__name__)
 MessageCallback = Callable[..., Awaitable[None]]
+
+
+class BoundWebSocketConnect(Connect):
+    """A feed URL is a security boundary, including during HTTP redirects."""
+
+    def handle_redirect(self, uri: str) -> None:
+        raise SecurityError("Feed redirects are forbidden; configure the final URL explicitly")
 
 
 class BaseFeedTransport:
@@ -40,17 +60,22 @@ class BaseFeedTransport:
 class JsonFeedParsingMixin:
     """Normalize external JSON payloads into MLAT callback records."""
 
+    def reject(self, reason: str, count: int = 1):
+        counters = self.__dict__.setdefault("rejection_counts", Counter())
+        counters[reason] += count
+        event(logger, "observation_rejected", reason=reason, count=count)
+
     async def dispatch_feed_payload(
         self,
-        raw_payload: str,
+        raw_payload: str | bytes,
         callback: MessageCallback,
         default_receiver_id: Optional[str] = None,
         allowed_receiver_ids: Optional[Set[str]] = None,
     ):
         try:
-            payload = json.loads(raw_payload)
-        except json.JSONDecodeError:
-            logger.debug("Skipping non-JSON 4DSky payload: %s", raw_payload[:200])
+            payload = strict_json(raw_payload)
+        except (ValueError, UnicodeError, RecursionError):
+            self.reject("invalid_json_payload")
             return
 
         for record in self.normalize_feed_records(
@@ -73,20 +98,32 @@ class JsonFeedParsingMixin:
         payload: Any,
         default_receiver_id: Optional[str] = None,
         allowed_receiver_ids: Optional[Set[str]] = None,
+        _depth: int = 0,
+        _budget: Optional[list[int]] = None,
     ) -> List[Dict[str, Any]]:
+        if _budget is None:
+            _budget = [MAX_BATCH_RECORDS]
+        if _depth > MAX_NESTING or _budget[0] <= 0:
+            self.reject("batch_limit")
+            return []
         if isinstance(payload, list):
+            if len(payload) > MAX_BATCH_RECORDS:
+                self.reject("batch_limit", len(payload) - MAX_BATCH_RECORDS)
             records: List[Dict[str, Any]] = []
-            for item in payload:
+            for item in payload[:MAX_BATCH_RECORDS]:
                 records.extend(
                     self.normalize_feed_records(
                         item,
                         default_receiver_id=default_receiver_id,
                         allowed_receiver_ids=allowed_receiver_ids,
+                        _depth=_depth + 1,
+                        _budget=_budget,
                     )
                 )
             return records
 
         if not isinstance(payload, dict):
+            self.reject("invalid_record_type")
             return []
 
         if "records" in payload and isinstance(payload["records"], list):
@@ -94,6 +131,8 @@ class JsonFeedParsingMixin:
                 payload["records"],
                 default_receiver_id=default_receiver_id,
                 allowed_receiver_ids=allowed_receiver_ids,
+                _depth=_depth + 1,
+                _budget=_budget,
             )
 
         if "data" in payload and isinstance(payload["data"], (dict, list)):
@@ -101,10 +140,13 @@ class JsonFeedParsingMixin:
                 payload["data"],
                 default_receiver_id=default_receiver_id,
                 allowed_receiver_ids=allowed_receiver_ids,
+                _depth=_depth + 1,
+                _budget=_budget,
             )
             if nested:
                 return nested
 
+        _budget[0] -= 1
         claimed_receiver_id = (
             payload.get("receiver_id")
             or payload.get("receiver")
@@ -131,10 +173,15 @@ class JsonFeedParsingMixin:
             or payload.get("payload")
         )
 
+        message = mode_s_frame(message)
         if not receiver_id or not message:
+            self.reject("identity_or_frame_invalid")
             return []
 
         timestamp_ns = self.parse_timestamp_ns(payload.get("timestamp_ns"))
+        if payload.get("timestamp_ns") is not None and timestamp_ns is None:
+            self.reject("invalid_timestamp_ns")
+            return []
         timestamp = (
             timestamp_ns / 1_000_000_000.0
             if timestamp_ns is not None
@@ -145,6 +192,13 @@ class JsonFeedParsingMixin:
                 or payload.get("observed_at")
             )
         )
+        if timestamp is None or not math.isfinite(timestamp) or timestamp <= 0:
+            self.reject("missing_or_invalid_timestamp")
+            return []
+        source = payload.get("clock_source", "unknown")
+        if not isinstance(source, str) or len(source) > 128:
+            self.reject("invalid_clock_source")
+            return []
         clock_synchronized = bool(
             timestamp_ns is not None and payload.get("clock_synchronized") is True
         )
@@ -155,7 +209,7 @@ class JsonFeedParsingMixin:
                 "timestamp": timestamp,
                 "timestamp_ns": timestamp_ns,
                 "clock_synchronized": clock_synchronized,
-                "clock_source": str(payload.get("clock_source") or "unknown"),
+                "clock_source": source,
                 "clock_uncertainty_ns": self.parse_optional_float(
                     payload.get("clock_uncertainty_ns")
                 ),
@@ -170,7 +224,11 @@ class JsonFeedParsingMixin:
         default_receiver_id: Optional[str],
         allowed_receiver_ids: Optional[Set[str]],
     ) -> Optional[str]:
-        claimed = str(claimed_receiver_id) if claimed_receiver_id else None
+        if claimed_receiver_id is not None and (
+            not isinstance(claimed_receiver_id, str) or len(claimed_receiver_id) > 128
+        ):
+            return None
+        claimed = claimed_receiver_id or None
         if claimed and claimed.startswith("0x"):
             try:
                 claimed = normalize_receiver_identity(claimed)
@@ -185,30 +243,20 @@ class JsonFeedParsingMixin:
                 return None
 
         if bound is not None and claimed is not None and claimed != bound:
-            logger.warning(
-                "Dropping feed payload claiming %s on connection bound to %s",
-                claimed,
-                bound,
-            )
+            logger.warning("Dropping feed payload with a conflicting receiver identity")
             return None
 
         receiver_id = bound or claimed
         if receiver_id is None:
             return None
         if allowed_receiver_ids is not None and receiver_id not in allowed_receiver_ids:
-            logger.warning("Dropping feed payload for unassigned receiver %s", receiver_id)
+            logger.warning("Dropping feed payload for an unassigned receiver")
             return None
         return receiver_id
 
     @staticmethod
     def parse_timestamp_ns(value: Any) -> Optional[int]:
-        if value is None or isinstance(value, bool):
-            return None
-        try:
-            parsed = int(value)
-        except (TypeError, ValueError):
-            return None
-        return parsed if parsed > 0 else None
+        return integer_nanoseconds(value)
 
     @staticmethod
     def parse_optional_float(value: Any) -> Optional[float]:
@@ -221,9 +269,9 @@ class JsonFeedParsingMixin:
         return parsed if math.isfinite(parsed) and parsed >= 0 else None
 
     @staticmethod
-    def parse_timestamp(value: Any) -> float:
-        if value is None:
-            return time.time()
+    def parse_timestamp(value: Any) -> Optional[float]:
+        if value is None or isinstance(value, bool):
+            return None
 
         if isinstance(value, (int, float)):
             return float(value)
@@ -239,7 +287,7 @@ class JsonFeedParsingMixin:
             except ValueError:
                 logger.debug("Unsupported 4DSky timestamp format: %s", value)
 
-        return time.time()
+        return None
 
 
 class WebSocketJsonFeedTransport(BaseFeedTransport, JsonFeedParsingMixin):
@@ -251,11 +299,26 @@ class WebSocketJsonFeedTransport(BaseFeedTransport, JsonFeedParsingMixin):
         endpoint: str,
         auth_headers: Dict[str, str],
         subscribe_message: Optional[str],
+        allowed_endpoints: tuple[str, ...] = (),
     ):
         super().__init__(receivers)
         self.endpoint = endpoint
         self.auth_headers = auth_headers
         self.subscribe_message = subscribe_message
+        self.allowed_endpoints = set(allowed_endpoints) | ({endpoint} if endpoint else set())
+
+    def _validate_endpoint(self, endpoint: str) -> None:
+        if endpoint not in self.allowed_endpoints:
+            raise ValueError("Receiver feed endpoint is not in the operator allowlist")
+        parsed = urlsplit(endpoint)
+        if (
+            parsed.scheme not in {"ws", "wss"}
+            or not parsed.hostname
+            or parsed.username
+            or parsed.password
+            or parsed.fragment
+        ):
+            raise ValueError("Feed endpoint must be a ws/wss URL without credentials or fragment")
 
     def create_tasks(self, callback: MessageCallback) -> List[asyncio.Task]:
         endpoint_to_receivers: Dict[str, List[str]] = {}
@@ -281,6 +344,10 @@ class WebSocketJsonFeedTransport(BaseFeedTransport, JsonFeedParsingMixin):
                     "Each WebSocket connection must bind to one receiver identity; "
                     f"endpoint {endpoint} is assigned to: {joined}"
                 )
+        # Validate the whole batch before starting any task.
+        for endpoint in endpoint_to_receivers:
+            self._validate_endpoint(endpoint)
+        for endpoint, receiver_ids in endpoint_to_receivers.items():
             default_receiver_id = receiver_ids[0]
             tasks.append(
                 asyncio.create_task(
@@ -302,20 +369,22 @@ class WebSocketJsonFeedTransport(BaseFeedTransport, JsonFeedParsingMixin):
         default_receiver_id: Optional[str] = None,
         allowed_receiver_ids: Optional[Set[str]] = None,
     ):
-        try:
-            import websockets
-        except ImportError:
-            logger.error("websockets package not installed. Run: pip install websockets")
-            return
-
         while True:
             try:
-                async with websockets.connect(
-                    endpoint, extra_headers=self.auth_headers
+                self._validate_endpoint(endpoint)
+                # Secrets belong only to the exact operator-configured URL.
+                headers = self.auth_headers if endpoint == self.endpoint else {}
+                async with BoundWebSocketConnect(
+                    endpoint,
+                    extra_headers=headers,
+                    max_size=MAX_PAYLOAD_BYTES,
+                    max_queue=16,
+                    open_timeout=15,
+                    close_timeout=5,
                 ) as websocket:
-                    logger.info("Connected to 4DSky websocket: %s", endpoint)
+                    event(logger, "feed_connected", receiver_id=default_receiver_id)
 
-                    if self.subscribe_message:
+                    if self.subscribe_message and endpoint == self.endpoint:
                         await websocket.send(self.subscribe_message)
 
                     async for raw_payload in websocket:
@@ -329,7 +398,9 @@ class WebSocketJsonFeedTransport(BaseFeedTransport, JsonFeedParsingMixin):
             except asyncio.CancelledError:
                 raise
             except Exception as exc:
-                logger.warning("4DSky websocket stream error (%s): %s", endpoint, exc)
+                event(
+                    logger, "feed_failed", level=logging.WARNING, exception_type=type(exc).__name__
+                )
                 await asyncio.sleep(3)
 
 
@@ -350,9 +421,12 @@ class CommandJsonlFeedTransport(BaseFeedTransport, JsonFeedParsingMixin):
                 process = await asyncio.create_subprocess_exec(
                     *shlex.split(self.command),
                     stdout=asyncio.subprocess.PIPE,
-                    stderr=asyncio.subprocess.PIPE,
+                    # Never echo a bridge's arbitrary stderr (may contain secrets),
+                    # and never allow an undrained pipe to deadlock its stdout.
+                    stderr=asyncio.subprocess.DEVNULL,
+                    limit=MAX_PAYLOAD_BYTES,
                 )
-                logger.info("Started 4DSky bridge command: %s", self.command)
+                event(logger, "feed_started")
 
                 assert process.stdout is not None
                 while True:
@@ -365,27 +439,21 @@ class CommandJsonlFeedTransport(BaseFeedTransport, JsonFeedParsingMixin):
                         allowed_receiver_ids=set(self.receivers),
                     )
 
-                if process.stderr is not None:
-                    stderr_output = await process.stderr.read()
-                    if stderr_output:
-                        logger.warning(
-                            "4DSky bridge stderr: %s",
-                            stderr_output.decode("utf-8", errors="ignore").strip(),
-                        )
-
             except asyncio.CancelledError:
-                if process is not None and process.returncode is None:
-                    process.terminate()
-                    with contextlib.suppress(ProcessLookupError):
-                        await process.wait()
                 raise
             except Exception as exc:
-                logger.warning("4DSky bridge command failed: %s", exc)
+                event(
+                    logger, "feed_failed", level=logging.WARNING, exception_type=type(exc).__name__
+                )
             finally:
                 if process is not None and process.returncode is None:
-                    process.terminate()
                     with contextlib.suppress(ProcessLookupError):
-                        await process.wait()
+                        process.terminate()
+                        try:
+                            await asyncio.wait_for(process.wait(), timeout=3)
+                        except asyncio.TimeoutError:
+                            process.kill()
+                            await process.wait()
 
             await asyncio.sleep(3)
 
@@ -408,7 +476,10 @@ class SimulationFeedTransport(BaseFeedTransport):
                 self.scenario_name,
             )
             for aircraft in replay_states:
+                transmit_time_ns = time.time_ns()
                 message = f"8D{aircraft['icao']}202CC371C32CE0576098"
+                body = message[:-6] + "000000"
+                message = body[:-6] + f"{mode_s_crc(body):06X}"
                 receiver_ids = list(self.receivers.keys())
 
                 if len(receiver_ids) < 4:

@@ -1,0 +1,13 @@
+
+> @aircraft-malt/registry-v2@0.1.0 prepare
+> npm run build
+
+
+> @aircraft-malt/registry-v2@0.1.0 build
+> tsc -p tsconfig.json
+
+
+added 48 packages in 6s
+
+11 packages are looking for funding
+  run `npm fund` for details

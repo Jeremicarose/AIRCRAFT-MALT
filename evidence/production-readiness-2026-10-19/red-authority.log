@@ -1,0 +1,163 @@
+FFFFFFF..F                                                               [100%]
+=================================== FAILURES ===================================
+__________ test_spent_or_unknown_indexer_cell_is_not_discovered[dead] __________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10898f830>
+status = 'dead'
+
+    @pytest.mark.parametrize("status", ["dead", "unknown"])
+    def test_spent_or_unknown_indexer_cell_is_not_discovered(monkeypatch, status):
+        discovery, _, calls = discovery_with_responses(monkeypatch, {"status": status, "cell": None})
+>       assert asyncio.run(discovery.discover_peers()) == []
+E       AssertionError: assert [ReceiverInfo...t=1700000000)] == []
+E         
+E         Left contains one more item: ReceiverInfo(receiver_id='RECV_NYC_001', latitude=40.7128, longitude=-74.006, altitude=10.0, status='online', last_see...55555555555555555', 'index': '0x0'}, 'block_number': '0x10', 'updated_at': 1700000000}, registry_updated_at=1700000000)
+E         Use -v to get more diff
+
+tests/registry/test_discovery_authority.py:34: AssertionError
+________ test_spent_or_unknown_indexer_cell_is_not_discovered[unknown] _________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10898f9e0>
+status = 'unknown'
+
+    @pytest.mark.parametrize("status", ["dead", "unknown"])
+    def test_spent_or_unknown_indexer_cell_is_not_discovered(monkeypatch, status):
+        discovery, _, calls = discovery_with_responses(monkeypatch, {"status": status, "cell": None})
+>       assert asyncio.run(discovery.discover_peers()) == []
+E       AssertionError: assert [ReceiverInfo...t=1700000000)] == []
+E         
+E         Left contains one more item: ReceiverInfo(receiver_id='RECV_NYC_001', latitude=40.7128, longitude=-74.006, altitude=10.0, status='online', last_see...55555555555555555', 'index': '0x0'}, 'block_number': '0x10', 'updated_at': 1700000000}, registry_updated_at=1700000000)
+E         Use -v to get more diff
+
+tests/registry/test_discovery_authority.py:34: AssertionError
+_______ test_indexer_cannot_override_node_data_or_ownership[output_data] _______
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x1089c5760>
+field = 'output_data'
+
+    @pytest.mark.parametrize("field", ["output_data", "owner_lock", "type_script"])
+    def test_indexer_cannot_override_node_data_or_ownership(monkeypatch, field):
+        candidate = receiver_cell(receiver_record(), IDENTITY_A)
+        node_cell = copy.deepcopy(candidate)
+        if field == "output_data":
+            node_cell["output_data"] = receiver_record(status="revoked", sequence=1).to_cell_data_hex()
+        elif field == "owner_lock":
+            node_cell["output"]["lock"]["args"] = "0x1234"
+        else:
+            node_cell["output"]["type"]["code_hash"] = "0x" + "aa" * 32
+        response = {"status": "live", "cell": {"output": node_cell["output"], "data": {"content": node_cell["output_data"]}}}
+        discovery, _, _ = discovery_with_responses(monkeypatch, response)
+>       with pytest.raises(RuntimeError, match="node|RPC"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE RuntimeError
+
+tests/registry/test_discovery_authority.py:51: Failed
+_______ test_indexer_cannot_override_node_data_or_ownership[owner_lock] ________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x1089c57f0>
+field = 'owner_lock'
+
+    @pytest.mark.parametrize("field", ["output_data", "owner_lock", "type_script"])
+    def test_indexer_cannot_override_node_data_or_ownership(monkeypatch, field):
+        candidate = receiver_cell(receiver_record(), IDENTITY_A)
+        node_cell = copy.deepcopy(candidate)
+        if field == "output_data":
+            node_cell["output_data"] = receiver_record(status="revoked", sequence=1).to_cell_data_hex()
+        elif field == "owner_lock":
+            node_cell["output"]["lock"]["args"] = "0x1234"
+        else:
+            node_cell["output"]["type"]["code_hash"] = "0x" + "aa" * 32
+        response = {"status": "live", "cell": {"output": node_cell["output"], "data": {"content": node_cell["output_data"]}}}
+        discovery, _, _ = discovery_with_responses(monkeypatch, response)
+>       with pytest.raises(RuntimeError, match="node|RPC"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE RuntimeError
+
+tests/registry/test_discovery_authority.py:51: Failed
+_______ test_indexer_cannot_override_node_data_or_ownership[type_script] _______
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x1089c6540>
+field = 'type_script'
+
+    @pytest.mark.parametrize("field", ["output_data", "owner_lock", "type_script"])
+    def test_indexer_cannot_override_node_data_or_ownership(monkeypatch, field):
+        candidate = receiver_cell(receiver_record(), IDENTITY_A)
+        node_cell = copy.deepcopy(candidate)
+        if field == "output_data":
+            node_cell["output_data"] = receiver_record(status="revoked", sequence=1).to_cell_data_hex()
+        elif field == "owner_lock":
+            node_cell["output"]["lock"]["args"] = "0x1234"
+        else:
+            node_cell["output"]["type"]["code_hash"] = "0x" + "aa" * 32
+        response = {"status": "live", "cell": {"output": node_cell["output"], "data": {"content": node_cell["output_data"]}}}
+        discovery, _, _ = discovery_with_responses(monkeypatch, response)
+>       with pytest.raises(RuntimeError, match="node|RPC"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE RuntimeError
+
+tests/registry/test_discovery_authority.py:51: Failed
+________ test_node_outage_invalidates_discovery_instead_of_falling_back ________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x1089c7050>
+
+    def test_node_outage_invalidates_discovery_instead_of_falling_back(monkeypatch):
+        discovery, _, _ = discovery_with_responses(monkeypatch, OSError("node unavailable"))
+>       with pytest.raises(OSError, match="unavailable"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE OSError
+
+tests/registry/test_discovery_authority.py:58: Failed
+____________________ test_complete_discovery_has_a_deadline ____________________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x1089c67e0>
+
+    def test_complete_discovery_has_a_deadline(monkeypatch):
+        discovery = CKBPeerDiscovery(CKBConfig())
+        discovery.config.discovery_timeout_seconds = 0.01
+    
+        async def slow_search():
+            await asyncio.sleep(0.1)
+            return []
+    
+        monkeypatch.setattr(discovery, "_search_receiver_cells", slow_search)
+>       with pytest.raises(TimeoutError):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE TimeoutError
+
+tests/registry/test_discovery_authority.py:72: Failed
+__________ test_diagnostics_do_not_export_arbitrary_feed_clock_labels __________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10898f260>
+tmp_path = PosixPath('/private/var/folders/j4/nyh12wqj72l5mpkp_twtvr2m0000gn/T/pytest-of-jeremicarose/pytest-1/test_diagnostics_do_not_export0')
+
+    def test_diagnostics_do_not_export_arbitrary_feed_clock_labels(monkeypatch, tmp_path):
+        module = _load_api_module(monkeypatch, tmp_path)
+        monkeypatch.setattr(module.production_main, "CURRENT_RUNTIME", None)
+        app = module.create_app()
+        _seed_api_db(module, app)
+        secret = "wss://private.invalid/feed?token=DO-NOT-EXPORT"
+        with app.app_context():
+            module.get_db().store_receiver_qualification(
+                "RECV_NYC_001", {"state": "UNQUALIFIED", "clock_source": secret}
+            )
+        response = app.test_client().get("/api/diagnostics/bundle")
+        assert response.status_code == 200
+>       assert secret not in response.get_data(as_text=True)
+E       assert 'wss://priva...O-NOT-EXPORT' not in '{"component...xt":null}}\n'
+E         
+E         'wss://private.inva...token=DO-NOT-EXPORT' is contained here:
+E           _source":"wss://private.invalid/feed?token=DO-NOT-EXPORT","clock_uncertainty_ns":null,"data_provenance":null,"historical_solver_eligible":null,"maximum_clock_uncertainty_ns":null,"reason":"no_recent_clock_evidence","received_at":null,"scope":null,"source_timestamp_ns":null,"state":"UNQUALIFIED"},"receiver_id":"RECV_NYC_001"}],"runtime":{"correlation_dropped_signals":null,"failed_solves":null,"last_signal_age_s":null,"last_store_age_s":null,"observation_counts":{},"observation_diagnostics":[],"storage_failure...
+E         
+E         ...Full output truncated (2 lines hidden), use '-vv' to show
+
+tests/mlat/test_remediation_security.py:73: AssertionError
+=========================== short test summary info ============================
+FAILED tests/registry/test_discovery_authority.py::test_spent_or_unknown_indexer_cell_is_not_discovered[dead]
+FAILED tests/registry/test_discovery_authority.py::test_spent_or_unknown_indexer_cell_is_not_discovered[unknown]
+FAILED tests/registry/test_discovery_authority.py::test_indexer_cannot_override_node_data_or_ownership[output_data]
+FAILED tests/registry/test_discovery_authority.py::test_indexer_cannot_override_node_data_or_ownership[owner_lock]
+FAILED tests/registry/test_discovery_authority.py::test_indexer_cannot_override_node_data_or_ownership[type_script]
+FAILED tests/registry/test_discovery_authority.py::test_node_outage_invalidates_discovery_instead_of_falling_back
+FAILED tests/registry/test_discovery_authority.py::test_complete_discovery_has_a_deadline
+FAILED tests/mlat/test_remediation_security.py::test_diagnostics_do_not_export_arbitrary_feed_clock_labels
+8 failed, 2 passed in 1.53s

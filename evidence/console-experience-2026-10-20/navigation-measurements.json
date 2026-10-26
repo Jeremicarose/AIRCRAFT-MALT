@@ -1,0 +1,65 @@
+{
+  "scope": "Local production frontend navigation, same synthetic backend, desktop Chromium; five route changes per version, no statistical speed claim",
+  "versions": [
+    {
+      "name": "before",
+      "results": [
+        {
+          "route": "Diagnostics",
+          "headingVisibleMs": 497.86742000000004,
+          "sidebarPreserved": false
+        },
+        {
+          "route": "Pipeline",
+          "headingVisibleMs": 845.9212840000005,
+          "sidebarPreserved": false
+        },
+        {
+          "route": "Accuracy benchmark",
+          "headingVisibleMs": 826.4266710000002,
+          "sidebarPreserved": false
+        },
+        {
+          "route": "Metrics",
+          "headingVisibleMs": 823.172337,
+          "sidebarPreserved": false
+        },
+        {
+          "route": "Settings",
+          "headingVisibleMs": 831.9489650000005,
+          "sidebarPreserved": false
+        }
+      ]
+    },
+    {
+      "name": "after",
+      "results": [
+        {
+          "route": "Diagnostics",
+          "headingVisibleMs": 230.8981160000003,
+          "sidebarPreserved": true
+        },
+        {
+          "route": "Pipeline",
+          "headingVisibleMs": 138.00128399999994,
+          "sidebarPreserved": true
+        },
+        {
+          "route": "Accuracy benchmark",
+          "headingVisibleMs": 109.4732299999996,
+          "sidebarPreserved": true
+        },
+        {
+          "route": "Metrics",
+          "headingVisibleMs": 97.21788800000104,
+          "sidebarPreserved": true
+        },
+        {
+          "route": "Settings",
+          "headingVisibleMs": 138.4041699999998,
+          "sidebarPreserved": true
+        }
+      ]
+    }
+  ]
+}

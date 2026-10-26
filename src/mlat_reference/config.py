@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import os
+import math
 
 from mlat_reference.ingest.client import NetworkConfig
 from mlat_reference.demo import get_demo_scenario, get_scenario_metadata
@@ -13,7 +14,10 @@ def env_bool(name: str, default: bool) -> bool:
     value = os.getenv(name)
     if value is None:
         return default
-    return value.strip().lower() in {"1", "true", "yes", "on"}
+    normalized = value.strip().lower()
+    if normalized not in {"1", "true", "yes", "on", "0", "false", "no", "off"}:
+        raise ValueError(f"{name} must be an explicit true or false value")
+    return normalized in {"1", "true", "yes", "on"}
 
 
 @dataclass(frozen=True)
@@ -87,7 +91,7 @@ def load_runtime_settings(
     db_path_default: str = "data/mlat_data.db",
 ) -> RuntimeSettings:
     """Load shared network and storage settings from environment."""
-    fourdsky_endpoint = os.getenv("FOURDSKY_ENDPOINT") or os.getenv("FOURDSKYENDPOINT", "")
+    fourdsky_endpoint = os.getenv("FOURDSKY_ENDPOINT") or os.getenv("FOURDSKYENDPOINT") or ""
     fourdsky_api_key = os.getenv("FOURDSKY_API_KEY") or os.getenv("FOURDSKYAPIKEY")
     strict_production_mode = env_bool("STRICT_PRODUCTION_MODE", False)
 
@@ -106,11 +110,22 @@ def load_runtime_settings(
         fourdsky_auth_token=os.getenv("FOURDSKY_AUTH_TOKEN") or None,
         fourdsky_subscribe_message=os.getenv("FOURDSKY_SUBSCRIBE_MESSAGE") or None,
         fourdsky_bridge_command=os.getenv("FOURDSKY_BRIDGE_COMMAND") or None,
+        fourdsky_allowed_endpoints=tuple(
+            item.strip()
+            for item in os.getenv("FOURDSKY_ALLOWED_ENDPOINTS", "").split(",")
+            if item.strip()
+        ),
+        max_observation_age_seconds=float(os.getenv("MAX_OBSERVATION_AGE_SECONDS", "120")),
+        max_observation_future_seconds=float(os.getenv("MAX_OBSERVATION_FUTURE_SECONDS", "5")),
         max_receivers=int(os.getenv("MAX_RECEIVERS", str(max_receivers_default))),
-        simulate_if_unavailable=env_bool("SIMULATE_IF_UNAVAILABLE", True),
+        simulate_if_unavailable=env_bool("SIMULATE_IF_UNAVAILABLE", False),
         strict_production_mode=strict_production_mode,
         ssl_verify=env_bool("CKB_SSL_VERIFY", True),
-        max_record_age_seconds=int(os.getenv("CKB_MAX_RECORD_AGE_SECONDS", "86400")),
+        max_record_age_seconds=(
+            int(os.environ["CKB_MAX_RECORD_AGE_SECONDS"])
+            if os.getenv("CKB_MAX_RECORD_AGE_SECONDS")
+            else None
+        ),
         hybrid_simulation_min_receivers=int(os.getenv("CKB_HYBRID_SIMULATION_MIN_RECEIVERS", "4")),
         demo_scenario=os.getenv("DEMO_SCENARIO", "default"),
         registry_refresh_seconds=max(5, int(os.getenv("CKB_REGISTRY_REFRESH_SECONDS", "30"))),
@@ -120,6 +135,14 @@ def load_runtime_settings(
     demo_scenario = os.getenv("DEMO_SCENARIO", "default")
     scenario = get_demo_scenario(demo_scenario)
     demo_label = os.getenv("DEMO_LABEL", scenario.label)
+    max_uncertainty = float(os.getenv("MAX_CLOCK_UNCERTAINTY_NS", "100"))
+    for name, value in (
+        ("MAX_CLOCK_UNCERTAINTY_NS", max_uncertainty),
+        ("MAX_OBSERVATION_AGE_SECONDS", config.max_observation_age_seconds),
+        ("MAX_OBSERVATION_FUTURE_SECONDS", config.max_observation_future_seconds),
+    ):
+        if not math.isfinite(value) or value < 0:
+            raise ValueError(f"{name} must be finite and non-negative")
 
     _validate_runtime_settings(
         strict_production_mode=strict_production_mode,
@@ -135,7 +158,7 @@ def load_runtime_settings(
         health_stale_signal_seconds=int(os.getenv("HEALTH_STALE_SIGNAL_SECONDS", "120")),
         stats_interval_seconds=int(os.getenv("STATS_INTERVAL_SECONDS", "60")),
         require_live_benchmarkable_output=env_bool("REQUIRE_LIVE_BENCHMARKABLE_OUTPUT", False),
-        max_clock_uncertainty_ns=float(os.getenv("MAX_CLOCK_UNCERTAINTY_NS", "100")),
+        max_clock_uncertainty_ns=max_uncertainty,
         strict_production_mode=strict_production_mode,
         demo=DemoSettings(
             enabled=demo_enabled,

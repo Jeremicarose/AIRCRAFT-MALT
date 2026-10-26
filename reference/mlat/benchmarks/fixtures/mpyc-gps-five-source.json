@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "source_id": "mpyc-gps-five-locards-example",
+  "data_source": "HISTORICAL_RECORDING",
+  "claim_scope": "solver_only",
+  "dataset": "MPyC five-receiver GPS-timed LocaRDS example",
+  "upstream_repository": "https://github.com/lschoe/mpyc/tree/v0.11/demos/data/mlat",
+  "upstream_version": "v0.11",
+  "original_dataset": "https://doi.org/10.5281/zenodo.4739276",
+  "license": "CC-BY-SA-4.0",
+  "selection": "Aircraft messages received by exactly five sensors described by the source as GPS timed.",
+  "expected_event_count": 362,
+  "files": {
+    "sensors": {
+      "name": "sensors.csv",
+      "url": "https://raw.githubusercontent.com/lschoe/mpyc/v0.11/demos/data/mlat/sensors.csv",
+      "sha256": "998a63f5fc89fa41fd1a37468431da96f355812054e7bca8b2a4f4db0ba47d1b",
+      "github_blob_sha": "df6c1525b58b1e1c240572f4fd54f59328c74c47",
+      "size_bytes": 30272
+    },
+    "measurements": {
+      "name": "set_1.csv",
+      "url": "https://raw.githubusercontent.com/lschoe/mpyc/v0.11/demos/data/mlat/set_1.csv",
+      "sha256": "7167988f67af8314a2d9f44378f748f3a897de783c85271a154cbd81d49d20f5",
+      "github_blob_sha": "83775a437a05f677b5167aae674e6da624bdb596",
+      "size_bytes": 72160
+    }
+  },
+  "limitations": [
+    "This is a historical filtered extract and is not live data.",
+    "The compact source contains pre-grouped observations rather than original Mode-S frames.",
+    "The source describes the selected sensors as GPS timed but does not provide per-observation clock uncertainty.",
+    "Ground truth is aircraft-reported ADS-B position, not an independent survey measurement.",
+    "Dataset-local receiver serials are not CKB Registry identities and do not prove receiver ownership."
+  ]
+}

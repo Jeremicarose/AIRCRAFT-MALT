@@ -1,0 +1,19 @@
+{
+  "command": [
+    "/usr/bin/caffeinate",
+    "-i",
+    "npm",
+    "run",
+    "test:e2e:prepared"
+  ],
+  "cwd": "/Users/jeremicarose/Downloads/mlat-system 2/artifacts/experience-2026-10-20/candidate/reference/mlat/frontend",
+  "started_at": "2026-10-20T07:06:01.496154+00:00",
+  "environment": {
+    "MLAT_ENV_FILE": "/dev/null",
+    "node": "22.23.1",
+    "python_environment": "artifacts/audit/venv"
+  },
+  "exit_status": 1,
+  "status": "FAIL",
+  "duration_seconds": 637.17
+}

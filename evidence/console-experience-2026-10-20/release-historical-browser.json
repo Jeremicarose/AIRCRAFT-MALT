@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-10-20T07:49:10.095Z",
+  "source_commit": "3b19c3f7976fe90310d46ae73ff66791ef30c09e",
+  "source_tree": "df172b4ebe428d359da158327647d025f3f0cf95",
+  "worktree_clean": true,
+  "route": "/app/registry",
+  "accessibility_standard": "WCAG 2 A/AA serious and critical axe findings",
+  "total_tests": 4,
+  "completed_tests": 4,
+  "passed_tests": 3,
+  "failed_tests": 1,
+  "failures": [
+    {
+      "id": "8dd574148b2578b564ea-b4c5ef3a9e8661b81ce5",
+      "title": " > chromium > historical-replay.spec.mjs > historical replay retains rejected events and supports mobile keyboard use",
+      "status": "failed",
+      "error": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: getByText(/No position was stored: altitude out of bounds/)\nExpected: visible\nError: strict mode violation: getByText(/No position was stored: altitude out of bounds/) resolved to 2 elements:\n    1) <p class=\"text-sm text-attention\">No position was stored: altitude out of bounds. I…</p> aka locator('#main-content').getByText('No position was stored:')\n    2) <p class=\"text-sm text-attention\">…</p> aka getByText('No position was stored:').nth(1)\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" getByText(/No position was stored: altitude out of bounds/) with timeout 15000ms\u001b[22m\n\u001b[2m  - waiting for getByText(/No position was stored: altitude out of bounds/)\u001b[22m\n"
+    }
+  ],
+  "accessibility_violations": 0,
+  "pass": false
+}

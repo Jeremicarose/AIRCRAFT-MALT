@@ -1,0 +1,37 @@
+receiver-registry v0.1.0 (/Users/jeremicarose/Downloads/mlat-system 2/artifacts/blockers-2026-10-19/candidate/contracts/registry-v2)
+ckb-std v0.16.4
+buddy-alloc v0.6.0
+ckb-gen-types v0.119.0
+cfg-if v1.0.4
+ckb-hash v0.119.0
+blake2b-ref v0.3.1
+molecule v0.8.0
+bytes v1.12.1
+cfg-if v1.0.4
+ckb-hash v0.119.0 (*)
+gcd v2.3.0
+cc v1.2.62
+find-msvc-tools v0.1.9
+shlex v1.3.0
+heapless v0.7.17
+hash32 v0.2.1
+byteorder v1.5.0
+serde v1.0.228
+serde_core v1.0.228
+serde_derive v1.0.228 (proc-macro)
+proc-macro2 v1.0.106
+unicode-ident v1.0.24
+quote v1.0.45
+proc-macro2 v1.0.106 (*)
+syn v2.0.117
+proc-macro2 v1.0.106 (*)
+quote v1.0.45 (*)
+unicode-ident v1.0.24
+stable_deref_trait v1.2.1
+rustc_version v0.4.1
+semver v1.0.28
+serde v1.0.228 (*)
+serde-json-core v0.5.1
+heapless v0.7.17 (*)
+ryu v1.0.23
+serde v1.0.228 (*)

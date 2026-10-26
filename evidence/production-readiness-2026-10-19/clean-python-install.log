@@ -1,0 +1,7 @@
+Using Python 3.12.11 environment at: artifacts/readiness-2026-10-19/venv
+error: Request failed after 3 retries in 5.4s
+  Caused by: Failed to fetch: `https://pypi.org/simple/jinja2/`
+  Caused by: error sending request for url (https://pypi.org/simple/jinja2/)
+  Caused by: client error (Connect)
+  Caused by: dns error
+  Caused by: failed to lookup address information: nodename nor servname provided, or not known
